@@ -3,254 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMHC Pro - Management Medicine Health Center</title>
+    <title>MMRC Pro - Management Stock Medicine client Health Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .nav-active { @apply bg-blue-600 text-white shadow-lg shadow-blue-200; }
-        .glass-card { @apply bg-white/80 backdrop-blur-md border border-white shadow-sm; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { @apply bg-gray-200 rounded-full; }
+        .page-content { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-[#F8FAFC] min-h-screen">
 
-    <div id="login-page" class="fixed inset-0 bg-blue-600 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-hospital-user text-3xl"></i>
-                </div>
-                <h1 class="text-2xl font-extrabold text-gray-800">MMHC Pro</h1>
-                <p class="text-gray-500 text-sm">Silakan login untuk akses sistem</p>
+    <div id="login-page" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl text-center">
+            <div class="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200">
+                <i class="fas fa-hospital-symbol text-3xl"></i>
             </div>
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase ml-1">Username</label>
-                    <input type="text" id="user-input" class="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" placeholder="Masukkan username" required>
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
-                    <input type="password" id="pass-input" class="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all mt-4">Login Sekarang</button>
+            <h1 class="text-2xl font-black text-slate-800 mb-2">MMHC <span class="text-blue-600">STOCK</span></h1>
+            <p class="text-slate-400 text-sm mb-8 font-medium">Monitoring Persediaan Obat Madani</p>
+            <form id="login-form" class="space-y-4 text-left">
+                <input type="text" id="user-input" placeholder="Username" class="w-full bg-slate-50 border-2 border-slate-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all font-semibold" required>
+                <input type="password" id="pass-input" placeholder="Password" class="w-full bg-slate-50 border-2 border-slate-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all font-semibold" required>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all mt-4">Masuk Sistem</button>
             </form>
         </div>
     </div>
 
     <div id="main-content" class="hidden flex flex-col md:flex-row min-h-screen">
         
-        <aside class="w-full md:w-72 bg-white border-r border-gray-100 flex flex-col z-20">
+        <aside class="w-full md:w-72 bg-white border-r border-slate-100 flex flex-col z-20">
             <div class="p-8">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 p-2 rounded-lg text-white"><i class="fas fa-plus-square"></i></div>
-                    <h1 class="text-xl font-extrabold text-gray-800 tracking-tight">MMHC <span class="text-blue-600">Pro</span></h1>
-                </div>
+                <h1 class="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    <span class="text-blue-600"><i class="fas fa-shield-virus"></i></span> MMHC PRO
+                </h1>
             </div>
             
             <nav class="flex-1 px-4 space-y-2">
-                <button onclick="showPage('dashboard')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-gray-500 font-semibold transition-all hover:bg-gray-50 nav-active">
-                    <i class="fas fa-grid-2 text-lg"></i> Dashboard
+                <button onclick="showPage('dashboard')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 font-bold transition-all nav-active">
+                    <i class="fas fa-chart-pie"></i> Monitoring
                 </button>
-                <button onclick="showPage('obat')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-gray-500 font-semibold transition-all hover:bg-gray-50">
-                    <i class="fas fa-pills text-lg"></i> Data Obat
+                <button onclick="showPage('obat')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 font-bold transition-all">
+                    <i class="fas fa-pills"></i> Manajemen Obat
                 </button>
-                <button onclick="showPage('pasien')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-gray-500 font-semibold transition-all hover:bg-gray-50">
-                    <i class="fas fa-user-injured text-lg"></i> Data Pasien
+                <button onclick="showPage('pasien')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 font-bold transition-all">
+                    <i class="fas fa-user-md"></i> Database Pasien
                 </button>
-                <button onclick="showPage('penggunaan')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-gray-500 font-semibold transition-all hover:bg-gray-50">
-                    <i class="fas fa-clipboard-list text-lg"></i> Penggunaan
+                <button onclick="showPage('penggunaan')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 font-bold transition-all">
+                    <i class="fas fa-exchange-alt"></i> Log Penggunaan
                 </button>
             </nav>
 
-            <div class="p-6 border-t border-gray-50">
-                <button onclick="location.reload()" class="w-full flex items-center gap-3 text-red-400 font-bold px-6 py-3 hover:text-red-600 transition-all">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+            <div class="p-8">
+                <button onclick="location.reload()" class="flex items-center gap-3 text-slate-400 font-bold hover:text-red-500 transition-all">
+                    <i class="fas fa-power-off"></i> Keluar
                 </button>
             </div>
         </aside>
 
         <main class="flex-1 h-screen overflow-y-auto custom-scroll p-4 md:p-10">
-            <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-                <div>
-                    <h2 id="page-title" class="text-3xl font-extrabold text-gray-800 tracking-tight">Dashboard</h2>
-                    <p class="text-gray-400 font-medium">Monitoring MMHC secara real-time</p>
-                </div>
-                <div class="relative w-full md:w-80">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
-                    <input type="text" id="global-search" oninput="handleSearch()" placeholder="Cari data apapun..." class="w-full bg-white border border-gray-100 p-4 pl-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm">
-                </div>
-            </header>
-
+            
             <section id="page-dashboard" class="page-content space-y-8">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-white p-6 rounded-3xl border border-gray-50 shadow-sm">
-                        <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-capsules text-xl"></i></div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Jenis Obat</p>
-                        <h3 id="stat-obat" class="text-3xl font-black text-gray-800 mt-1">0</h3>
+                <header>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">Status Stok Obat</h2>
+                    <p class="text-slate-400 font-semibold">Pantau sisa stok setiap obat secara mandiri</p>
+                </header>
+                <div id="dashboard-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     </div>
-                    <div class="bg-blue-600 p-6 rounded-3xl shadow-xl shadow-blue-100 text-white">
-                        <div class="w-12 h-12 bg-white/20 text-white rounded-xl flex items-center justify-center mb-4"><i class="fas fa-box text-xl"></i></div>
-                        <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">Total Sisa Stok</p>
-                        <h3 id="stat-stok-total" class="text-3xl font-black mt-1">0</h3>
-                    </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-50 shadow-sm">
-                        <div class="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-user-check text-xl"></i></div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pasien Terdaftar</p>
-                        <h3 id="stat-pasien" class="text-3xl font-black text-gray-800 mt-1">0</h3>
-                    </div>
-                    <div class="bg-white p-6 rounded-3xl border border-gray-50 shadow-sm">
-                        <div class="w-12 h-12 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-hand-holding-medical text-xl"></i></div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pemakaian Hari Ini</p>
-                        <h3 id="stat-pakai" class="text-3xl font-black text-gray-800 mt-1">0</h3>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-3xl p-8 border border-gray-50 shadow-sm">
-                    <h4 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <span class="w-2 h-6 bg-red-500 rounded-full"></span> Peringatan Stok Rendah
-                    </h4>
-                    <ul id="low-stock-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></ul>
-                </div>
             </section>
 
             <section id="page-obat" class="page-content hidden space-y-6">
-                <div class="flex justify-between items-center bg-white p-4 rounded-3xl border border-gray-50">
-                    <span class="text-gray-400 font-bold ml-4">Katalog Obat</span>
-                    <button onclick="prepareModal('obat')" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-100 hover:scale-105 transition-all">+ Tambah Obat Baru</button>
+                <div class="flex flex-col md:flex-row justify-between gap-4">
+                    <div class="relative flex-1">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                        <input type="text" id="search-obat" oninput="renderObat()" placeholder="Cari nama obat..." class="w-full bg-white border border-slate-100 p-4 pl-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 shadow-sm">
+                    </div>
+                    <button onclick="prepareModal('obat')" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:scale-105 transition-all">+ Tambah Obat</button>
                 </div>
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <table class="w-full border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50/50">
-                                <th class="p-6 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Info Obat</th>
-                                <th class="p-6 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Stok</th>
-                                <th class="p-6 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Masa Berlaku</th>
-                                <th class="p-6 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Aksi</th>
+                <div class="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                            <tr>
+                                <th class="p-6">Detail Obat</th>
+                                <th class="p-6 text-center">Stok Awal</th>
+                                <th class="p-6 text-center">Sisa Stok</th>
+                                <th class="p-6 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="list-obat" class="divide-y divide-gray-50"></tbody>
+                        <tbody id="list-obat" class="divide-y divide-slate-50 font-semibold text-slate-600"></tbody>
                     </table>
                 </div>
             </section>
 
             <section id="page-pasien" class="page-content hidden space-y-6">
-                <div class="flex justify-between items-center bg-white p-4 rounded-3xl border border-gray-50">
-                    <span class="text-gray-400 font-bold ml-4">Database Pasien</span>
-                    <button onclick="prepareModal('pasien')" class="bg-green-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all">+ Daftar Pasien</button>
+                <div class="flex flex-col md:flex-row justify-between gap-4">
+                    <div class="relative flex-1">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                        <input type="text" id="search-pasien" oninput="renderPasien()" placeholder="Cari nama pasien..." class="w-full bg-white border border-slate-100 p-4 pl-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 shadow-sm">
+                    </div>
+                    <button onclick="prepareModal('pasien')" class="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all">+ Pasien Baru</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="list-pasien"></div>
             </section>
 
             <section id="page-penggunaan" class="page-content hidden space-y-6">
-                <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-3xl border border-gray-50 gap-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-calendar text-blue-500 ml-4"></i>
-                        <input type="date" id="filter-date" class="border-none bg-transparent font-bold text-gray-600 outline-none" onchange="renderPenggunaan()">
+                <div class="flex flex-col md:flex-row justify-between gap-4 items-center">
+                    <div class="flex gap-4 w-full md:w-auto">
+                        <input type="date" id="filter-date" class="bg-white border border-slate-100 p-4 rounded-2xl font-bold text-slate-600 outline-none" onchange="renderPenggunaan()">
+                        <div class="relative flex-1 md:w-64">
+                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                            <input type="text" id="search-penggunaan" oninput="renderPenggunaan()" placeholder="Cari riwayat..." class="w-full bg-white border border-slate-100 p-4 pl-12 rounded-2xl outline-none">
+                        </div>
                     </div>
-                    <button onclick="prepareModal('pakai')" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-100 hover:scale-105 transition-all">+ Catat Penggunaan</button>
+                    <button onclick="prepareModal('pakai')" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">+ Catat Penggunaan</button>
                 </div>
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="bg-gray-50/50 text-xs font-bold text-gray-400 uppercase">
-                                    <th class="p-6 text-left">Data Transaksi</th>
-                                    <th class="p-6 text-center">P/S/M</th>
-                                    <th class="p-6 text-center">Total</th>
-                                    <th class="p-6 text-left">Keterangan</th>
-                                    <th class="p-6 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="list-penggunaan" class="divide-y divide-gray-50"></tbody>
-                        </table>
-                    </div>
+                <div class="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                    <table class="w-full text-left">
+                        <tbody id="list-penggunaan" class="divide-y divide-slate-50 font-semibold"></tbody>
+                    </table>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="modal-obat" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl">
-            <h3 id="title-obat" class="text-2xl font-black text-gray-800 mb-2">Data Obat</h3>
-            <p class="text-gray-400 text-sm mb-8">Lengkapi informasi detail persediaan obat.</p>
-            <form id="form-obat" class="space-y-6">
+    <div id="modal-obat" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-10">
+            <h3 id="title-obat" class="text-2xl font-black text-slate-800 mb-6">Input Obat</h3>
+            <form id="form-obat" class="space-y-4">
                 <input type="hidden" id="o-id">
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-400 uppercase">Nama Obat</label>
-                    <input type="text" id="o-nama" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required>
-                </div>
+                <input type="text" id="o-nama" placeholder="Nama Obat" class="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500" required>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase">Satuan</label>
-                        <select id="o-satuan" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all">
-                            <option>Tablet</option><option>Botol</option><option>Ampul</option><option>Sachet</option>
-                        </select>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase">Stok Awal</label>
-                        <input type="number" id="o-stok" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required>
-                    </div>
+                    <select id="o-satuan" class="w-full bg-slate-50 p-4 rounded-2xl outline-none">
+                        <option>Tablet</option><option>Botol</option><option>Ampul</option><option>Sachet</option>
+                    </select>
+                    <input type="number" id="o-stok" placeholder="Stok Awal" class="w-full bg-slate-50 p-4 rounded-2xl outline-none" required>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-400 uppercase">Tanggal Kedaluwarsa</label>
-                    <input type="date" id="o-exp" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required>
-                </div>
+                <input type="date" id="o-exp" class="w-full bg-slate-50 p-4 rounded-2xl outline-none" required>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-obat')" class="flex-1 py-4 bg-gray-100 rounded-2xl font-extrabold text-gray-500">Batal</button>
-                    <button type="submit" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-extrabold shadow-xl shadow-blue-100">Simpan Data</button>
+                    <button type="button" onclick="closeModal('modal-obat')" class="flex-1 py-4 font-bold text-slate-400">Batal</button>
+                    <button type="submit" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-100">Simpan Data</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modal-pasien" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl">
-            <h3 id="title-pasien" class="text-2xl font-black text-gray-800 mb-8">Data Pasien</h3>
-            <form id="form-pasien" class="space-y-6">
+    <div id="modal-pasien" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-10">
+            <h3 id="title-pasien" class="text-2xl font-black text-slate-800 mb-6">Input Pasien</h3>
+            <form id="form-pasien" class="space-y-4">
                 <input type="hidden" id="p-id">
-                <input type="text" id="p-nama" placeholder="Nama Lengkap Pasien" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required>
+                <input type="text" id="p-nama" placeholder="Nama Lengkap" class="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-green-500" required>
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="p-umur" placeholder="Umur" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required>
-                    <select id="p-jk" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all">
+                    <input type="number" id="p-umur" placeholder="Umur" class="w-full bg-slate-50 p-4 rounded-2xl outline-none" required>
+                    <select id="p-jk" class="w-full bg-slate-50 p-4 rounded-2xl outline-none">
                         <option value="L">Laki-laki</option><option value="P">Perempuan</option>
                     </select>
                 </div>
-                <textarea id="p-diag" placeholder="Ketik Diagnosa di sini..." class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all h-32"></textarea>
+                <textarea id="p-diag" placeholder="Diagnosa Medis" class="w-full bg-slate-50 p-4 rounded-2xl outline-none h-32"></textarea>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-pasien')" class="flex-1 py-4 bg-gray-100 rounded-2xl font-extrabold text-gray-500">Batal</button>
-                    <button type="submit" class="flex-1 py-4 bg-green-600 text-white rounded-2xl font-extrabold shadow-xl shadow-green-100">Daftarkan</button>
+                    <button type="button" onclick="closeModal('modal-pasien')" class="flex-1 py-4 font-bold text-slate-400">Batal</button>
+                    <button type="submit" class="flex-1 py-4 bg-green-600 text-white rounded-2xl font-black shadow-lg shadow-green-100">Simpan Pasien</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modal-pakai" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl">
-            <h3 id="title-pakai" class="text-2xl font-black text-gray-800 mb-8">Pencatatan Baru</h3>
-            <form id="form-pakai" class="space-y-6">
-                <select id="tr-pasien" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required></select>
-                <select id="tr-obat" class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required></select>
-                <div class="grid grid-cols-3 gap-4 bg-blue-50 p-6 rounded-3xl">
-                    <div class="text-center">
-                        <label class="text-[10px] font-bold text-blue-400 uppercase">Pagi</label>
-                        <input type="number" id="tr-pagi" value="0" class="w-full bg-white border-none p-2 rounded-xl text-center font-bold">
-                    </div>
-                    <div class="text-center">
-                        <label class="text-[10px] font-bold text-blue-400 uppercase">Siang</label>
-                        <input type="number" id="tr-siang" value="0" class="w-full bg-white border-none p-2 rounded-xl text-center font-bold">
-                    </div>
-                    <div class="text-center">
-                        <label class="text-[10px] font-bold text-blue-400 uppercase">Malam</label>
-                        <input type="number" id="tr-malam" value="0" class="w-full bg-white border-none p-2 rounded-xl text-center font-bold">
-                    </div>
+    <div id="modal-pakai" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-10">
+            <h3 class="text-2xl font-black text-slate-800 mb-6">Catat Penggunaan</h3>
+            <form id="form-pakai" class="space-y-4">
+                <select id="tr-pasien" class="w-full bg-slate-50 p-4 rounded-2xl outline-none" required></select>
+                <select id="tr-obat" class="w-full bg-slate-50 p-4 rounded-2xl outline-none" required></select>
+                <div class="grid grid-cols-3 gap-2 bg-indigo-50 p-4 rounded-2xl">
+                    <input type="number" id="tr-pagi" value="0" placeholder="Pagi" class="w-full p-2 rounded-xl text-center font-bold">
+                    <input type="number" id="tr-siang" value="0" placeholder="Siang" class="w-full p-2 rounded-xl text-center font-bold">
+                    <input type="number" id="tr-malam" value="0" placeholder="Malam" class="w-full p-2 rounded-xl text-center font-bold">
                 </div>
-                <input type="text" id="tr-ket" placeholder="Tambahkan catatan keterangan..." class="w-full bg-gray-50 border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all">
+                <input type="text" id="tr-ket" placeholder="Keterangan..." class="w-full bg-slate-50 p-4 rounded-2xl outline-none">
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeModal('modal-pakai')" class="flex-1 py-4 bg-gray-100 rounded-2xl font-extrabold text-gray-500">Batal</button>
-                    <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-extrabold shadow-xl shadow-indigo-100">Simpan Transaksi</button>
+                    <button type="button" onclick="closeModal('modal-pakai')" class="flex-1 py-4 font-bold text-slate-400">Batal</button>
+                    <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100">Kirim Data</button>
                 </div>
             </form>
         </div>
@@ -271,78 +206,50 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
         let OBAT = [], PASIEN = [], TRANSAKSI = [];
-        let searchTerm = "";
 
-        // --- LOGIN LOGIC ---
+        // AUTH
         document.getElementById('login-form').onsubmit = (e) => {
             e.preventDefault();
-            const u = document.getElementById('user-input').value;
-            const p = document.getElementById('pass-input').value;
-            if(u === "MMRC.Stock1999" && p === "Madani1999") {
+            if(document.getElementById('user-input').value === "MMRC.Stock1999" && document.getElementById('pass-input').value === "Madani1999") {
                 document.getElementById('login-page').classList.add('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
-                initRealtime();
-            } else {
-                alert("Username atau Password Salah!");
-            }
+                syncData();
+            } else { alert("Akses Ditolak!"); }
         };
 
-        // --- REALTIME SYNC ---
-        function initRealtime() {
-            onSnapshot(collection(db, "obat"), (s) => { 
-                OBAT = s.docs.map(d => ({id: d.id, ...d.data()})); 
-                renderAll(); 
-            });
-            onSnapshot(collection(db, "pasien"), (s) => { 
-                PASIEN = s.docs.map(d => ({id: d.id, ...d.data()})); 
-                renderAll(); 
-            });
-            onSnapshot(query(collection(db, "transaksi"), orderBy("tanggal", "desc")), (s) => { 
-                TRANSAKSI = s.docs.map(d => ({id: d.id, ...d.data()})); 
-                renderAll(); 
-            });
+        function syncData() {
+            onSnapshot(collection(db, "obat"), s => { OBAT = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); });
+            onSnapshot(collection(db, "pasien"), s => { PASIEN = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); });
+            onSnapshot(query(collection(db, "transaksi"), orderBy("tanggal", "desc")), s => { TRANSAKSI = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); });
         }
 
-        // --- SEARCH HANDLER ---
-        window.handleSearch = () => {
-            searchTerm = document.getElementById('global-search').value.toLowerCase();
-            renderAll();
-        };
-
-        // --- NAVIGATION ---
         window.showPage = (id) => {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.getElementById('page-' + id).classList.remove('hidden');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
             event.currentTarget.classList.add('nav-active');
-            document.getElementById('page-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
         };
 
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
-        // --- CRUD ACTIONS ---
+        // CRUD PREPARE
         window.prepareModal = (type, dataId = null) => {
             const form = document.getElementById('form-' + type);
             form.reset();
-            document.getElementById(type.charAt(0) + '-id')?.setAttribute('value', dataId || '');
-            
+            document.getElementById(type.charAt(0) + '-id').value = dataId || '';
             if(type === 'pakai') {
                 document.getElementById('tr-pasien').innerHTML = PASIEN.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
                 document.getElementById('tr-obat').innerHTML = OBAT.map(o => `<option value="${o.id}">${o.nama}</option>`).join('');
             }
-
             if(dataId) {
                 const data = type === 'obat' ? OBAT.find(x => x.id === dataId) : PASIEN.find(x => x.id === dataId);
                 if(type === 'obat') {
-                    document.getElementById('o-id').value = data.id;
                     document.getElementById('o-nama').value = data.nama;
                     document.getElementById('o-satuan').value = data.satuan;
                     document.getElementById('o-stok').value = data.stokAwal;
                     document.getElementById('o-exp').value = data.exp;
-                } else if(type === 'pasien') {
-                    document.getElementById('p-id').value = data.id;
+                } else {
                     document.getElementById('p-nama').value = data.nama;
                     document.getElementById('p-umur').value = data.umur;
                     document.getElementById('p-jk').value = data.jk;
@@ -352,16 +259,11 @@
             document.getElementById('modal-' + type).classList.remove('hidden');
         };
 
-        // Forms Submits
+        // SUBMIT ACTIONS
         document.getElementById('form-obat').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('o-id').value;
-            const data = {
-                nama: document.getElementById('o-nama').value,
-                satuan: document.getElementById('o-satuan').value,
-                stokAwal: parseInt(document.getElementById('o-stok').value),
-                exp: document.getElementById('o-exp').value
-            };
+            const data = { nama: document.getElementById('o-nama').value, satuan: document.getElementById('o-satuan').value, stokAwal: parseInt(document.getElementById('o-stok').value), exp: document.getElementById('o-exp').value };
             id ? await updateDoc(doc(db, "obat", id), data) : await addDoc(collection(db, "obat"), data);
             closeModal('modal-obat');
         };
@@ -369,147 +271,108 @@
         document.getElementById('form-pasien').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('p-id').value;
-            const data = {
-                nama: document.getElementById('p-nama').value,
-                umur: document.getElementById('p-umur').value,
-                jk: document.getElementById('p-jk').value,
-                diag: document.getElementById('p-diag').value
-            };
+            const data = { nama: document.getElementById('p-nama').value, umur: document.getElementById('p-umur').value, jk: document.getElementById('p-jk').value, diag: document.getElementById('p-diag').value };
             id ? await updateDoc(doc(db, "pasien", id), data) : await addDoc(collection(db, "pasien"), data);
             closeModal('modal-pasien');
         };
 
         document.getElementById('form-pakai').onsubmit = async (e) => {
             e.preventDefault();
-            const p = parseInt(document.getElementById('tr-pagi').value) || 0;
-            const s = parseInt(document.getElementById('tr-siang').value) || 0;
-            const m = parseInt(document.getElementById('tr-malam').value) || 0;
-            const data = {
-                tanggal: new Date().toISOString().split('T')[0],
-                pasienId: document.getElementById('tr-pasien').value,
-                obatId: document.getElementById('tr-obat').value,
-                pagi: p, siang: s, malam: m, total: p+s+m,
-                ket: document.getElementById('tr-ket').value
-            };
-            await addDoc(collection(db, "transaksi"), data);
+            const p = parseInt(document.getElementById('tr-pagi').value) || 0, s = parseInt(document.getElementById('tr-siang').value) || 0, m = parseInt(document.getElementById('tr-malam').value) || 0;
+            await addDoc(collection(db, "transaksi"), { tanggal: new Date().toISOString().split('T')[0], pasienId: document.getElementById('tr-pasien').value, obatId: document.getElementById('tr-obat').value, pagi: p, siang: s, malam: m, total: p+s+m, ket: document.getElementById('tr-ket').value });
             closeModal('modal-pakai');
         };
 
-        window.deleteItem = async (type, id) => {
-            if(confirm("Hapus permanen data ini?")) {
-                const col = type === 'OBAT' ? 'obat' : (type === 'PASIEN' ? 'pasien' : 'transaksi');
-                await deleteDoc(doc(db, col, id));
-            }
-        };
+        window.deleteItem = async (type, id) => { if(confirm("Hapus Permanen?")) await deleteDoc(doc(db, type, id)); };
 
-        // --- RENDER FUNCTIONS ---
-        window.renderAll = () => {
-            renderDashboard();
-            renderObat();
-            renderPasien();
-            renderPenggunaan();
-        };
+        // RENDERING
+        function renderAll() { renderDashboard(); renderObat(); renderPasien(); renderPenggunaan(); }
 
         function renderDashboard() {
-            document.getElementById('stat-obat').innerText = OBAT.length;
-            document.getElementById('stat-pasien').innerText = PASIEN.length;
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('stat-pakai').innerText = TRANSAKSI.filter(t => t.tanggal === today).reduce((a, b) => a + b.total, 0);
-            
-            let totalSisa = 0;
-            const lowStockList = document.getElementById('low-stock-list');
-            lowStockList.innerHTML = '';
-
-            OBAT.forEach(o => {
+            const grid = document.getElementById('dashboard-grid');
+            grid.innerHTML = OBAT.map(o => {
                 const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((a, b) => a + b.total, 0);
                 const sisa = o.stokAwal - used;
-                totalSisa += sisa;
-                if(sisa < 10) {
-                    lowStockList.innerHTML += `
-                        <li class="flex justify-between items-center p-4 bg-red-50 rounded-2xl border border-red-100">
-                            <span class="font-bold text-gray-700">${o.nama}</span>
-                            <span class="bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black">${sisa} ${o.satuan}</span>
-                        </li>`;
-                }
-            });
-            document.getElementById('stat-stok-total').innerText = totalSisa;
-        }
-
-        function renderObat() {
-            const list = document.getElementById('list-obat');
-            const filtered = OBAT.filter(o => o.nama.toLowerCase().includes(searchTerm));
-            list.innerHTML = filtered.map(o => {
-                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((a, b) => a + b.total, 0);
-                const sisa = o.stokAwal - used;
+                const pct = Math.min((sisa / o.stokAwal) * 100, 100);
                 return `
-                    <tr class="hover:bg-gray-50/50 transition-all">
-                        <td class="p-6">
-                            <p class="font-extrabold text-gray-800">${o.nama}</p>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase">${o.satuan}</p>
-                        </td>
-                        <td class="p-6 text-center">
-                            <span class="text-xs text-gray-400">Sisa:</span>
-                            <span class="font-black ${sisa < 10 ? 'text-red-500' : 'text-blue-600'}">${sisa}</span>
-                        </td>
-                        <td class="p-6 text-center text-sm font-bold text-gray-500">${o.exp}</td>
-                        <td class="p-6 text-center space-x-2">
-                            <button onclick="prepareModal('obat', '${o.id}')" class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><i class="fas fa-edit"></i></button>
-                            <button onclick="deleteItem('OBAT', '${o.id}')" class="w-10 h-10 bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`;
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-full -mr-8 -mt-8"></div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">${o.satuan}</p>
+                    <h4 class="text-xl font-black text-slate-800 mb-4">${o.nama}</h4>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="text-3xl font-black ${sisa < 10 ? 'text-red-500' : 'text-blue-600'}">${sisa}</span>
+                        <span class="text-[10px] font-bold text-slate-400 mb-1">DARI ${o.stokAwal}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="h-full ${sisa < 10 ? 'bg-red-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
             }).join('');
         }
 
-        function renderPasien() {
-            const list = document.getElementById('list-pasien');
-            const filtered = PASIEN.filter(p => p.nama.toLowerCase().includes(searchTerm));
-            list.innerHTML = filtered.map(p => `
-                <div class="bg-white p-6 rounded-3xl border border-gray-50 shadow-sm hover:shadow-md transition-all">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400"><i class="fas fa-user text-xl"></i></div>
-                        <div class="flex gap-2">
-                            <button onclick="prepareModal('pasien', '${p.id}')" class="text-blue-400 hover:text-blue-600"><i class="fas fa-edit"></i></button>
-                            <button onclick="deleteItem('PASIEN', '${p.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                        </div>
+        window.renderObat = () => {
+            const search = document.getElementById('search-obat').value.toLowerCase();
+            document.getElementById('list-obat').innerHTML = OBAT.filter(o => o.nama.toLowerCase().includes(search)).map(o => {
+                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((a, b) => a + b.total, 0);
+                const sisa = o.stokAwal - used;
+                return `
+                <tr>
+                    <td class="p-6"><p class="font-black text-slate-800">${o.nama}</p><p class="text-[10px] text-slate-400 uppercase">${o.satuan} • EXP: ${o.exp}</p></td>
+                    <td class="p-6 text-center text-slate-400">${o.stokAwal}</td>
+                    <td class="p-6 text-center font-black ${sisa < 10 ? 'text-red-500' : 'text-blue-600'}">${sisa}</td>
+                    <td class="p-6 text-center space-x-2">
+                        <button onclick="prepareModal('obat', '${o.id}')" class="text-blue-500 hover:scale-110 transition-all"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteItem('obat', '${o.id}')" class="text-slate-200 hover:text-red-500 transition-all"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        };
+
+        window.renderPasien = () => {
+            const search = document.getElementById('search-pasien').value.toLowerCase();
+            document.getElementById('list-pasien').innerHTML = PASIEN.filter(p => p.nama.toLowerCase().includes(search)).map(p => `
+            <div class="bg-white p-8 rounded-[2rem] border border-slate-100 relative group">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-slate-50 w-12 h-12 rounded-2xl flex items-center justify-center text-slate-300"><i class="fas fa-id-badge text-xl"></i></div>
+                    <div class="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onclick="prepareModal('pasien', '${p.id}')" class="text-blue-500"><i class="fas fa-pen"></i></button>
+                        <button onclick="deleteItem('pasien', '${p.id}')" class="text-red-300"><i class="fas fa-times"></i></button>
                     </div>
-                    <h5 class="text-lg font-black text-gray-800">${p.nama}</h5>
-                    <p class="text-xs font-bold text-blue-500 mb-4">${p.umur} Thn • ${p.jk === 'L' ? 'Laki-laki' : 'Perempuan'}</p>
-                    <div class="p-4 bg-gray-50 rounded-2xl">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Diagnosa</p>
-                        <p class="text-sm text-gray-600 leading-relaxed">${p.diag || 'Tidak ada diagnosa'}</p>
-                    </div>
-                </div>`).join('');
-        }
+                </div>
+                <h4 class="text-xl font-black text-slate-800">${p.nama}</h4>
+                <p class="text-blue-500 font-bold text-xs mb-4 uppercase">${p.umur} THN • ${p.jk}</p>
+                <div class="bg-slate-50/50 p-4 rounded-2xl text-xs text-slate-500 font-medium">${p.diag || 'Tidak ada diagnosa'}</div>
+            </div>`).join('');
+        };
 
         window.renderPenggunaan = () => {
-            const dateVal = document.getElementById('filter-date').value;
-            const list = document.getElementById('list-penggunaan');
-            const filtered = TRANSAKSI.filter(t => {
-                const matchDate = dateVal ? t.tanggal === dateVal : true;
+            const date = document.getElementById('filter-date').value;
+            const search = document.getElementById('search-penggunaan').value.toLowerCase();
+            document.getElementById('list-penggunaan').innerHTML = TRANSAKSI.filter(t => {
+                const matchDate = date ? t.tanggal === date : true;
                 const p = PASIEN.find(x => x.id === t.pasienId)?.nama.toLowerCase() || "";
                 const o = OBAT.find(x => x.id === t.obatId)?.nama.toLowerCase() || "";
-                return matchDate && (p.includes(searchTerm) || o.includes(searchTerm));
-            });
-            
-            list.innerHTML = filtered.map(t => {
+                return matchDate && (p.includes(search) || o.includes(search));
+            }).map(t => {
                 const p = PASIEN.find(x => x.id === t.pasienId)?.nama || 'N/A';
                 const o = OBAT.find(x => x.id === t.obatId)?.nama || 'N/A';
                 return `
-                    <tr class="hover:bg-gray-50/50 transition-all">
-                        <td class="p-6">
-                            <p class="font-black text-gray-800">${p}</p>
-                            <p class="text-[10px] font-bold text-blue-500 uppercase">${o} • ${t.tanggal}</p>
-                        </td>
-                        <td class="p-6 text-center font-bold text-gray-400">${t.pagi}/${t.siang}/${t.malam}</td>
-                        <td class="p-6 text-center"><span class="bg-gray-800 text-white px-4 py-1 rounded-full font-black text-xs">${t.total}</span></td>
-                        <td class="p-6 text-sm text-gray-500 italic">${t.ket || '-'}</td>
-                        <td class="p-6 text-center">
-                            <button onclick="deleteItem('TRX', '${t.id}')" class="text-red-300 hover:text-red-600 transition-all"><i class="fas fa-times-circle text-xl"></i></button>
-                        </td>
-                    </tr>`;
+                <tr class="hover:bg-slate-50/30 transition-all">
+                    <td class="p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-2 h-10 bg-indigo-500 rounded-full"></div>
+                            <div><p class="text-slate-800 font-black">${p}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${o} • ${t.tanggal}</p></div>
+                        </div>
+                    </td>
+                    <td class="p-6 text-center text-slate-400 font-bold">${t.pagi}/${t.siang}/${t.malam}</td>
+                    <td class="p-6 text-center"><span class="bg-slate-900 text-white px-4 py-1 rounded-full text-xs font-black">${t.total}</span></td>
+                    <td class="p-6 text-slate-400 text-sm italic font-medium">${t.ket || '-'}</td>
+                    <td class="p-6 text-center">
+                        <button onclick="deleteItem('transaksi', '${t.id}')" class="text-slate-200 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                </tr>`;
             }).join('');
         };
-
     </script>
 </body>
-    </html>
+                        </html>
