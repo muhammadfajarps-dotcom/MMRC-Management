@@ -194,214 +194,188 @@
             </form>
         </div>
     </div>
+<script type="module">
+    // 1. Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    <script>
-        let OBAT = JSON.parse(localStorage.getItem('mmhc_obat')) || [];
-        let PASIEN = JSON.parse(localStorage.getItem('mmhc_pasien')) || [];
-        let TRANSAKSI = JSON.parse(localStorage.getItem('mmhc_transaksi')) || [];
+    // 2. Konfigurasi Anda
+    const firebaseConfig = {
+        apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
+        authDomain: "mmrc-stock.firebaseapp.com",
+        projectId: "mmrc-stock",
+        storageBucket: "mmrc-stock.firebasestorage.app",
+        messagingSenderId: "722563453659",
+        appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
+    };
 
-        function save() {
-            localStorage.setItem('mmhc_obat', JSON.stringify(OBAT));
-            localStorage.setItem('mmhc_pasien', JSON.stringify(PASIEN));
-            localStorage.setItem('mmhc_transaksi', JSON.stringify(TRANSAKSI));
-            renderAll();
+    // 3. Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Variabel Lokal untuk menampung data dari Cloud
+    let OBAT = [];
+    let PASIEN = [];
+    let TRANSAKSI = [];
+
+    // --- FUNGSI SINKRONISASI REAL-TIME ---
+    // Mengambil data Obat
+    onSnapshot(collection(db, "obat"), (snapshot) => {
+        OBAT = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+    });
+
+    // Mengambil data Pasien
+    onSnapshot(collection(db, "pasien"), (snapshot) => {
+        PASIEN = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+    });
+
+    // Mengambil data Transaksi
+    onSnapshot(collection(db, "transaksi"), (snapshot) => {
+        TRANSAKSI = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+    });
+
+    // --- FORM HANDLERS (Simpan ke Cloud) ---
+    window.prepareModal = function(type, dataId = null) {
+        const modalId = 'modal-' + type;
+        const form = document.getElementById('form-' + type);
+        form.reset();
+        document.getElementById(type.charAt(0) + '-id').value = dataId || '';
+        document.getElementById('title-' + type).innerText = (dataId ? 'Edit' : 'Input') + ' Data ' + type;
+
+        if (type === 'pakai') {
+            document.getElementById('tr-pasien').innerHTML = PASIEN.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
+            document.getElementById('tr-obat').innerHTML = OBAT.map(o => `<option value="${o.id}">${o.nama}</option>`).join('');
         }
 
-        /* NAVIGATION & MODAL CONTROL */
-        function showPage(pageId) {
-            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-            document.getElementById('page-' + pageId).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active-link'));
-            event.currentTarget.classList.add('active-link');
-            document.getElementById('page-title').innerText = pageId.toUpperCase();
-        }
-
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-        function prepareModal(type, dataId = null) {
-            const modalId = 'modal-' + type;
-            const form = document.getElementById('form-' + type);
-            form.reset();
-            document.getElementById(type.charAt(0) + '-id').value = '';
-            document.getElementById('title-' + type).innerText = (dataId ? 'Edit' : 'Input') + ' Data ' + type;
-
-            if (type === 'pakai') {
-                document.getElementById('tr-pasien').innerHTML = PASIEN.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
-                document.getElementById('tr-obat').innerHTML = OBAT.map(o => `<option value="${o.id}">${o.nama}</option>`).join('');
+        if (dataId) {
+            if (type === 'obat') {
+                const d = OBAT.find(x => x.id === dataId);
+                document.getElementById('o-nama').value = d.nama;
+                document.getElementById('o-satuan').value = d.satuan;
+                document.getElementById('o-stok').value = d.stokAwal;
+                document.getElementById('o-exp').value = d.exp;
+            } else if (type === 'pasien') {
+                const d = PASIEN.find(x => x.id === dataId);
+                document.getElementById('p-nama').value = d.nama;
+                document.getElementById('p-umur').value = d.umur;
+                document.getElementById('p-jk').value = d.jk;
+                document.getElementById('p-diag').value = d.diag;
             }
+        }
+        document.getElementById(modalId).classList.remove('hidden');
+    }
 
-            if (dataId) {
-                if (type === 'obat') {
-                    const d = OBAT.find(x => x.id === dataId);
-                    document.getElementById('o-id').value = d.id;
-                    document.getElementById('o-nama').value = d.nama;
-                    document.getElementById('o-satuan').value = d.satuan;
-                    document.getElementById('o-stok').value = d.stokAwal;
-                    document.getElementById('o-exp').value = d.exp;
-                } else if (type === 'pasien') {
-                    const d = PASIEN.find(x => x.id === dataId);
-                    document.getElementById('p-id').value = d.id;
-                    document.getElementById('p-nama').value = d.nama;
-                    document.getElementById('p-umur').value = d.umur;
-                    document.getElementById('p-jk').value = d.jk;
-                    document.getElementById('p-diag').value = d.diag;
-                } else if (type === 'pakai') {
-                    const d = TRANSAKSI.find(x => x.id === dataId);
-                    document.getElementById('tr-id').value = d.id;
-                    document.getElementById('tr-pasien').value = d.pasienId;
-                    document.getElementById('tr-obat').value = d.obatId;
-                    document.getElementById('tr-pagi').value = d.pagi;
-                    document.getElementById('tr-siang').value = d.siang;
-                    document.getElementById('tr-malam').value = d.malam;
-                    document.getElementById('tr-ket').value = d.ket;
-                }
+    document.getElementById('form-obat').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('o-id').value;
+        const data = {
+            nama: document.getElementById('o-nama').value,
+            satuan: document.getElementById('o-satuan').value,
+            stokAwal: parseInt(document.getElementById('o-stok').value),
+            exp: document.getElementById('o-exp').value
+        };
+        if(id) await updateDoc(doc(db, "obat", id), data);
+        else await addDoc(collection(db, "obat"), data);
+        closeModal('modal-obat');
+    };
+
+    document.getElementById('form-pasien').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('p-id').value;
+        const data = {
+            nama: document.getElementById('p-nama').value,
+            umur: document.getElementById('p-umur').value,
+            jk: document.getElementById('p-jk').value,
+            diag: document.getElementById('p-diag').value
+        };
+        if(id) await updateDoc(doc(db, "pasien", id), data);
+        else await addDoc(collection(db, "pasien"), data);
+        closeModal('modal-pasien');
+    };
+
+    document.getElementById('form-pakai').onsubmit = async (e) => {
+        e.preventDefault();
+        const pagi = parseInt(document.getElementById('tr-pagi').value) || 0;
+        const siang = parseInt(document.getElementById('tr-siang').value) || 0;
+        const malam = parseInt(document.getElementById('tr-malam').value) || 0;
+        const data = {
+            tanggal: new Date().toISOString().split('T')[0],
+            pasienId: document.getElementById('tr-pasien').value,
+            obatId: document.getElementById('tr-obat').value,
+            pagi, siang, malam, total: pagi + siang + malam,
+            ket: document.getElementById('tr-ket').value
+        };
+        await addDoc(collection(db, "transaksi"), data);
+        closeModal('modal-pakai');
+    };
+
+    window.deleteItem = async function(type, id) {
+        if(!confirm("Hapus data ini?")) return;
+        const path = type === 'OBAT' ? 'obat' : (type === 'PASIEN' ? 'pasien' : 'transaksi');
+        await deleteDoc(doc(db, path, id));
+    }
+
+    // --- FUNGSI TAMPILAN (RENDER) ---
+    // (Fungsi ini tetap sama dengan logika Anda, hanya membaca dari variabel OBAT/PASIEN/TRANSAKSI yang sudah terupdate dari Firebase)
+    window.renderAll = function() {
+        renderDashboard();
+        renderObat();
+        renderPasien();
+        renderPenggunaan();
+    }
+
+    function renderDashboard() {
+        document.getElementById('stat-obat').innerText = OBAT.length;
+        document.getElementById('stat-pasien').innerText = PASIEN.length;
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('stat-pakai').innerText = TRANSAKSI.filter(t => t.tanggal === today).reduce((s, c) => s + c.total, 0);
+        
+        let totalSisa = 0;
+        const lowStockList = document.getElementById('low-stock-list');
+        lowStockList.innerHTML = '';
+        
+        OBAT.forEach(o => {
+            const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
+            const sisa = o.stokAwal - used;
+            totalSisa += sisa;
+            if(sisa < 10) {
+                lowStockList.innerHTML += `<li class="p-3 text-xs flex justify-between"><span>${o.nama}</span><span class="font-bold text-red-500">${sisa} ${o.satuan}</span></li>`;
             }
-            document.getElementById(modalId).classList.remove('hidden');
-        }
+        });
+        document.getElementById('stat-stok-total').innerText = totalSisa;
+    }
 
-        /* FORM HANDLERS */
-        document.getElementById('form-obat').onsubmit = (e) => {
-            e.preventDefault();
-            const id = document.getElementById('o-id').value;
-            const data = {
-                id: id || 'O-' + Date.now(),
-                nama: document.getElementById('o-nama').value,
-                satuan: document.getElementById('o-satuan').value,
-                stokAwal: parseInt(document.getElementById('o-stok').value),
-                exp: document.getElementById('o-exp').value
-            };
-            if(id) OBAT = OBAT.map(x => x.id === id ? data : x);
-            else OBAT.push(data);
-            save(); closeModal('modal-obat');
-        };
+    function renderObat() {
+        document.getElementById('list-obat').innerHTML = OBAT.map(o => {
+            const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
+            const sisa = o.stokAwal - used;
+            return `<tr><td class="font-bold">${o.nama}</td><td>${o.satuan}</td><td class="text-center">${o.stokAwal}</td><td class="text-center font-bold ${sisa < 10 ? 'text-red-500' : 'text-green-600'}">${sisa}</td><td>${o.exp}</td><td class="text-center"><button onclick="prepareModal('obat', '${o.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button><button onclick="deleteItem('OBAT', '${o.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
+        }).join('');
+    }
 
-        document.getElementById('form-pasien').onsubmit = (e) => {
-            e.preventDefault();
-            const id = document.getElementById('p-id').value;
-            const data = {
-                id: id || 'P-' + Date.now(),
-                nama: document.getElementById('p-nama').value,
-                umur: document.getElementById('p-umur').value,
-                jk: document.getElementById('p-jk').value,
-                diag: document.getElementById('p-diag').value
-            };
-            if(id) PASIEN = PASIEN.map(x => x.id === id ? data : x);
-            else PASIEN.push(data);
-            save(); closeModal('modal-pasien');
-        };
+    function renderPasien() {
+        document.getElementById('list-pasien').innerHTML = PASIEN.map(p => `<tr><td class="font-bold">${p.nama}</td><td>${p.umur} Thn (${p.jk})</td><td>${p.diag}</td><td class="text-center"><button onclick="prepareModal('pasien', '${p.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button><button onclick="deleteItem('PASIEN', '${p.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+    }
 
-        document.getElementById('form-pakai').onsubmit = (e) => {
-            e.preventDefault();
-            const id = document.getElementById('tr-id').value;
-            const pagi = parseInt(document.getElementById('tr-pagi').value) || 0;
-            const siang = parseInt(document.getElementById('tr-siang').value) || 0;
-            const malam = parseInt(document.getElementById('tr-malam').value) || 0;
-            const total = pagi + siang + malam;
-            
-            const data = {
-                id: id || 'T-' + Date.now(),
-                tanggal: new Date().toISOString().split('T')[0],
-                pasienId: document.getElementById('tr-pasien').value,
-                obatId: document.getElementById('tr-obat').value,
-                pagi, siang, malam, total,
-                ket: document.getElementById('tr-ket').value
-            };
-            if(id) TRANSAKSI = TRANSAKSI.map(x => x.id === id ? data : x);
-            else TRANSAKSI.push(data);
-            save(); closeModal('modal-pakai');
-        };
+    window.renderPenggunaan = function() {
+        const dateVal = document.getElementById('filter-date').value;
+        document.getElementById('list-penggunaan').innerHTML = TRANSAKSI.filter(t => dateVal ? t.tanggal === dateVal : true).reverse().map(t => {
+            const p = PASIEN.find(x => x.id === t.pasienId)?.nama || 'N/A';
+            const o = OBAT.find(x => x.id === t.obatId)?.nama || 'N/A';
+            return `<tr><td>${t.tanggal}</td><td class="font-bold">${p}</td><td class="text-blue-600">${o}</td><td class="text-center">${t.pagi}/${t.siang}/${t.malam}</td><td class="text-center font-bold">${t.total}</td><td>${t.ket || '-'}</td><td class="text-center"><button onclick="deleteItem('TRX', '${t.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-times"></i></button></td></tr>`;
+        }).join('');
+    }
 
-        /* RENDER FUNCTIONS */
-        function renderAll() {
-            renderDashboard();
-            renderObat();
-            renderPasien();
-            renderPenggunaan();
-        }
+    // Fungsi bantu lainnya
+    window.showPage = function(pageId) {
+        document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+        document.getElementById('page-' + pageId).classList.remove('hidden');
+        document.getElementById('page-title').innerText = pageId.toUpperCase();
+    }
+    window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); }
 
-        function renderDashboard() {
-            document.getElementById('stat-obat').innerText = OBAT.length;
-            document.getElementById('stat-pasien').innerText = PASIEN.length;
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('stat-pakai').innerText = TRANSAKSI.filter(t => t.tanggal === today).reduce((s, c) => s + c.total, 0);
-            
-            let totalSisa = 0;
-            const lowStockList = document.getElementById('low-stock-list');
-            lowStockList.innerHTML = '';
-            
-            OBAT.forEach(o => {
-                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
-                const sisa = o.stokAwal - used;
-                totalSisa += sisa;
-                if(sisa < 10) {
-                    lowStockList.innerHTML += `<li class="p-3 text-xs flex justify-between"><span>${o.nama}</span><span class="font-bold text-red-500">${sisa} ${o.satuan}</span></li>`;
-                }
-            });
-            document.getElementById('stat-stok-total').innerText = totalSisa;
-        }
-
-        function renderObat() {
-            const list = document.getElementById('list-obat');
-            list.innerHTML = OBAT.map(o => {
-                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
-                const sisa = o.stokAwal - used;
-                return `<tr>
-                    <td class="font-bold">${o.nama}</td>
-                    <td>${o.satuan}</td>
-                    <td class="text-center">${o.stokAwal}</td>
-                    <td class="text-center font-bold ${sisa < 10 ? 'text-red-500' : 'text-green-600'}">${sisa}</td>
-                    <td>${o.exp}</td>
-                    <td class="text-center">
-                        <button onclick="prepareModal('obat', '${o.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteItem('OBAT', '${o.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-
-        function renderPasien() {
-            const list = document.getElementById('list-pasien');
-            list.innerHTML = PASIEN.map(p => `<tr>
-                <td class="font-bold">${p.nama}</td>
-                <td>${p.umur} Thn (${p.jk})</td>
-                <td>${p.diag}</td>
-                <td class="text-center">
-                    <button onclick="prepareModal('pasien', '${p.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteItem('PASIEN', '${p.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>`).join('');
-        }
-
-        function renderPenggunaan() {
-            const dateVal = document.getElementById('filter-date').value;
-            const list = document.getElementById('list-penggunaan');
-            list.innerHTML = TRANSAKSI.filter(t => dateVal ? t.tanggal === dateVal : true).reverse().map(t => {
-                const p = PASIEN.find(x => x.id === t.pasienId)?.nama || 'N/A';
-                const o = OBAT.find(x => x.id === t.obatId)?.nama || 'N/A';
-                return `<tr>
-                    <td>${t.tanggal}</td>
-                    <td class="font-bold">${p}</td>
-                    <td class="text-blue-600">${o}</td>
-                    <td class="text-center">${t.pagi}/${t.siang}/${t.malam}</td>
-                    <td class="text-center font-bold">${t.total}</td>
-                    <td>${t.ket || '-'}</td>
-                    <td class="text-center">
-                        <button onclick="prepareModal('pakai', '${t.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteItem('TRX', '${t.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-times"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-
-        function deleteItem(type, id) {
-            if(!confirm("Hapus data ini?")) return;
-            if(type === 'OBAT') OBAT = OBAT.filter(x => x.id !== id);
-            if(type === 'PASIEN') PASIEN = PASIEN.filter(x => x.id !== id);
-            if(type === 'TRX') TRANSAKSI = TRANSAKSI.filter(x => x.id !== id);
-            save();
-        }
-
-        window.onload = renderAll;
-    </script>
-</body>
-</html>
+</script>
+                                    
