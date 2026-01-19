@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMHC - Management Medicine Health Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .active-link { @apply bg-blue-50 text-blue-700 border-l-4 border-blue-700; }
+        th { @apply px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50; }
+        td { @apply px-4 py-4 whitespace-nowrap text-sm border-b border-gray-100; }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col md:flex-row min-h-screen">
+
+    <aside class="w-full md:w-64 bg-white shadow-xl z-20">
+        <div class="p-6">
+            <h1 class="text-2xl font-black text-blue-600 tracking-tighter">MMHC</h1>
+            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Medical Management</p>
+        </div>
+        <nav class="mt-2">
+            <a href="#" onclick="showPage('dashboard')" class="nav-item flex items-center px-6 py-4 transition-all active-link">
+                <i class="fas fa-chart-line w-6"></i> Dashboard
+            </a>
+            <a href="#" onclick="showPage('obat')" class="nav-item flex items-center px-6 py-4 transition-all text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-pills w-6"></i> Data Obat
+            </a>
+            <a href="#" onclick="showPage('pasien')" class="nav-item flex items-center px-6 py-4 transition-all text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-users w-6"></i> Data Pasien
+            </a>
+            <a href="#" onclick="showPage('penggunaan')" class="nav-item flex items-center px-6 py-4 transition-all text-gray-500 hover:bg-gray-50">
+                <i class="fas fa-notes-medical w-6"></i> Penggunaan Obat
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <header class="mb-8">
+            <h2 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h2>
+            <p id="page-desc" class="text-gray-500 text-sm">Sistem Manajemen Obat MMHC</p>
+        </header>
+
+        <section id="page-dashboard" class="page-content">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Total Obat</p>
+                    <h3 id="stat-obat" class="text-2xl font-bold">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Sisa Stok Total</p>
+                    <h3 id="stat-stok-total" class="text-2xl font-bold text-blue-600">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Pasien Terdaftar</p>
+                    <h3 id="stat-pasien" class="text-2xl font-bold text-green-600">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Pemakaian Hari Ini</p>
+                    <h3 id="stat-pakai" class="text-2xl font-bold text-red-500">0</h3>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b font-bold text-sm text-red-600">⚠️ Peringatan Stok Rendah (< 10)</div>
+                <ul id="low-stock-list" class="divide-y divide-gray-50"></ul>
+            </div>
+        </section>
+
+        <section id="page-obat" class="page-content hidden">
+            <div class="mb-4 flex justify-end">
+                <button onclick="prepareModal('obat')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-blue-700">+ Tambah Obat</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Nama Obat</th>
+                            <th>Satuan</th>
+                            <th class="text-center">Stok Awal</th>
+                            <th class="text-center">Sisa</th>
+                            <th>Expired</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-obat"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="page-pasien" class="page-content hidden">
+            <div class="mb-4 flex justify-end">
+                <button onclick="prepareModal('pasien')" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-green-700">+ Daftar Pasien</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Nama</th>
+                            <th>Umur/JK</th>
+                            <th>Diagnosa</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-pasien"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="page-penggunaan" class="page-content hidden">
+            <div class="flex flex-col md:flex-row justify-between gap-4 mb-4">
+                <div class="flex gap-2">
+                    <input type="date" id="filter-date" class="border rounded-lg p-2 text-sm" onchange="renderPenggunaan()">
+                </div>
+                <button onclick="prepareModal('pakai')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-indigo-700">+ Catat Penggunaan</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Tgl</th>
+                            <th>Pasien</th>
+                            <th>Obat</th>
+                            <th class="text-center">P/S/M</th>
+                            <th class="text-center font-bold">Total</th>
+                            <th>Keterangan</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-penggunaan"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="modal-obat" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+            <h3 id="title-obat" class="text-xl font-bold mb-4">Input Data Obat</h3>
+            <form id="form-obat" class="space-y-4">
+                <input type="hidden" id="o-id">
+                <input type="text" id="o-nama" placeholder="Nama Obat" class="w-full border p-3 rounded-xl outline-none" required>
+                <div class="flex gap-4">
+                    <select id="o-satuan" class="w-full border p-3 rounded-xl">
+                        <option>Tablet</option><option>Botol</option><option>Ampul</option><option>Sachet</option>
+                    </select>
+                    <input type="number" id="o-stok" placeholder="Stok Awal" class="w-full border p-3 rounded-xl" required>
+                </div>
+                <input type="date" id="o-exp" class="w-full border p-3 rounded-xl" required>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('modal-obat')" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Batal</button>
+                    <button type="submit" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-pasien" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+            <h3 id="title-pasien" class="text-xl font-bold mb-4">Daftar Pasien</h3>
+            <form id="form-pasien" class="space-y-4">
+                <input type="hidden" id="p-id">
+                <input type="text" id="p-nama" placeholder="Nama Pasien" class="w-full border p-3 rounded-xl" required>
+                <div class="flex gap-4">
+                    <input type="number" id="p-umur" placeholder="Umur" class="w-full border p-3 rounded-xl" required>
+                    <select id="p-jk" class="w-full border p-3 rounded-xl">
+                        <option value="L">Laki-laki</option><option value="P">Perempuan</option>
+                    </select>
+                </div>
+                <textarea id="p-diag" placeholder="Diagnosa" class="w-full border p-3 rounded-xl"></textarea>
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('modal-pasien')" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Batal</button>
+                    <button type="submit" class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-pakai" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+            <h3 id="title-pakai" class="text-xl font-bold mb-4">Catat Penggunaan</h3>
+            <form id="form-pakai" class="space-y-4">
+                <input type="hidden" id="tr-id">
+                <select id="tr-pasien" class="w-full border p-3 rounded-xl" required></select>
+                <select id="tr-obat" class="w-full border p-3 rounded-xl" required></select>
+                <div class="grid grid-cols-3 gap-2 p-3 bg-gray-50 rounded-xl">
+                    <div><label class="text-[10px]">Pagi</label><input type="number" id="tr-pagi" value="0" class="w-full p-1 border rounded"></div>
+                    <div><label class="text-[10px]">Siang</label><input type="number" id="tr-siang" value="0" class="w-full p-1 border rounded"></div>
+                    <div><label class="text-[10px]">Malam</label><input type="number" id="tr-malam" value="0" class="w-full p-1 border rounded"></div>
+                </div>
+                <input type="text" id="tr-ket" placeholder="Keterangan Penggunaan" class="w-full border p-3 rounded-xl">
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="closeModal('modal-pakai')" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Batal</button>
+                    <button type="submit" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let OBAT = JSON.parse(localStorage.getItem('mmhc_obat')) || [];
+        let PASIEN = JSON.parse(localStorage.getItem('mmhc_pasien')) || [];
+        let TRANSAKSI = JSON.parse(localStorage.getItem('mmhc_transaksi')) || [];
+
+        function save() {
+            localStorage.setItem('mmhc_obat', JSON.stringify(OBAT));
+            localStorage.setItem('mmhc_pasien', JSON.stringify(PASIEN));
+            localStorage.setItem('mmhc_transaksi', JSON.stringify(TRANSAKSI));
+            renderAll();
+        }
+
+        /* NAVIGATION & MODAL CONTROL */
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active-link'));
+            event.currentTarget.classList.add('active-link');
+            document.getElementById('page-title').innerText = pageId.toUpperCase();
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function prepareModal(type, dataId = null) {
+            const modalId = 'modal-' + type;
+            const form = document.getElementById('form-' + type);
+            form.reset();
+            document.getElementById(type.charAt(0) + '-id').value = '';
+            document.getElementById('title-' + type).innerText = (dataId ? 'Edit' : 'Input') + ' Data ' + type;
+
+            if (type === 'pakai') {
+                document.getElementById('tr-pasien').innerHTML = PASIEN.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
+                document.getElementById('tr-obat').innerHTML = OBAT.map(o => `<option value="${o.id}">${o.nama}</option>`).join('');
+            }
+
+            if (dataId) {
+                if (type === 'obat') {
+                    const d = OBAT.find(x => x.id === dataId);
+                    document.getElementById('o-id').value = d.id;
+                    document.getElementById('o-nama').value = d.nama;
+                    document.getElementById('o-satuan').value = d.satuan;
+                    document.getElementById('o-stok').value = d.stokAwal;
+                    document.getElementById('o-exp').value = d.exp;
+                } else if (type === 'pasien') {
+                    const d = PASIEN.find(x => x.id === dataId);
+                    document.getElementById('p-id').value = d.id;
+                    document.getElementById('p-nama').value = d.nama;
+                    document.getElementById('p-umur').value = d.umur;
+                    document.getElementById('p-jk').value = d.jk;
+                    document.getElementById('p-diag').value = d.diag;
+                } else if (type === 'pakai') {
+                    const d = TRANSAKSI.find(x => x.id === dataId);
+                    document.getElementById('tr-id').value = d.id;
+                    document.getElementById('tr-pasien').value = d.pasienId;
+                    document.getElementById('tr-obat').value = d.obatId;
+                    document.getElementById('tr-pagi').value = d.pagi;
+                    document.getElementById('tr-siang').value = d.siang;
+                    document.getElementById('tr-malam').value = d.malam;
+                    document.getElementById('tr-ket').value = d.ket;
+                }
+            }
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        /* FORM HANDLERS */
+        document.getElementById('form-obat').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('o-id').value;
+            const data = {
+                id: id || 'O-' + Date.now(),
+                nama: document.getElementById('o-nama').value,
+                satuan: document.getElementById('o-satuan').value,
+                stokAwal: parseInt(document.getElementById('o-stok').value),
+                exp: document.getElementById('o-exp').value
+            };
+            if(id) OBAT = OBAT.map(x => x.id === id ? data : x);
+            else OBAT.push(data);
+            save(); closeModal('modal-obat');
+        };
+
+        document.getElementById('form-pasien').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('p-id').value;
+            const data = {
+                id: id || 'P-' + Date.now(),
+                nama: document.getElementById('p-nama').value,
+                umur: document.getElementById('p-umur').value,
+                jk: document.getElementById('p-jk').value,
+                diag: document.getElementById('p-diag').value
+            };
+            if(id) PASIEN = PASIEN.map(x => x.id === id ? data : x);
+            else PASIEN.push(data);
+            save(); closeModal('modal-pasien');
+        };
+
+        document.getElementById('form-pakai').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('tr-id').value;
+            const pagi = parseInt(document.getElementById('tr-pagi').value) || 0;
+            const siang = parseInt(document.getElementById('tr-siang').value) || 0;
+            const malam = parseInt(document.getElementById('tr-malam').value) || 0;
+            const total = pagi + siang + malam;
+            
+            const data = {
+                id: id || 'T-' + Date.now(),
+                tanggal: new Date().toISOString().split('T')[0],
+                pasienId: document.getElementById('tr-pasien').value,
+                obatId: document.getElementById('tr-obat').value,
+                pagi, siang, malam, total,
+                ket: document.getElementById('tr-ket').value
+            };
+            if(id) TRANSAKSI = TRANSAKSI.map(x => x.id === id ? data : x);
+            else TRANSAKSI.push(data);
+            save(); closeModal('modal-pakai');
+        };
+
+        /* RENDER FUNCTIONS */
+        function renderAll() {
+            renderDashboard();
+            renderObat();
+            renderPasien();
+            renderPenggunaan();
+        }
+
+        function renderDashboard() {
+            document.getElementById('stat-obat').innerText = OBAT.length;
+            document.getElementById('stat-pasien').innerText = PASIEN.length;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('stat-pakai').innerText = TRANSAKSI.filter(t => t.tanggal === today).reduce((s, c) => s + c.total, 0);
+            
+            let totalSisa = 0;
+            const lowStockList = document.getElementById('low-stock-list');
+            lowStockList.innerHTML = '';
+            
+            OBAT.forEach(o => {
+                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
+                const sisa = o.stokAwal - used;
+                totalSisa += sisa;
+                if(sisa < 10) {
+                    lowStockList.innerHTML += `<li class="p-3 text-xs flex justify-between"><span>${o.nama}</span><span class="font-bold text-red-500">${sisa} ${o.satuan}</span></li>`;
+                }
+            });
+            document.getElementById('stat-stok-total').innerText = totalSisa;
+        }
+
+        function renderObat() {
+            const list = document.getElementById('list-obat');
+            list.innerHTML = OBAT.map(o => {
+                const used = TRANSAKSI.filter(t => t.obatId === o.id).reduce((s, c) => s + c.total, 0);
+                const sisa = o.stokAwal - used;
+                return `<tr>
+                    <td class="font-bold">${o.nama}</td>
+                    <td>${o.satuan}</td>
+                    <td class="text-center">${o.stokAwal}</td>
+                    <td class="text-center font-bold ${sisa < 10 ? 'text-red-500' : 'text-green-600'}">${sisa}</td>
+                    <td>${o.exp}</td>
+                    <td class="text-center">
+                        <button onclick="prepareModal('obat', '${o.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteItem('OBAT', '${o.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPasien() {
+            const list = document.getElementById('list-pasien');
+            list.innerHTML = PASIEN.map(p => `<tr>
+                <td class="font-bold">${p.nama}</td>
+                <td>${p.umur} Thn (${p.jk})</td>
+                <td>${p.diag}</td>
+                <td class="text-center">
+                    <button onclick="prepareModal('pasien', '${p.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteItem('PASIEN', '${p.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+        }
+
+        function renderPenggunaan() {
+            const dateVal = document.getElementById('filter-date').value;
+            const list = document.getElementById('list-penggunaan');
+            list.innerHTML = TRANSAKSI.filter(t => dateVal ? t.tanggal === dateVal : true).reverse().map(t => {
+                const p = PASIEN.find(x => x.id === t.pasienId)?.nama || 'N/A';
+                const o = OBAT.find(x => x.id === t.obatId)?.nama || 'N/A';
+                return `<tr>
+                    <td>${t.tanggal}</td>
+                    <td class="font-bold">${p}</td>
+                    <td class="text-blue-600">${o}</td>
+                    <td class="text-center">${t.pagi}/${t.siang}/${t.malam}</td>
+                    <td class="text-center font-bold">${t.total}</td>
+                    <td>${t.ket || '-'}</td>
+                    <td class="text-center">
+                        <button onclick="prepareModal('pakai', '${t.id}')" class="text-blue-500 mr-3"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteItem('TRX', '${t.id}')" class="text-gray-300 hover:text-red-500"><i class="fas fa-times"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function deleteItem(type, id) {
+            if(!confirm("Hapus data ini?")) return;
+            if(type === 'OBAT') OBAT = OBAT.filter(x => x.id !== id);
+            if(type === 'PASIEN') PASIEN = PASIEN.filter(x => x.id !== id);
+            if(type === 'TRX') TRANSAKSI = TRANSAKSI.filter(x => x.id !== id);
+            save();
+        }
+
+        window.onload = renderAll;
+    </script>
+</body>
+</html>
