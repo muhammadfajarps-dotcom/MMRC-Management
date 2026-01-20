@@ -3,644 +3,590 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMRC Management System</title>
+    <title>MMRC Management - Madani Mental Recovery Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.0/docx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
-        .tab-active { border-bottom: 4px solid #0d9488; color: #0f766e; font-weight: bold; background-color: #f0fdfa; }
-        .sidebar-active { background-color: #0f766e; border-left: 4px solid #ccfbf1; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .sidebar-active { background: #1e293b; border-left: 4px solid #3b82f6; color: white; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="text-gray-800">
+<body x-data="mmrcApp()" x-init="init()">
 
-    <div id="login-section" class="fixed inset-0 z-50 bg-teal-900 flex items-center justify-center">
-        <div class="bg-white p-10 rounded-2xl shadow-2xl w-[400px] text-center border-t-8 border-teal-500">
-            <h1 class="text-3xl font-extrabold text-teal-700 mb-1">MMRC</h1>
-            <p class="text-gray-400 mb-8 text-sm font-medium">Madani Mental Recovery Center</p>
-            <form id="loginForm" class="space-y-5">
-                <div class="text-left">
-                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Username</label>
-                    <input type="text" id="username" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Masukkan Username">
+    <template x-if="!isLoggedIn">
+        <div class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-slate-800">MMRC</h1>
+                    <p class="text-slate-500 italic">Madani Mental Recovery Center</p>
                 </div>
-                <div class="text-left">
-                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Password</label>
-                    <input type="password" id="password" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="••••••••">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Username</label>
+                        <input type="text" x-model="loginForm.user" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                        <input type="password" x-model="loginForm.pass" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <button @click="doLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition duration-200">MASUK</button>
+                    <p x-show="errorMsg" x-text="errorMsg" class="text-red-500 text-sm text-center font-medium"></p>
                 </div>
-                <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition duration-300 shadow-lg">MASUK SISTEM</button>
-            </form>
-            <p id="loginError" class="text-red-500 text-xs mt-4 hidden italic">Kredensial yang Anda masukkan salah!</p>
+            </div>
         </div>
-    </div>
+    </template>
 
-    <div id="app-container" class="flex h-screen hidden">
-        <aside class="w-72 bg-teal-800 text-white flex flex-col shadow-2xl">
-            <div class="p-8 text-center border-b border-teal-700">
-                <h2 class="text-2xl font-black tracking-widest">MMRC</h2>
-                <span class="text-[10px] bg-teal-600 px-2 py-1 rounded uppercase tracking-tighter">Operasional System</span>
+    <div x-show="isLoggedIn" x-cloak class="flex min-h-screen">
+        <aside class="w-64 bg-slate-800 text-slate-300 hidden md:flex flex-col shadow-xl">
+            <div class="p-6 bg-slate-900">
+                <h2 class="text-xl font-bold text-white tracking-wider">MMRC MGMT</h2>
+                <p class="text-xs text-blue-400">Operational System</p>
             </div>
-            <nav class="flex-1 py-6">
-                <a href="#" class="flex items-center px-8 py-4 sidebar-active transition">
-                    <i class="fas fa-hospital-user w-8 text-xl"></i> 
-                    <span class="font-semibold">Database Pasien</span>
-                </a>
-                <div class="px-8 mt-10">
-                    <p class="text-[10px] text-teal-300 font-bold uppercase mb-4">Export Data</p>
-                    <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 p-3 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg transition">
-                        <i class="fas fa-file-excel"></i> Export SPREADSHEET
+            <nav class="flex-1 mt-4">
+                <template x-for="menu in menus">
+                    <button @click="activeMenu = menu.id; resetSearch()" 
+                            class="w-full flex items-center px-6 py-4 transition-all hover:bg-slate-700 hover:text-white"
+                            :class="activeMenu === menu.id ? 'sidebar-active' : ''">
+                        <span x-text="menu.label" class="font-semibold uppercase text-xs tracking-widest"></span>
                     </button>
-                </div>
+                </template>
             </nav>
-            <div class="p-6 border-t border-teal-700">
-                <button onclick="location.reload()" class="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 p-3 rounded-lg text-sm font-bold transition">
-                    <i class="fas fa-power-off"></i> LOGOUT
-                </button>
-            </div>
+            <button @click="isLoggedIn = false" class="p-6 text-sm text-red-400 hover:text-red-300 text-left border-t border-slate-700 uppercase font-bold tracking-tighter">Logout</button>
         </aside>
 
         <main class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-md p-6 flex justify-between items-center border-b border-gray-200">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800 italic">Pusat Informasi Operasional</h2>
-                    <p class="text-xs text-gray-400">Selamat datang di Sistem Manajemen Madani Mental Recovery Center</p>
-                </div>
-                <div class="flex gap-4">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
-                        <input type="text" id="globalSearch" placeholder="Cari Pasien..." class="pl-10 pr-4 py-3 border rounded-xl w-80 shadow-sm focus:ring-2 focus:ring-teal-500 outline-none" onkeyup="renderDashboard()">
-                    </div>
-                    <button onclick="addNewPatient()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition">
-                        <i class="fas fa-plus-circle"></i> Registrasi Pasien Baru
-                    </button>
+            <header class="bg-white shadow-sm border-b px-8 py-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-slate-800" x-text="activeMenuLabel"></h3>
+                <div class="flex space-x-3">
+                    <button @click="exportToExcel()" class="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-md hover:bg-emerald-700">EXCEL</button>
+                    <button @click="exportToWord()" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700">WORD</button>
                 </div>
             </header>
 
-            <section class="flex-1 overflow-auto p-8 bg-gray-50">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-100 text-gray-500 text-[11px] uppercase tracking-widest font-black border-b">
+            <section class="p-8 overflow-y-auto h-full">
+                <div x-show="activeMenu === 'dashboard'" class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <input type="text" x-model="searchQuery" placeholder="Cari nama pasien..." class="px-4 py-2 border rounded-lg w-1/3 outline-none focus:ring-2 focus:ring-blue-400">
+                        <button @click="openModal('pasien')" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700">+ Tambah Pasien</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6">
+                        <template x-for="(pasien, index) in filteredPasien" :key="index">
+                            <div class="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition relative">
+                                <div class="absolute top-4 right-4 space-x-2">
+                                    <button @click="editPasien(pasien)" class="text-blue-500 text-sm font-bold">Edit</button>
+                                    <button @click="deletePasien(pasien.id)" class="text-red-500 text-sm font-bold">Hapus</button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div>
+                                        <h4 class="text-blue-600 font-bold uppercase text-xs mb-3 border-b pb-1">Registrasi Pasien</h4>
+                                        <p class="text-sm font-bold text-slate-800" x-text="pasien.nama"></p>
+                                        <div class="text-xs text-slate-500 mt-2 space-y-1">
+                                            <p>Masuk: <span x-text="pasien.waktu"></span></p>
+                                            <p>Usia: <span x-text="pasien.usia"></span> thn | <span x-text="pasien.pendidikan"></span></p>
+                                            <p>Alamat: <span x-text="pasien.alamat"></span></p>
+                                            <p>Wali: <span x-text="pasien.wali"></span></p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-amber-600 font-bold uppercase text-xs mb-3 border-b pb-1">Riwayat Penyakit</h4>
+                                        <div class="text-xs space-y-2">
+                                            <p class="italic text-slate-600" x-text="pasien.riwayat"></p>
+                                            <p><strong>Dosis:</strong> <span x-text="pasien.riwayatDosis"></span></p>
+                                            <p><strong>Kondisi:</strong> <span x-text="pasien.kondisiTerkini"></span></p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-emerald-600 font-bold uppercase text-xs mb-3 border-b pb-1">Diagnosa Dokter</h4>
+                                        <div class="text-xs space-y-2">
+                                            <p><strong>Dokter:</strong> <span x-text="pasien.dokter"></span></p>
+                                            <p><strong>Diagnosa:</strong> <span x-text="pasien.diagnosa"></span></p>
+                                            <div class="flex space-x-2 mt-2">
+                                                <span :class="pasien.intervensi.injeksi ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'" class="px-2 py-1 rounded">Injeksi</span>
+                                                <span :class="pasien.intervensi.urine ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'" class="px-2 py-1 rounded">Urine</span>
+                                                <span :class="pasien.intervensi.fiksasi ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'" class="px-2 py-1 rounded">Fiksasi</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-6 pt-4 border-t border-dashed grid grid-cols-2 gap-4">
+                                    <div class="bg-blue-50 p-3 rounded-lg">
+                                        <p class="text-[10px] font-bold text-blue-800 uppercase">Stok Obat Personal</p>
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-lg font-bold" :class="pasien.stokObat.akhir <= 7 ? 'text-red-600' : 'text-slate-800'">
+                                                Sisa: <span x-text="pasien.stokObat.akhir"></span> Tablet
+                                            </p>
+                                            <span x-show="pasien.stokObat.akhir <= 7" class="animate-pulse bg-red-600 text-white text-[10px] px-2 py-1 rounded-full font-bold">Low Stok</span>
+                                        </div>
+                                        <button @click="openMedLogModal(pasien)" class="mt-2 text-[10px] bg-white border border-blue-400 text-blue-600 px-2 py-1 rounded">+ Catat Penggunaan</button>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-lg overflow-y-auto max-h-24">
+                                        <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Log Penggunaan Terakhir</p>
+                                        <template x-for="log in pasien.logs" :key="log.id">
+                                            <div class="text-[9px] border-b py-1">
+                                                <span x-text="log.waktu" class="font-bold"></span> - <span x-text="log.obat"></span> (<span x-text="log.pj"></span>)
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'ttv'" class="bg-white rounded-xl shadow border p-6">
+                    <div class="flex justify-between mb-4">
+                        <input type="text" x-model="searchQuery" placeholder="Cari..." class="px-4 py-2 border rounded-lg">
+                        <button @click="openModal('ttv')" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Input TTV</button>
+                    </div>
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <th class="p-5">Waktu Reg</th>
-                                <th class="p-5">Profil Pasien</th>
-                                <th class="p-5">Diagnosa & Program</th>
-                                <th class="p-5">Kondisi</th>
-                                <th class="p-5 text-center">Tindakan</th>
+                                <th class="p-4 border">Waktu</th>
+                                <th class="p-4 border">Pasien</th>
+                                <th class="p-4 border">Tensi</th>
+                                <th class="p-4 border">Saturasi</th>
+                                <th class="p-4 border">RR</th>
+                                <th class="p-4 border">TB/BB</th>
+                                <th class="p-4 border">GDS</th>
+                                <th class="p-4 border">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="patientTableBody" class="divide-y divide-gray-100">
-                            </tbody>
+                        <tbody>
+                            <template x-for="t in filteredTTV">
+                                <tr>
+                                    <td class="p-4 border" x-text="t.waktu"></td>
+                                    <td class="p-4 border font-bold" x-text="getPasienName(t.pasienId)"></td>
+                                    <td class="p-4 border" x-text="t.tensi"></td>
+                                    <td class="p-4 border" x-text="t.sat"></td>
+                                    <td class="p-4 border" x-text="t.rr"></td>
+                                    <td class="p-4 border" x-text="t.tb + '/' + t.bb"></td>
+                                    <td class="p-4 border" x-text="t.gds"></td>
+                                    <td class="p-4 border">
+                                        <button @click="deleteTTV(t.id)" class="text-red-500">Hapus</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
                     </table>
+                </div>
+
+                <div x-show="activeMenu === 'visit'" class="space-y-4">
+                    <button @click="openModal('visit')" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Input Visit Baru</button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <template x-for="v in filteredVisit">
+                            <div class="bg-white p-6 rounded-xl border shadow-sm">
+                                <div class="flex justify-between mb-4">
+                                    <span class="text-xs font-bold text-slate-400" x-text="v.waktu"></span>
+                                    <button @click="deleteVisit(v.id)" class="text-red-500 text-xs">Hapus</button>
+                                </div>
+                                <h4 class="font-bold text-blue-600" x-text="getPasienName(v.pasienId)"></h4>
+                                <div class="mt-3 flex space-x-4">
+                                    <div class="w-24 h-24 bg-slate-100 rounded border flex items-center justify-center text-[10px] text-slate-400">
+                                        <template x-if="v.foto">
+                                            <img :src="v.foto" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="!v.foto">
+                                            <span>No Image</span>
+                                        </template>
+                                    </div>
+                                    <div class="flex-1 bg-slate-50 p-3 rounded italic text-xs text-slate-600" x-text="v.keterangan"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="activeMenu === 'crisis'" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm h-fit">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="font-bold text-slate-700">BPSS Score Tracker</h4>
+                            <button @click="openModal('crisis')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg">Input Skor Baru</button>
+                        </div>
+                        <div class="space-y-4 max-h-[500px] overflow-y-auto">
+                            <template x-for="s in filteredCrisis">
+                                <div @click="renderChart(s)" class="cursor-pointer hover:border-blue-300 transition border-l-4 border-l-red-500 bg-slate-50 p-4 rounded-r-lg shadow-sm">
+                                    <div class="flex justify-between text-[10px] mb-2 font-bold text-slate-400">
+                                        <span x-text="s.waktu"></span>
+                                        <button @click.stop="deleteCrisis(s.id)" class="text-red-500">Hapus</button>
+                                    </div>
+                                    <p class="font-bold text-sm text-slate-800" x-text="getPasienName(s.pasienId)"></p>
+                                    <div class="grid grid-cols-4 gap-2 mt-2 text-center text-[9px]">
+                                        <div class="bg-red-100 p-1 rounded">BIO: <span x-text="s.bio"></span></div>
+                                        <div class="bg-blue-100 p-1 rounded">PSY: <span x-text="s.psy"></span></div>
+                                        <div class="bg-emerald-100 p-1 rounded">SOC: <span x-text="s.soc"></span></div>
+                                        <div class="bg-amber-100 p-1 rounded">SPI: <span x-text="s.spi"></span></div>
+                                    </div>
+                                    <div class="mt-2 text-[10px] bg-white p-2 border rounded italic text-slate-500">
+                                        Change (7 Hari): <span x-text="s.change"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl border shadow-sm flex flex-col items-center">
+                        <h4 class="font-bold text-slate-700 mb-8 self-start">Grafik Polygon BPSS</h4>
+                        <div class="w-full h-[400px]">
+                            <canvas id="bpssRadarChart"></canvas>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-4 italic">*Pilih data di sebelah kiri untuk memuat grafik</p>
+                    </div>
+                </div>
+
+                <div x-show="['program', 'terapi'].includes(activeMenu)" class="bg-white rounded-xl shadow border p-8">
+                    <div class="flex justify-between mb-8">
+                        <h4 class="font-bold text-slate-700 uppercase" x-text="'Planning ' + activeMenu"></h4>
+                        <button @click="openModal(activeMenu)" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold" x-text="'+ Input ' + activeMenu"></button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="plan in filteredPlans">
+                            <div class="p-6 rounded-xl border-l-4" :class="activeMenu === 'program' ? 'border-l-indigo-500 bg-indigo-50' : 'border-l-teal-500 bg-teal-50'">
+                                <div class="flex justify-between items-start">
+                                    <h5 class="font-bold text-slate-800" x-text="getPasienName(plan.pasienId)"></h5>
+                                    <button @click="deletePlan(plan.id)" class="text-red-400 hover:text-red-600 text-xs font-bold">Hapus</button>
+                                </div>
+                                <template x-if="activeMenu === 'program'">
+                                    <div class="mt-4 space-y-1">
+                                        <p class="text-xs font-bold text-indigo-700">PAKET: <span x-text="plan.paket"></span></p>
+                                        <p class="text-xs text-indigo-600 font-medium">DURASI: <span x-text="plan.durasi"></span></p>
+                                    </div>
+                                </template>
+                                <template x-if="activeMenu === 'terapi'">
+                                    <p class="mt-4 text-xs italic text-teal-700 leading-relaxed" x-text="plan.keterangan"></p>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="detailModal" class="fixed inset-0 z-40 bg-black/60 hidden flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
-            
-            <div class="bg-teal-700 text-white p-6 flex justify-between items-center shadow-lg">
-                <div class="flex items-center gap-5">
-                    <div class="bg-white/20 p-4 rounded-2xl">
-                        <i class="fas fa-user-injured text-3xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-black italic tracking-wide" id="m_headerName">NAMA PASIEN</h2>
-                        <p class="text-xs text-teal-200 font-medium" id="m_headerId">ID: MMRC-2026-XXXX</p>
-                    </div>
+    <template x-if="modalOpen">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="p-6 border-b bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-xl text-slate-800 uppercase tracking-tight" x-text="'Input Data ' + modalTarget"></h3>
+                    <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
                 </div>
-                <button onclick="closeModal()" class="bg-white/10 hover:bg-white/20 p-3 rounded-full transition"><i class="fas fa-times text-xl"></i></button>
-            </div>
-
-            <div class="flex border-b bg-white flex-shrink-0">
-                <button onclick="switchTab('tab-reg')" id="btn-tab-reg" class="px-8 py-4 text-sm font-bold text-gray-500 hover:text-teal-700 tab-active">DASHBOARD & MEDIS</button>
-                <button onclick="switchTab('tab-med')" id="btn-tab-med" class="px-8 py-4 text-sm font-bold text-gray-500 hover:text-teal-700">💊 MEDICINE (OBAT)</button>
-                <button onclick="switchTab('tab-ttv')" id="btn-tab-ttv" class="px-8 py-4 text-sm font-bold text-gray-500 hover:text-teal-700">💓 TTV & GDS</button>
-                <button onclick="switchTab('tab-crisis')" id="btn-tab-crisis" class="px-8 py-4 text-sm font-bold text-gray-500 hover:text-teal-700">⚠️ PASIEN CRISIS (BPSS)</button>
-                <button onclick="switchTab('tab-prog')" id="btn-tab-prog" class="px-8 py-4 text-sm font-bold text-gray-500 hover:text-teal-700">📅 RENCANA PROGRAM</button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-10 bg-gray-50" id="tabContent">
-                </div>
-
-            <div class="p-6 border-t bg-white flex justify-between items-center">
-                <button onclick="deleteCurrentPatient()" class="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-2">
-                    <i class="fas fa-trash-alt"></i> Hapus Seluruh Data Pasien
-                </button>
-                <button onclick="savePatientChanges()" class="bg-teal-600 hover:bg-teal-700 text-white px-10 py-3 rounded-xl font-black shadow-xl transition active:scale-95">
-                    <i class="fas fa-save mr-2"></i> SIMPAN PERUBAHAN DATA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- DATA & STATE ---
-        const CREDENTIALS = { u: "OPERASIONAL.MMRC", p: "MADANI1999" };
-        let db = JSON.parse(localStorage.getItem('mmrc_db_final')) || { patients: [] };
-        let currentPId = null;
-        let activeTab = 'tab-reg';
-        let radarChart = null;
-
-        // --- AUTH LOGIC ---
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if(document.getElementById('username').value === CREDENTIALS.u && document.getElementById('password').value === CREDENTIALS.p) {
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                renderDashboard();
-            } else {
-                document.getElementById('loginError').classList.remove('hidden');
-            }
-        });
-
-        // --- CRUD LOGIC ---
-        function saveDB() { localStorage.setItem('mmrc_db_final', JSON.stringify(db)); }
-
-        function addNewPatient() {
-            const now = new Date();
-            const newId = 'MMRC-' + now.getTime();
-            const newP = {
-                id: newId,
-                regDate: now.toLocaleString('id-ID'),
-                // Dashboard Info
-                name: "Pasien Baru", ttl: "", age: "", status: "Belum", edu: "", job: "", addr: "", guardian: "", spotcheck: "",
-                // Riwayat & Medis
-                histPhysical: "", histPsych: "", diagPrev: "", cond: "Stabil",
-                // Dokter
-                doc: "", docDiag: "", plan: "", 
-                interv: { inj: false, urine: false, fix: false },
-                presc: "",
-                // Medicine (Integrated)
-                medicines: [], 
-                medLogs: [],
-                // TTV & GDS
-                ttvLogs: [],
-                // BPSS
-                bpssLogs: [],
-                // Program
-                progPkg: "Reguler", progTime: "7 Hari", progDesc: "", therapyDesc: ""
-            };
-            db.patients.unshift(newP);
-            saveDB();
-            renderDashboard();
-            openModal(newId);
-        }
-
-        function renderDashboard() {
-            const tbody = document.getElementById('patientTableBody');
-            const search = document.getElementById('globalSearch').value.toLowerCase();
-            tbody.innerHTML = '';
-
-            db.patients.forEach(p => {
-                if(p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search)) {
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-teal-50/50 transition cursor-pointer" onclick="openModal('${p.id}')">
-                            <td class="p-5 text-xs font-mono text-gray-400">${p.regDate}</td>
-                            <td class="p-5">
-                                <div class="font-bold text-teal-800 uppercase tracking-wide">${p.name}</div>
-                                <div class="text-[10px] text-gray-500">${p.age} Thn | Wali: ${p.guardian || '-'}</div>
-                            </td>
-                            <td class="p-5">
-                                <div class="text-xs font-bold text-gray-700">${p.docDiag || 'N/A'}</div>
-                                <div class="text-[10px] text-blue-500 font-bold uppercase">${p.progPkg} - ${p.progTime}</div>
-                            </td>
-                            <td class="p-5">
-                                <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-[10px] font-black uppercase">${p.cond}</span>
-                            </td>
-                            <td class="p-5 text-center">
-                                <button class="bg-teal-100 text-teal-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-teal-200 transition">BUKA FILE REKAM MEDIS</button>
-                            </td>
-                        </tr>
-                    `;
-                }
-            });
-        }
-
-        // --- MODAL & TABS LOGIC ---
-        function openModal(id) {
-            currentPId = id;
-            const p = db.patients.find(x => x.id === id);
-            document.getElementById('m_headerName').innerText = p.name;
-            document.getElementById('m_headerId').innerText = `ID: ${p.id}`;
-            document.getElementById('detailModal').classList.remove('hidden');
-            switchTab('tab-reg');
-        }
-
-        function closeModal() {
-            document.getElementById('detailModal').classList.add('hidden');
-            renderDashboard();
-        }
-
-        function switchTab(tabId) {
-            activeTab = tabId;
-            document.querySelectorAll('#btn-tab-reg, #btn-tab-med, #btn-tab-ttv, #btn-tab-crisis, #btn-tab-prog').forEach(b => b.classList.remove('tab-active'));
-            document.getElementById('btn-' + tabId).classList.add('tab-active');
-            renderTabContent();
-        }
-
-        function renderTabContent() {
-            const p = db.patients.find(x => x.id === currentPId);
-            const container = document.getElementById('tabContent');
-            container.innerHTML = '';
-
-            if(activeTab === 'tab-reg') {
-                container.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="text-teal-700 font-black text-sm uppercase mb-6 flex items-center gap-2">
-                            <i class="fas fa-id-card"></i> Biodata & Registrasi
-                        </h3>
+                <div class="p-8 overflow-y-auto">
+                    <template x-if="modalTarget === 'pasien'">
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-[10px] font-bold text-gray-400">Nama Lengkap</label><input type="text" id="in_name" value="${p.name}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                                <div><label class="text-[10px] font-bold text-gray-400">Tempat Tanggal Lahir</label><input type="text" id="in_ttl" value="${p.ttl}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
+                                <div class="col-span-2"><label class="text-xs font-bold text-slate-500">NAMA LENGKAP</label><input type="text" x-model="formData.nama" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs font-bold text-slate-500">TTL</label><input type="text" x-model="formData.ttl" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs font-bold text-slate-500">USIA</label><input type="number" x-model="formData.usia" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs font-bold text-slate-500">STATUS</label><select x-model="formData.status" class="w-full border p-2 rounded"><option value="Belum Menikah">Belum Menikah</option><option value="Menikah">Menikah</option></select></div>
+                                <div><label class="text-xs font-bold text-slate-500">PENDIDIKAN</label><input type="text" x-model="formData.pendidikan" class="w-full border p-2 rounded"></div>
+                                <div class="col-span-2"><label class="text-xs font-bold text-slate-500">ALAMAT</label><textarea x-model="formData.alamat" class="w-full border p-2 rounded"></textarea></div>
+                                <div><label class="text-xs font-bold text-slate-500">WALI</label><input type="text" x-model="formData.wali" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-xs font-bold text-slate-500">STOK OBAT AWAL</label><input type="number" x-model="formData.stokAwal" class="w-full border p-2 rounded"></div>
                             </div>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div><label class="text-[10px] font-bold text-gray-400">Usia</label><input type="number" id="in_age" value="${p.age}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                                <div><label class="text-[10px] font-bold text-gray-400">Status</label><input type="text" id="in_status" value="${p.status}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                                <div><label class="text-[10px] font-bold text-gray-400">Pendidikan</label><input type="text" id="in_edu" value="${p.edu}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                            </div>
-                            <div><label class="text-[10px] font-bold text-gray-400">Pekerjaan</label><input type="text" id="in_job" value="${p.job}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                            <div><label class="text-[10px] font-bold text-gray-400">Alamat</label><input type="text" id="in_addr" value="${p.addr}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                            <div><label class="text-[10px] font-bold text-gray-400">Nama Wali</label><input type="text" id="in_guardian" value="${p.guardian}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                            <div><label class="text-[10px] font-bold text-gray-400 italic text-red-400">Spotcheck Barang Bawaan</label><textarea id="in_spot" class="w-full border p-2 rounded-lg bg-gray-50">${p.spotcheck}</textarea></div>
-                        </div>
-                    </div>
-                    <div class="space-y-6">
-                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 class="text-teal-700 font-black text-sm uppercase mb-6 flex items-center gap-2"><i class="fas fa-notes-medical"></i> Riwayat & Kondisi</h3>
-                            <div class="space-y-4">
-                                <div><label class="text-[10px] font-bold text-gray-400 uppercase">Riwayat Fisik/Psikis</label><textarea id="in_hist" class="w-full border p-2 rounded-lg bg-gray-50 h-20">${p.histPhysical} / ${p.histPsych}</textarea></div>
-                                <div><label class="text-[10px] font-bold text-gray-400 uppercase">Diagnosa Sebelumnya</label><input type="text" id="in_diagPrev" value="${p.diagPrev}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                                <div><label class="text-[10px] font-bold text-gray-400 uppercase">Kondisi Terkini</label><input type="text" id="in_cond" value="${p.cond}" class="w-full border-b p-2 outline-none focus:border-teal-500 font-bold text-teal-600"></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 class="text-teal-700 font-black text-sm uppercase mb-6 flex items-center gap-2"><i class="fas fa-user-md"></i> Diagnosa Dokter</h3>
-                            <div class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label class="text-[10px] font-bold text-gray-400 uppercase">Nama Dokter</label><input type="text" id="in_doc" value="${p.doc}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
-                                    <div><label class="text-[10px] font-bold text-gray-400 uppercase">Diagnosa Masuk</label><input type="text" id="in_docDiag" value="${p.docDiag}" class="w-full border-b p-2 outline-none focus:border-teal-500"></div>
+                            <div class="border-t pt-4">
+                                <label class="text-xs font-bold text-slate-500">RIWAYAT PENYAKIT & DIAGNOSA</label>
+                                <textarea x-model="formData.riwayat" class="w-full border p-2 rounded mt-2" placeholder="Fisik, psikis, diagnosa sebelumnya..."></textarea>
+                                <div class="grid grid-cols-2 gap-4 mt-2">
+                                    <input type="text" x-model="formData.dokter" placeholder="Nama Dokter" class="w-full border p-2 rounded">
+                                    <input type="text" x-model="formData.diagnosa" placeholder="Diagnosa Sekarang" class="w-full border p-2 rounded">
                                 </div>
-                                <div class="flex gap-4 py-2 border-y border-gray-50">
-                                    <label class="flex items-center gap-2 text-[10px] font-bold"><input type="checkbox" id="c_inj" ${p.interv.inj?'checked':''}> INJEKSI</label>
-                                    <label class="flex items-center gap-2 text-[10px] font-bold"><input type="checkbox" id="c_urine" ${p.interv.urine?'checked':''}> URINE TEST</label>
-                                    <label class="flex items-center gap-2 text-[10px] font-bold"><input type="checkbox" id="c_fix" ${p.interv.fix?'checked':''}> FIKSASI</label>
+                                <div class="mt-4 flex space-x-6">
+                                    <label class="flex items-center space-x-2 text-sm"><input type="checkbox" x-model="formData.injeksi"> <span>Injeksi</span></label>
+                                    <label class="flex items-center space-x-2 text-sm"><input type="checkbox" x-model="formData.urine"> <span>Urine Test</span></label>
+                                    <label class="flex items-center space-x-2 text-sm"><input type="checkbox" x-model="formData.fiksasi"> <span>Fiksasi</span></label>
                                 </div>
-                                <div><label class="text-[10px] font-bold text-gray-400 uppercase">Planning Dokter</label><textarea id="in_plan" class="w-full border p-2 rounded-lg bg-gray-50 h-16">${p.plan}</textarea></div>
-                                <div><label class="text-[10px] font-bold text-gray-400 uppercase">Resep Obat & Nama Obat (Jumlah)</label><textarea id="in_presc" class="w-full border p-2 rounded-lg bg-gray-50 h-16">${p.presc}</textarea></div>
                             </div>
                         </div>
-                    </div>
-                </div>`;
-            } else if (activeTab === 'tab-med') {
-                container.innerHTML = `
-                <div class="space-y-10">
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-teal-700 font-black text-sm uppercase tracking-widest"><i class="fas fa-boxes"></i> Inventori Stok Obat Pasien</h3>
-                            <button onclick="addMedStock()" class="bg-teal-600 text-white text-[10px] px-4 py-2 rounded-lg font-black uppercase shadow-lg"><i class="fas fa-plus"></i> Tambah Stok Baru</button>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="text-[10px] font-black uppercase text-gray-400 border-b">
-                                <tr>
-                                    <th class="pb-4">Nama Obat</th>
-                                    <th class="pb-4 text-center">Stok Awal</th>
-                                    <th class="pb-4 text-center">Digunakan</th>
-                                    <th class="pb-4 text-center">Stok Akhir</th>
-                                    <th class="pb-4 text-center">Status</th>
-                                    <th class="pb-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-50">
-                                ${p.medicines.map((m, idx) => `
-                                    <tr>
-                                        <td class="py-4 font-bold text-teal-900 uppercase text-xs">${m.name}</td>
-                                        <td class="py-4 text-center text-xs font-mono">${m.initial}</td>
-                                        <td class="py-4 text-center text-xs font-mono text-blue-600 font-bold">${m.used}</td>
-                                        <td class="py-4 text-center text-xs font-mono font-black">${m.current}</td>
-                                        <td class="py-4 text-center">
-                                            ${m.current <= 7 ? '<span class="px-2 py-1 bg-red-100 text-red-600 rounded-full text-[9px] font-black animate-pulse">REFILL SEGERA</span>' : '<span class="px-2 py-1 bg-green-100 text-green-600 rounded-full text-[9px] font-black uppercase">Aman</span>'}
-                                        </td>
-                                        <td class="py-4 text-center">
-                                            <button onclick="drinkMed(${idx})" class="bg-emerald-500 text-white px-3 py-1 rounded-md text-[9px] font-black hover:bg-emerald-600 transition">MINUM</button>
-                                            <button onclick="deleteMed(${idx})" class="text-gray-300 hover:text-red-500 ml-2 transition"><i class="fas fa-trash"></i></button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                    </template>
 
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="text-teal-700 font-black text-sm uppercase tracking-widest mb-6"><i class="fas fa-history"></i> Log Catatan Penggunaan Obat</h3>
-                        <div class="overflow-hidden rounded-xl border border-gray-50">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
-                                    <tr>
-                                        <th class="p-4">Jenis Obat</th>
-                                        <th class="p-4">Waktu (Jam/Tgl)</th>
-                                        <th class="p-4">Keterangan</th>
-                                        <th class="p-4">Penanggung Jawab</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    ${p.medLogs.map(l => `
-                                        <tr class="text-[11px]">
-                                            <td class="p-4 font-bold uppercase">${l.name}</td>
-                                            <td class="p-4 text-gray-500">${l.time}</td>
-                                            <td class="p-4">${l.note}</td>
-                                            <td class="p-4 italic font-medium">${l.pj}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>`;
-            } else if (activeTab === 'tab-ttv') {
-                container.innerHTML = `
-                <div class="space-y-10">
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-teal-700 font-black text-sm uppercase tracking-widest"><i class="fas fa-heartbeat"></i> Monitoring TTV & GDS</h3>
-                            <button onclick="addTTVLog()" class="bg-blue-600 text-white text-[10px] px-4 py-2 rounded-lg font-black uppercase shadow-lg"><i class="fas fa-plus"></i> Input TTV Baru</button>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="text-[10px] font-black uppercase text-gray-400 border-b">
-                                <tr>
-                                    <th class="pb-4">Jam/Tgl</th>
-                                    <th class="pb-4 text-center">TD</th>
-                                    <th class="pb-4 text-center">Sat (%)</th>
-                                    <th class="pb-4 text-center">RR</th>
-                                    <th class="pb-4 text-center">TB (cm)</th>
-                                    <th class="pb-4 text-center">BB (kg)</th>
-                                    <th class="pb-4">GDS (Keterangan)</th>
-                                    <th class="pb-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                ${p.ttvLogs.map((v, idx) => `
-                                    <tr class="text-[11px]">
-                                        <td class="py-4 text-gray-400">${v.time}</td>
-                                        <td class="py-4 text-center font-bold">${v.td}</td>
-                                        <td class="py-4 text-center font-bold text-blue-500">${v.sat}</td>
-                                        <td class="py-4 text-center font-bold">${v.rr}</td>
-                                        <td class="py-4 text-center">${v.tb}</td>
-                                        <td class="py-4 text-center">${v.bb}</td>
-                                        <td class="py-4 italic text-gray-600">${v.gds}</td>
-                                        <td class="py-4 text-center"><button onclick="deleteTTV(${idx})" class="text-red-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button></td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>`;
-            } else if (activeTab === 'tab-crisis') {
-                container.innerHTML = `
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 h-full">
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-teal-700 font-black text-sm uppercase tracking-widest"><i class="fas fa-chart-line"></i> BPSS SCORE DASHBOARD</h3>
-                            <button onclick="addBPSS()" class="bg-orange-500 text-white text-[10px] px-4 py-2 rounded-lg font-black uppercase shadow-lg transition hover:bg-orange-600"><i class="fas fa-plus"></i> Input BPSS</button>
-                        </div>
-                        <div class="flex-1 overflow-auto">
-                            <table class="w-full text-left">
-                                <thead class="text-[9px] font-black uppercase text-gray-400 border-b">
-                                    <tr>
-                                        <th class="pb-4">Waktu</th>
-                                        <th class="pb-4 text-center">Bio</th>
-                                        <th class="pb-4 text-center">Psy</th>
-                                        <th class="pb-4 text-center">Soc</th>
-                                        <th class="pb-4 text-center">Spi</th>
-                                        <th class="pb-4">Change (7 Hari)</th>
-                                        <th class="pb-4 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 italic">
-                                    ${p.bpssLogs.map((b, idx) => `
-                                        <tr class="text-[10px]">
-                                            <td class="py-4 text-gray-400">${b.time}</td>
-                                            <td class="py-4 text-center font-bold text-teal-600">${b.bio}</td>
-                                            <td class="py-4 text-center font-bold text-teal-600">${b.psy}</td>
-                                            <td class="py-4 text-center font-bold text-teal-600">${b.soc}</td>
-                                            <td class="py-4 text-center font-bold text-teal-600">${b.spi}</td>
-                                            <td class="py-4 font-black text-orange-600">${b.change}</td>
-                                            <td class="py-4 text-center"><button onclick="deleteBPSS(${idx})" class="text-red-200 hover:text-red-500"><i class="fas fa-minus-circle"></i></button></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-                        <h3 class="text-gray-400 font-black text-sm uppercase tracking-[0.3em] mb-10">GRAFIK POLYGON BPSS</h3>
-                        <div class="w-full flex-1 min-h-[400px]">
-                            <canvas id="bpssChart"></canvas>
-                        </div>
-                        <p class="mt-4 text-[10px] text-gray-400 italic">*Grafik berdasarkan data inputan BPSS Score terakhir.</p>
-                    </div>
-                </div>`;
-                setTimeout(() => renderRadar(p), 100);
-            } else if (activeTab === 'tab-prog') {
-                container.innerHTML = `
-                <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 max-w-4xl mx-auto space-y-10">
-                    <div>
-                        <h3 class="text-teal-700 font-black text-sm uppercase tracking-widest mb-6 border-l-4 border-teal-500 pl-4">Rencana Program</h3>
-                        <div class="grid grid-cols-2 gap-10">
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase">Paket Program</label>
-                                <select id="in_progPkg" class="w-full border-b p-3 font-bold text-gray-700 outline-none focus:border-teal-500">
-                                    <option value="Reguler" ${p.progPkg==='Reguler'?'selected':''}>Reguler</option>
-                                    <option value="Ekslusif" ${p.progPkg==='Ekslusif'?'selected':''}>Ekslusif</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase">Waktu Program</label>
-                                <select id="in_progTime" class="w-full border-b p-3 font-bold text-gray-700 outline-none focus:border-teal-500">
-                                    <option value="7 Hari" ${p.progTime==='7 Hari'?'selected':''}>7 Hari (Detox Only)</option>
-                                    <option value="14 Hari" ${p.progTime==='14 Hari'?'selected':''}>14 Hari</option>
-                                    <option value="30 Hari" ${p.progTime==='30 Hari'?'selected':''}>30 Hari</option>
-                                    <option value="60 Hari" ${p.progTime==='60 Hari'?'selected':''}>60 Hari</option>
-                                </select>
+                    <template x-if="modalTarget === 'ttv'">
+                        <div class="space-y-4">
+                            <label class="text-xs font-bold text-slate-500">PILIH PASIEN</label>
+                            <select x-model="formData.pasienId" class="w-full border p-2 rounded">
+                                <option value="">- Pilih -</option>
+                                <template x-for="p in pasienList"><option :value="p.id" x-text="p.nama"></option></template>
+                            </select>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="text" x-model="formData.tensi" placeholder="Tensi (e.g 120/80)" class="border p-2 rounded">
+                                <input type="text" x-model="formData.sat" placeholder="Saturasi" class="border p-2 rounded">
+                                <input type="text" x-model="formData.rr" placeholder="RR" class="border p-2 rounded">
+                                <input type="text" x-model="formData.gds" placeholder="GDS (Keterangan)" class="border p-2 rounded col-span-2">
                             </div>
                         </div>
-                    </div>
-                    <div>
-                        <h3 class="text-blue-600 font-black text-sm uppercase tracking-widest mb-6 border-l-4 border-blue-500 pl-4">Rencana Terapi</h3>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase">Keterangan Rencana Terapi</label>
-                            <textarea id="in_therapy" class="w-full border p-4 rounded-xl bg-gray-50 h-40 font-medium text-gray-600">${p.therapyDesc}</textarea>
+                    </template>
+
+                    <template x-if="modalTarget === 'visit'">
+                        <div class="space-y-4">
+                            <select x-model="formData.pasienId" class="w-full border p-2 rounded">
+                                <option value="">- Pilih Pasien -</option>
+                                <template x-for="p in pasienList"><option :value="p.id" x-text="p.nama"></option></template>
+                            </select>
+                            <label class="text-xs font-bold text-slate-500">UPLOAD FOTO</label>
+                            <input type="file" @change="handleFileUpload" class="w-full text-xs">
+                            <textarea x-model="formData.keterangan" placeholder="Keterangan dokter..." class="w-full border p-2 rounded h-32"></textarea>
                         </div>
-                    </div>
-                </div>`;
-            }
-        }
+                    </template>
 
-        // --- SUB-FUNCTIONS FOR TAB CONTENT ---
-        function savePatientChanges() {
-            const p = db.patients.find(x => x.id === currentPId);
-            if(activeTab === 'tab-reg') {
-                p.name = document.getElementById('in_name').value;
-                p.ttl = document.getElementById('in_ttl').value;
-                p.age = document.getElementById('in_age').value;
-                p.status = document.getElementById('in_status').value;
-                p.edu = document.getElementById('in_edu').value;
-                p.job = document.getElementById('in_job').value;
-                p.addr = document.getElementById('in_addr').value;
-                p.guardian = document.getElementById('in_guardian').value;
-                p.spotcheck = document.getElementById('in_spot').value;
-                p.histPhysical = document.getElementById('in_hist').value.split('/')[0].trim();
-                p.histPsych = document.getElementById('in_hist').value.split('/')[1]?.trim() || "";
-                p.diagPrev = document.getElementById('in_diagPrev').value;
-                p.cond = document.getElementById('in_cond').value;
-                p.doc = document.getElementById('in_doc').value;
-                p.docDiag = document.getElementById('in_docDiag').value;
-                p.plan = document.getElementById('in_plan').value;
-                p.presc = document.getElementById('in_presc').value;
-                p.interv.inj = document.getElementById('c_inj').checked;
-                p.interv.urine = document.getElementById('c_urine').checked;
-                p.interv.fix = document.getElementById('c_fix').checked;
-            } else if (activeTab === 'tab-prog') {
-                p.progPkg = document.getElementById('in_progPkg').value;
-                p.progTime = document.getElementById('in_progTime').value;
-                p.therapyDesc = document.getElementById('in_therapy').value;
-            }
-            saveDB();
-            alert('Data Pasien Telah Diperbaharui!');
-            renderDashboard();
-        }
+                    <template x-if="modalTarget === 'crisis'">
+                        <div class="space-y-4">
+                            <select x-model="formData.pasienId" class="w-full border p-2 rounded">
+                                <option value="">- Pilih Pasien -</option>
+                                <template x-for="p in pasienList"><option :value="p.id" x-text="p.nama"></option></template>
+                            </select>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[10px] font-bold">BIO (0-25)</label><input type="number" x-model="formData.bio" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-[10px] font-bold">PSY (0-25)</label><input type="number" x-model="formData.psy" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-[10px] font-bold">SOC (0-25)</label><input type="number" x-model="formData.soc" class="w-full border p-2 rounded"></div>
+                                <div><label class="text-[10px] font-bold">SPI (0-25)</label><input type="number" x-model="formData.spi" class="w-full border p-2 rounded"></div>
+                            </div>
+                            <input type="text" x-model="formData.change" placeholder="Perubahan Selama 7 Hari Detox" class="w-full border p-2 rounded">
+                            <textarea x-model="formData.discharge" placeholder="Evaluasi Score (Discharge)" class="w-full border p-2 rounded"></textarea>
+                        </div>
+                    </template>
 
-        function deleteCurrentPatient() {
-            if(confirm('HAPUS DATA: Anda yakin ingin menghapus data pasien ini secara permanen dari server?')) {
-                db.patients = db.patients.filter(x => x.id !== currentPId);
-                saveDB();
-                closeModal();
-            }
-        }
+                    <template x-if="modalTarget === 'medlog'">
+                        <div class="space-y-4">
+                            <p class="font-bold text-blue-600" x-text="'Pasien: ' + formData.nama"></p>
+                            <input type="text" x-model="formData.obat" placeholder="Nama Obat" class="w-full border p-2 rounded">
+                            <input type="number" x-model="formData.jumlah" placeholder="Jumlah Tablet Digunakan" class="w-full border p-2 rounded">
+                            <input type="text" x-model="formData.pj" placeholder="Nama Penanggung Jawab (PJ)" class="w-full border p-2 rounded">
+                            <p class="text-[10px] text-amber-600">* Stok akan berkurang otomatis setelah disimpan</p>
+                        </div>
+                    </template>
+                    
+                    <template x-if="modalTarget === 'program'">
+                        <div class="space-y-4">
+                            <select x-model="formData.pasienId" class="w-full border p-2 rounded">
+                                <template x-for="p in pasienList"><option :value="p.id" x-text="p.nama"></option></template>
+                            </select>
+                            <select x-model="formData.paket" class="w-full border p-2 rounded">
+                                <option value="Reguler">Reguler</option>
+                                <option value="Ekslusif">Ekslusif</option>
+                            </select>
+                            <select x-model="formData.durasi" class="w-full border p-2 rounded">
+                                <option value="7 Hari (Detox)">7 Hari (Detox)</option>
+                                <option value="14 Hari">14 Hari</option>
+                                <option value="30 Hari">30 Hari</option>
+                                <option value="60 Hari">60 Hari</option>
+                            </select>
+                        </div>
+                    </template>
 
-        // Medicine Helper
-        function addMedStock() {
-            const name = prompt("Nama Obat:");
-            const qty = parseInt(prompt("Jumlah Stok Awal:"));
-            if(name && qty) {
-                const p = db.patients.find(x => x.id === currentPId);
-                p.medicines.push({ name, initial: qty, used: 0, current: qty });
-                saveDB(); renderTabContent();
-            }
-        }
-        function drinkMed(idx) {
-            const p = db.patients.find(x => x.id === currentPId);
-            const med = p.medicines[idx];
-            if(med.current <= 0) return alert('Stok Habis!');
-            
-            const pj = prompt("Nama Penanggung Jawab (PJ):");
-            const ket = prompt("Keterangan (Contoh: Sesudah Makan):");
-            if(pj) {
-                med.used += 1;
-                med.current -= 1;
-                p.medLogs.unshift({
-                    name: med.name,
-                    time: new Date().toLocaleString('id-ID'),
-                    note: ket || "-",
-                    pj: pj
-                });
-                if(med.current <= 7) alert('REMINDER: Stok obat ' + med.name + ' tersisa ' + med.current + '. Segera lakukan pengadaan!');
-                saveDB(); renderTabContent();
-            }
-        }
-        function deleteMed(idx) { if(confirm('Hapus stok?')) { db.patients.find(x => x.id === currentPId).medicines.splice(idx, 1); saveDB(); renderTabContent(); } }
+                    <template x-if="modalTarget === 'terapi'">
+                        <div class="space-y-4">
+                            <select x-model="formData.pasienId" class="w-full border p-2 rounded">
+                                <template x-for="p in pasienList"><option :value="p.id" x-text="p.nama"></option></template>
+                            </select>
+                            <textarea x-model="formData.keterangan" placeholder="Rencana Terapi..." class="w-full border p-2 rounded h-32"></textarea>
+                        </div>
+                    </template>
 
-        // TTV Helper
-        function addTTVLog() {
-            const td = prompt("Tensi Darah (mmHg):");
-            const sat = prompt("Saturasi (%):");
-            const rr = prompt("RR (x/menit):");
-            const tb = prompt("Tinggi Badan (cm):");
-            const bb = prompt("Berat Badan (kg):");
-            const gds = prompt("Keterangan GDS:");
-            if(td) {
-                db.patients.find(x => x.id === currentPId).ttvLogs.unshift({
-                    time: new Date().toLocaleString('id-ID'),
-                    td, sat, rr, tb, bb, gds
-                });
-                saveDB(); renderTabContent();
-            }
-        }
-        function deleteTTV(idx) { db.patients.find(x => x.id === currentPId).ttvLogs.splice(idx, 1); saveDB(); renderTabContent(); }
+                </div>
+                <div class="p-6 border-t bg-slate-50 flex justify-end space-x-3">
+                    <button @click="modalOpen = false" class="px-6 py-2 border font-bold rounded-lg text-slate-400">Batal</button>
+                    <button @click="saveData()" class="px-10 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-lg">SIMPAN DATA</button>
+                </div>
+            </div>
+        </div>
+    </template>
 
-        // BPSS Helper
-        function addBPSS() {
-            const bio = parseInt(prompt("Biological Score (0-25):"));
-            const psy = parseInt(prompt("Psychological Score (0-25):"));
-            const soc = parseInt(prompt("Social Score (0-25):"));
-            const spi = parseInt(prompt("Spiritual Score (0-25):"));
-            const chg = prompt("Perubahan Selama 7 Hari (Change):");
-            const eval = prompt("Evaluasi Score (Discharge):");
-            if(!isNaN(bio)) {
-                db.patients.find(x => x.id === currentPId).bpssLogs.unshift({
-                    time: new Date().toLocaleString('id-ID'),
-                    bio, psy, soc, spi, change: chg, eval: eval
-                });
-                saveDB(); renderTabContent();
-            }
-        }
-        function deleteBPSS(idx) { db.patients.find(x => x.id === currentPId).bpssLogs.splice(idx, 1); saveDB(); renderTabContent(); }
-
-        function renderRadar(p) {
-            const ctx = document.getElementById('bpssChart').getContext('2d');
-            const last = p.bpssLogs[0] || { bio:0, psy:0, soc:0, spi:0 };
-            
-            if(radarChart) radarChart.destroy();
-            radarChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['BIOLOGICAL', 'PSYCHOLOGICAL', 'SOCIAL', 'SPIRITUAL'],
-                    datasets: [{
-                        label: 'Skor BPSS Terkini',
-                        data: [last.bio, last.psy, last.soc, last.spi],
-                        fill: true,
-                        backgroundColor: 'rgba(20, 184, 166, 0.2)',
-                        borderColor: 'rgb(20, 184, 166)',
-                        pointBackgroundColor: 'rgb(20, 184, 166)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgb(20, 184, 166)'
-                    }]
+    <script>
+        function mmrcApp() {
+            return {
+                isLoggedIn: false,
+                loginForm: { user: '', pass: '' },
+                errorMsg: '',
+                activeMenu: 'dashboard',
+                searchQuery: '',
+                modalOpen: false,
+                modalTarget: '',
+                formData: {},
+                pasienList: [],
+                ttvList: [],
+                visitList: [],
+                crisisList: [],
+                programList: [],
+                terapiList: [],
+                menus: [
+                    { id: 'dashboard', label: 'Dashboard' },
+                    { id: 'ttv', label: 'TTV & GDS' },
+                    { id: 'visit', label: 'Visit Dokter' },
+                    { id: 'crisis', label: 'Pasien Crisis' },
+                    { id: 'program', label: 'Rencana Program' },
+                    { id: 'terapi', label: 'Rencana Terapi' },
+                ],
+                
+                init() {
+                    const saved = localStorage.getItem('mmrc_data');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.pasienList = data.pasien || [];
+                        this.ttvList = data.ttv || [];
+                        this.visitList = data.visit || [];
+                        this.crisisList = data.crisis || [];
+                        this.programList = data.program || [];
+                        this.terapiList = data.terapi || [];
+                    }
                 },
-                options: {
-                    elements: { line: { borderWidth: 3 } },
-                    scales: { r: { angleLines: { display: true }, suggestMin: 0, suggestMax: 25, ticks: { stepSize: 5 } } },
-                    plugins: { legend: { display: false } }
+
+                doLogin() {
+                    if (this.loginForm.user === 'OPERASIONAL.MMRC' && this.loginForm.pass === 'MADANI1999') {
+                        this.isLoggedIn = true;
+                        this.errorMsg = '';
+                    } else {
+                        this.errorMsg = 'Username atau Password salah!';
+                    }
+                },
+
+                get activeMenuLabel() {
+                    return this.menus.find(m => m.id === this.activeMenu).label;
+                },
+
+                openModal(target) {
+                    this.modalTarget = target;
+                    this.formData = target === 'pasien' ? { intervensi: {}, stokObat: { awal: 0, terpakai: 0, akhir: 0 }, logs: [] } : {};
+                    this.modalOpen = true;
+                },
+
+                openMedLogModal(pasien) {
+                    this.modalTarget = 'medlog';
+                    this.formData = { pasienId: pasien.id, nama: pasien.nama, obat: '', jumlah: 1, pj: '' };
+                    this.modalOpen = true;
+                },
+
+                handleFileUpload(e) {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onloadend = () => { this.formData.foto = reader.result; };
+                    if (file) reader.readAsDataURL(file);
+                },
+
+                saveData() {
+                    const now = new Date();
+                    const timestamp = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}`;
+
+                    if (this.modalTarget === 'pasien') {
+                        this.formData.id = this.formData.id || Date.now();
+                        this.formData.waktu = timestamp;
+                        this.formData.stokObat = { awal: this.formData.stokAwal, terpakai: 0, akhir: this.formData.stokAwal };
+                        this.formData.logs = this.formData.logs || [];
+                        const idx = this.pasienList.findIndex(p => p.id === this.formData.id);
+                        if (idx > -1) this.pasienList[idx] = this.formData;
+                        else this.pasienList.push(this.formData);
+                    } else if (this.modalTarget === 'ttv') {
+                        this.ttvList.push({...this.formData, id: Date.now(), waktu: timestamp});
+                    } else if (this.modalTarget === 'visit') {
+                        this.visitList.push({...this.formData, id: Date.now(), waktu: timestamp});
+                    } else if (this.modalTarget === 'crisis') {
+                        this.crisisList.push({...this.formData, id: Date.now(), waktu: timestamp});
+                    } else if (this.modalTarget === 'program') {
+                        this.programList.push({...this.formData, id: Date.now()});
+                    } else if (this.modalTarget === 'terapi') {
+                        this.terapiList.push({...this.formData, id: Date.now()});
+                    } else if (this.modalTarget === 'medlog') {
+                        const p = this.pasienList.find(px => px.id === this.formData.pasienId);
+                        if (p) {
+                            p.stokObat.terpakai = parseInt(p.stokObat.terpakai) + parseInt(this.formData.jumlah);
+                            p.stokObat.akhir = p.stokObat.awal - p.stokObat.terpakai;
+                            p.logs.unshift({ id: Date.now(), waktu: timestamp, obat: this.formData.obat, pj: this.formData.pj });
+                        }
+                    }
+
+                    this.persist();
+                    this.modalOpen = false;
+                },
+
+                persist() {
+                    localStorage.setItem('mmrc_data', JSON.stringify({
+                        pasien: this.pasienList,
+                        ttv: this.ttvList,
+                        visit: this.visitList,
+                        crisis: this.crisisList,
+                        program: this.programList,
+                        terapi: this.terapiList
+                    }));
+                },
+
+                // Filters
+                get filteredPasien() {
+                    return this.pasienList.filter(p => p.nama.toLowerCase().includes(this.searchQuery.toLowerCase()));
+                },
+                get filteredTTV() { return this.ttvList.filter(t => this.getPasienName(t.pasienId).toLowerCase().includes(this.searchQuery.toLowerCase())); },
+                get filteredVisit() { return this.visitList.filter(v => this.getPasienName(v.pasienId).toLowerCase().includes(this.searchQuery.toLowerCase())); },
+                get filteredCrisis() { return this.crisisList.filter(c => this.getPasienName(c.pasienId).toLowerCase().includes(this.searchQuery.toLowerCase())); },
+                get filteredPlans() {
+                    const list = this.activeMenu === 'program' ? this.programList : this.terapiList;
+                    return list.filter(p => this.getPasienName(p.pasienId).toLowerCase().includes(this.searchQuery.toLowerCase()));
+                },
+
+                getPasienName(id) {
+                    const p = this.pasienList.find(px => px.id == id);
+                    return p ? p.nama : 'Unknown';
+                },
+
+                // Deletions
+                deletePasien(id) { if(confirm('Hapus pasien?')) { this.pasienList = this.pasienList.filter(p => p.id !== id); this.persist(); }},
+                deleteTTV(id) { this.ttvList = this.ttvList.filter(t => t.id !== id); this.persist(); },
+                deleteVisit(id) { this.visitList = this.visitList.filter(v => v.id !== id); this.persist(); },
+                deleteCrisis(id) { this.crisisList = this.crisisList.filter(c => c.id !== id); this.persist(); },
+                deletePlan(id) { 
+                    if (this.activeMenu === 'program') this.programList = this.programList.filter(p => p.id !== id);
+                    else this.terapiList = this.terapiList.filter(p => p.id !== id);
+                    this.persist();
+                },
+
+                editPasien(pasien) {
+                    this.formData = JSON.parse(JSON.stringify(pasien));
+                    this.modalTarget = 'pasien';
+                    this.modalOpen = true;
+                },
+
+                renderChart(data) {
+                    const ctx = document.getElementById('bpssRadarChart').getContext('2d');
+                    if (window.myRadarChart) window.myRadarChart.destroy();
+                    
+                    window.myRadarChart = new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
+                            datasets: [{
+                                label: this.getPasienName(data.pasienId),
+                                data: [data.bio, data.psy, data.soc, data.spi],
+                                fill: true,
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: 'rgb(59, 130, 246)',
+                                pointBackgroundColor: 'rgb(59, 130, 246)',
+                            }]
+                        },
+                        options: {
+                            scales: { r: { min: 0, max: 25, ticks: { stepSize: 5 } } }
+                        }
+                    });
+                },
+
+                resetSearch() { this.searchQuery = ''; },
+
+                exportToExcel() {
+                    const data = this.pasienList.map(p => ({
+                        Nama: p.nama, Masuk: p.waktu, Usia: p.usia, Alamat: p.alamat, Stok_Akhir: p.stokObat.akhir, Dokter: p.dokter, Diagnosa: p.diagnosa
+                    }));
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Data Pasien MMRC");
+                    XLSX.writeFile(wb, "MMRC_Management_Export.xlsx");
+                },
+
+                exportToWord() {
+                    alert("Fitur Word Export memerlukan template khusus. Gunakan Print (Ctrl+P) dan Save as PDF untuk hasil rapi secara instan.");
                 }
-            });
+            }
         }
-
-        // --- EXPORT LOGIC ---
-        function exportToExcel() {
-            const data = db.patients.map(p => ({
-                'ID Pasien': p.id,
-                'Tanggal Masuk': p.regDate,
-                'Nama Lengkap': p.name,
-                'Usia': p.age,
-                'Status': p.status,
-                'Wali': p.guardian,
-                'Diagnosa Dokter': p.docDiag,
-                'Paket Program': p.progPkg,
-                'Durasi': p.progTime,
-                'Kondisi Terkini': p.cond
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Database MMRC");
-            XLSX.writeFile(wb, "MMRC_Management_Export.xlsx");
-        }
-
-        // --- INITIAL RENDER ---
-        renderDashboard();
     </script>
 </body>
 </html>
