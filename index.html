@@ -3,398 +3,762 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMRC PRO - Integrated System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>MMRC Management - Madani Mental Recovery Center</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F1F5F9; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 10px; }
-        .nav-btn.active { background: #4338ca; color: white; box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3); }
-        .card-base { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; }
-        .input-field { border: 1px solid #CBD5E1; border-radius: 10px; padding: 8px 12px; width: 100%; font-size: 13px; outline: none; transition: 0.2s; }
-        .input-field:focus { border-color: #4338ca; ring: 2px solid #e0e7ff; }
-        .upload-box { border: 2px dashed #CBD5E1; border-radius: 16px; height: 140px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #F8FAFC; overflow: hidden; position: relative; transition: 0.3s; }
-        .upload-box:hover { border-color: #4338ca; background: #EEF2FF; }
-        .preview-img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        .blink-red { animation: blinker 1.5s linear infinite; color: #DC2626; font-weight: 800; }
-        @keyframes blinker { 50% { opacity: 0.5; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; }
+        
+        /* Login Screen */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 350px; }
+
+        /* Dashboard Layout */
+        #app-container { display: none; min-height: 100vh; }
+        .sidebar {
+            width: 250px; background-color: #343a40; color: white; min-height: 100vh;
+            position: fixed; transition: all 0.3s;
+        }
+        .sidebar .nav-link { color: #cfd2d6; padding: 15px 20px; border-bottom: 1px solid #4b545c; cursor: pointer; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #0d6efd; color: white; }
+        .sidebar .brand { padding: 20px; font-weight: bold; font-size: 1.2rem; background: #212529; text-align: center; }
+        
+        .main-content { margin-left: 250px; padding: 20px; }
+        .card { border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: white; border-bottom: 2px solid #f0f0f0; font-weight: bold; }
+        
+        /* Utilities */
+        .status-badge { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; }
+        .stock-warning { background-color: #ffcccc; color: #a00; font-weight: bold; }
+        
+        /* Print/Export Helper */
+        @media print {
+            .sidebar, .no-print { display: none !important; }
+            .main-content { margin-left: 0; }
+        }
     </style>
 </head>
-<body class="text-slate-800">
+<body>
 
-    <div id="login-page" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
-            <h1 class="text-2xl font-black text-indigo-700 italic mb-2">MMRC SYSTEM</h1>
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Madani Mental Recovery Center</p>
-            <form id="login-form" class="space-y-4">
-                <input type="text" id="user-input" placeholder="ID Admin" class="input-field text-center font-bold bg-slate-50" required>
-                <input type="password" id="pass-input" placeholder="Password" class="input-field text-center font-bold bg-slate-50" required>
-                <button type="submit" class="w-full bg-indigo-700 text-white font-bold py-3 rounded-xl hover:bg-indigo-800 transition">MASUK APLIKASI</button>
-            </form>
+    <div id="login-screen">
+        <div class="login-box text-center">
+            <h3 class="mb-4">MMRC Login</h3>
+            <input type="text" id="username" class="form-control mb-3" placeholder="Username">
+            <input type="password" id="password" class="form-control mb-3" placeholder="Password">
+            <button onclick="login()" class="btn btn-primary w-100">Masuk Aplikasi</button>
+            <p id="login-error" class="text-danger mt-2 small"></p>
         </div>
     </div>
 
-    <div id="main-content" class="hidden min-h-screen flex flex-col">
-        <header class="bg-white border-b sticky top-0 z-40 px-6 py-4">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-700 w-10 h-10 rounded-lg flex items-center justify-center text-white"><i class="fas fa-hospital-user"></i></div>
-                    <div><h1 class="font-black text-xl italic tracking-tight text-indigo-900">MMRC <span class="text-indigo-600">PRO</span></h1><p class="text-[10px] font-bold text-slate-400 uppercase">Operational Dashboard</p></div>
-                </div>
-                <nav class="flex bg-slate-100 p-1.5 rounded-xl gap-1 overflow-x-auto">
-                    <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Dashboard</button>
-                    <button onclick="switchTab('visit')" id="btn-visit" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Visit Dokter</button>
-                    <button onclick="switchTab('medicine')" id="btn-medicine" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Medicine</button>
-                    <button onclick="switchTab('ttv')" id="btn-ttv" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">TTV & GDS</button>
-                </nav>
-            </div>
-        </header>
+    <div id="app-container">
+        <div class="sidebar">
+            <div class="brand">MMRC Management</div>
+            <nav class="nav flex-column">
+                <a class="nav-link active" onclick="showPage('dashboard')"><i class="fas fa-home me-2"></i> Dashboard</a>
+                <a class="nav-link" onclick="showPage('medicine')"><i class="fas fa-pills me-2"></i> Medicine</a>
+                <a class="nav-link" onclick="showPage('ttv')"><i class="fas fa-heartbeat me-2"></i> TTV & GDS</a>
+                <a class="nav-link" onclick="showPage('crisis')"><i class="fas fa-exclamation-triangle me-2"></i> Pasien Crisis</a>
+                <a class="nav-link text-danger mt-5" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+            </nav>
+        </div>
 
-        <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
-            <div class="mb-8 relative max-w-lg mx-auto">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="global-search" oninput="handleSearch()" placeholder="Cari data..." class="w-full pl-12 pr-4 py-3 rounded-2xl border-none shadow-sm focus:ring-2 ring-indigo-500 font-bold text-sm">
+        <div class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 id="page-title">Dashboard Operasional</h2>
+                <button onclick="exportData()" class="btn btn-success"><i class="fas fa-file-excel me-2"></i> Download Excel</button>
             </div>
 
-            <div id="tab-dashboard" class="tab-content space-y-6">
-                <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-indigo-900">DATA PASIEN</h2><p class="text-xs text-slate-500 font-medium">Registrasi & Biodata</p></div>
-                    <button onclick="openModal('pasien')" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ REGISTRASI BARU</button>
-                </div>
-                <div id="list-pasien" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"></div>
-            </div>
-
-            <div id="tab-visit" class="tab-content hidden space-y-6">
-                <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-violet-700">VISIT DOKTER</h2><p class="text-xs text-slate-500 font-medium">Catatan & Dokumentasi</p></div>
-                    <button onclick="openModal('visit')" class="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ INPUT VISIT</button>
-                </div>
-                <div id="list-visit" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-            </div>
-
-            <div id="tab-medicine" class="tab-content hidden space-y-6">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1 space-y-4">
-                        <div class="flex justify-between items-center card-base p-4 bg-indigo-50 border-indigo-100">
-                            <h3 class="font-black text-indigo-900 uppercase italic text-sm">Stok Obat</h3>
-                            <button onclick="openModal('stok')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">+ STOK</button>
+            <div id="page-dashboard" class="page-section">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Data Pasien & Registrasi</span>
+                        <div>
+                            <input type="text" id="search-dashboard" class="form-control d-inline-block w-auto form-control-sm" placeholder="Cari Pasien..." onkeyup="renderDashboard()">
+                            <button class="btn btn-primary btn-sm ms-2" onclick="openModal('modal-patient')">+ Pasien Baru</button>
                         </div>
-                        <div id="list-stok" class="space-y-3 h-[70vh] overflow-y-auto custom-scroll pr-2"></div>
                     </div>
-                    <div class="lg:col-span-2 space-y-4">
-                         <div class="flex justify-between items-center card-base p-4 bg-emerald-50 border-emerald-100">
-                            <h3 class="font-black text-emerald-900 uppercase italic text-sm">Log Penggunaan</h3>
-                            <button onclick="openModal('use')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">+ CATAT KELUAR</button>
-                        </div>
-                        <div class="card-base overflow-hidden">
-                            <table class="w-full text-sm text-left"><thead class="bg-slate-50 text-[10px] uppercase text-slate-500"><tr><th class="p-4">Waktu</th><th class="p-4">Pasien</th><th class="p-4">Obat</th><th class="p-4">Jml</th><th class="p-4">PJ</th><th class="p-4">Aksi</th></tr></thead><tbody id="list-use" class="divide-y divide-slate-100"></tbody></table>
-                        </div>
+                    <div class="card-body table-responsive">
+                        <table class="table table-hover align-middle" id="table-dashboard">
+                            <thead>
+                                <tr>
+                                    <th>Tgl Masuk</th>
+                                    <th>Nama Pasien</th>
+                                    <th>Diagnosa Dokter</th>
+                                    <th>Status/Kondisi</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-ttv" class="tab-content hidden space-y-6">
-                <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-rose-700">TTV & GDS</h2><p class="text-xs text-slate-500 font-medium">Monitoring Tanda Vital</p></div>
-                    <button onclick="openModal('ttv')" class="bg-rose-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ INPUT DATA</button>
-                </div>
-                <div id="list-ttv" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-            </div>
-        </main>
-    </div>
-
-    <div id="modal-pasien" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2rem] w-full max-w-6xl p-8 max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl">
-            <h3 class="text-2xl font-black mb-6 uppercase text-indigo-700 border-b pb-4">Formulir Pasien MMRC</h3>
-            <form id="form-pasien" class="grid grid-cols-1 lg:grid-cols-3 gap-8 text-sm">
-                <input type="hidden" id="p-id"><input type="hidden" id="p-foto-base64">
-                <div class="space-y-4">
-                    <div class="bg-indigo-50 p-3 rounded-lg"><h4 class="font-black text-indigo-800 text-xs uppercase">1. Registrasi</h4></div>
-                    <div class="upload-box" onclick="document.getElementById('p-file').click()"><img id="p-preview" class="preview-img hidden"><div id="p-ui" class="text-center text-slate-400"><i class="fas fa-camera text-2xl mb-2"></i><p class="text-[10px] font-bold">Foto Pasien</p></div></div>
-                    <input type="file" id="p-file" class="hidden" accept="image/*" onchange="previewImage(this, 'p-preview', 'p-ui', 'p-foto-base64')">
-                    <div class="grid grid-cols-2 gap-2"><div><label class="text-[9px] font-bold text-slate-500">TGL MASUK</label><input type="date" id="p-tgl" class="input-field"></div><div><label class="text-[9px] font-bold text-slate-500">JAM</label><input type="time" id="p-jam" class="input-field"></div></div>
-                    <input type="text" id="p-nama" placeholder="Nama Lengkap" class="input-field font-bold" required>
-                    <input type="text" id="p-ttl" placeholder="Tempat, Tanggal Lahir" class="input-field">
-                    <div class="grid grid-cols-2 gap-2"><input type="number" id="p-usia" placeholder="Usia" class="input-field"><select id="p-status" class="input-field"><option>Belum Kawin</option><option>Kawin</option><option>Cerai</option></select></div>
-                    <input type="text" id="p-pendidikan" placeholder="Pendidikan" class="input-field">
-                    <input type="text" id="p-pekerjaan" placeholder="Pekerjaan" class="input-field">
-                    <textarea id="p-alamat" placeholder="Alamat Domisili" class="input-field h-14"></textarea>
-                    <input type="text" id="p-wali" placeholder="Nama Wali" class="input-field bg-slate-50 font-semibold">
-                    <textarea id="p-spotcheck" placeholder="Spotcheck Barang Bawaan" class="input-field h-14 bg-amber-50"></textarea>
-                </div>
-                <div class="space-y-4">
-                    <div class="bg-red-50 p-3 rounded-lg"><h4 class="font-black text-red-800 text-xs uppercase">2. Riwayat Penyakit</h4></div>
-                    <textarea id="p-r-fisik" placeholder="Riwayat Penyakit Fisik" class="input-field h-20"></textarea>
-                    <textarea id="p-r-psikis" placeholder="Riwayat Penyakit Psikis" class="input-field h-20"></textarea>
-                    <textarea id="p-d-lama" placeholder="Diagnosa Dokter Sebelumnya" class="input-field h-16"></textarea>
-                    <textarea id="p-obat-lama" placeholder="Riwayat Dosis Obat" class="input-field h-16 bg-slate-50"></textarea>
-                    <textarea id="p-kondisi" placeholder="Kondisi Terkini Pasien" class="input-field h-20 bg-blue-50"></textarea>
-                </div>
-                <div class="space-y-4">
-                    <div class="bg-emerald-50 p-3 rounded-lg"><h4 class="font-black text-emerald-800 text-xs uppercase">3. Diagnosa & Resep</h4></div>
-                    <input type="text" id="p-dokter" placeholder="Nama Dokter" class="input-field font-bold">
-                    <textarea id="p-d-baru" placeholder="Diagnosa Dokter Saat Masuk" class="input-field h-16 font-bold text-indigo-700"></textarea>
-                    <textarea id="p-plan" placeholder="Planning Dokter" class="input-field h-16"></textarea>
-                    
-                    <textarea id="p-resep-baru" placeholder="RESEP OBAT DOKTER (Input Detail Resep Di Sini)" class="input-field h-24 bg-emerald-100 border-emerald-300 font-bold placeholder:text-emerald-500"></textarea>
-                    
-                    <div class="bg-slate-100 p-3 rounded-xl">
-                        <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Intervensi:</p>
-                        <div class="flex gap-4"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-injeksi" class="accent-indigo-600"> <span class="text-xs font-bold">Injeksi</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-urine" class="accent-indigo-600"> <span class="text-xs font-bold">Urine</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-fiksasi" class="accent-indigo-600"> <span class="text-xs font-bold">Fiksasi</span></label></div>
+            <div id="page-medicine" class="page-section" style="display:none;">
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <span>Stok Obat Pasien</span>
+                                <button class="btn btn-primary btn-sm" onclick="openModal('modal-medicine-stock')">+ Input Obat</button>
+                            </div>
+                            <div class="card-body table-responsive">
+                                <table class="table table-bordered" id="table-medicine-stock">
+                                    <thead><tr><th>Nama Obat</th><th>Stok Awal</th><th>Terpakai</th><th>Sisa</th><th>Status</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <select id="p-paket" class="input-field font-bold bg-emerald-50"><option value="7 Hari">Paket 7 HARI</option><option value="14 Hari">Paket 14 HARI</option><option value="1 Bulan">Paket 1 BULAN</option><option value="3 Bulan">Paket 3 BULAN</option></select>
-                    <div class="flex gap-2"><button type="button" onclick="closeModal('pasien')" class="flex-1 bg-slate-200 py-3 rounded-xl font-bold">BATAL</button><button type="submit" class="flex-[2] bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg">SIMPAN DATA</button></div>
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <span>Catatan Penggunaan Obat (Log)</span>
+                                <button class="btn btn-warning btn-sm" onclick="openModal('modal-medicine-log')">+ Catat Minum Obat</button>
+                            </div>
+                            <div class="card-body table-responsive">
+                                <table class="table table-sm table-striped" id="table-medicine-log">
+                                    <thead><tr><th>Waktu</th><th>Pasien</th><th>Obat</th><th>Ket</th><th>PJ</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </form>
+            </div>
+
+            <div id="page-ttv" class="page-section" style="display:none;">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Monitoring TTV & GDS</span>
+                        <button class="btn btn-primary btn-sm" onclick="openModal('modal-ttv')">+ Input Data</button>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="table table-hover" id="table-ttv">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Pasien</th>
+                                    <th>TD / Sat / RR</th>
+                                    <th>TB / BB</th>
+                                    <th>GDS (Keterangan)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-crisis" class="page-section" style="display:none;">
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <span>Data BPSS & Program</span>
+                                <button class="btn btn-danger btn-sm" onclick="openModal('modal-crisis')">+ Input Score</button>
+                            </div>
+                            <div class="card-body table-responsive">
+                                <table class="table table-sm" id="table-crisis">
+                                    <thead><tr><th>Pasien</th><th>Bio</th><th>Psy</th><th>Soc</th><th>Spi</th><th>Program</th><th>Aksi</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header">Grafik BPSS (Polygon)</div>
+                            <div class="card-body">
+                                <canvas id="bpssChart"></canvas>
+                                <p class="text-muted small mt-2 text-center">*Klik tombol "Lihat Grafik" pada tabel untuk menampilkan.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <div id="modal-visit" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
-            <h3 class="text-xl font-black mb-4 uppercase text-violet-700 border-b pb-2">Visit Dokter</h3>
-            <form id="form-visit" class="space-y-4">
-                <input type="hidden" id="v-id"><input type="hidden" id="v-foto-base64">
-                <select id="v-pasien" class="input-field font-bold" required></select>
-                <div class="upload-box h-32" onclick="document.getElementById('v-file').click()"><img id="v-preview" class="preview-img hidden"><div id="v-ui" class="text-center text-slate-400"><i class="fas fa-image text-2xl mb-1"></i><p class="text-[10px] font-bold">Upload Bukti Visit</p></div></div>
-                <input type="file" id="v-file" class="hidden" accept="image/*" onchange="previewImage(this, 'v-preview', 'v-ui', 'v-foto-base64')">
-                <div class="grid grid-cols-2 gap-2"><input type="date" id="v-tgl" class="input-field"><input type="time" id="v-jam" class="input-field"></div>
-                <textarea id="v-hasil" placeholder="Hasil Perkembangan..." class="input-field h-24 bg-violet-50" required></textarea>
-                <button type="submit" class="w-full bg-violet-600 text-white font-bold py-3 rounded-xl shadow-lg">SIMPAN</button>
-                <button type="button" onclick="closeModal('visit')" class="w-full text-slate-400 text-xs font-bold pt-2">BATAL</button>
-            </form>
+    <div class="modal fade" id="modal-patient" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Form Registrasi & Diagnosa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-patient">
+                        <input type="hidden" id="p-id">
+                        <h6>1. Registrasi Masuk</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4"><input type="datetime-local" class="form-control" id="p-date" required></div>
+                            <div class="col-md-8"><input type="text" class="form-control" id="p-name" placeholder="Nama Lengkap" required></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-dob" placeholder="Tempat, Tgl Lahir"></div>
+                            <div class="col-md-2"><input type="number" class="form-control" id="p-age" placeholder="Usia"></div>
+                            <div class="col-md-4"><input type="text" class="form-control" id="p-status" placeholder="Status Pernikahan"></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-edu" placeholder="Pendidikan Terakhir"></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-job" placeholder="Pekerjaan"></div>
+                            <div class="col-12"><textarea class="form-control" id="p-address" rows="2" placeholder="Alamat"></textarea></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-spotcheck" placeholder="Spotcheck Barang"></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-guardian" placeholder="Nama Wali"></div>
+                        </div>
+                        <hr>
+                        <h6>2. Riwayat Penyakit</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-12"><textarea class="form-control" id="p-history" placeholder="Riwayat Fisik & Psikis"></textarea></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-prev-diag" placeholder="Diagnosa Sebelumnya"></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-drug-hist" placeholder="Riwayat Dosis Obat"></div>
+                            <div class="col-12"><input type="text" class="form-control" id="p-condition" placeholder="Kondisi Terkini"></div>
+                        </div>
+                        <hr>
+                        <h6>3. Diagnosa Dokter & Rencana</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-doc-name" placeholder="Nama Dokter"></div>
+                            <div class="col-md-6"><input type="text" class="form-control" id="p-curr-diag" placeholder="Diagnosa Masuk"></div>
+                            <div class="col-12"><textarea class="form-control" id="p-planning" placeholder="Planning Dokter"></textarea></div>
+                            <div class="col-12">
+                                <label>Intervensi:</label><br>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="p-int-inj"> <label>Injeksi</label></div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="p-int-urine"> <label>Urine Test</label></div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="p-int-fix"> <label>Fiksasi</label></div>
+                            </div>
+                            <div class="col-12"><input type="text" class="form-control" id="p-prescription" placeholder="Resep Obat & Jumlah"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" onclick="savePatient()">Simpan Data</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="modal-stok" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
-            <h3 class="text-lg font-black text-indigo-700 uppercase mb-4">Master Obat</h3>
-            <form id="form-stok" class="space-y-4">
-                <input type="hidden" id="s-id"><input type="text" id="s-nama" placeholder="Nama Obat" class="input-field font-bold" required>
-                <div class="grid grid-cols-2 gap-2"><div><label class="text-[9px] font-bold">AWAL</label><input type="number" id="s-awal" class="input-field"></div><div><label class="text-[9px] font-bold">PAKAI</label><input type="number" id="s-pakai" class="input-field bg-slate-100" readonly value="0"></div></div>
-                <button type="submit" class="w-full bg-indigo-700 text-white font-bold py-3 rounded-xl">SIMPAN</button>
-            </form>
+    <div class="modal fade" id="modal-medicine-stock" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title">Input Stok Obat</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-stock">
+                        <input type="text" class="form-control mb-2" id="m-name" placeholder="Nama Obat" required>
+                        <input type="number" class="form-control mb-2" id="m-initial" placeholder="Stok Awal" required>
+                    </form>
+                </div>
+                <div class="modal-footer"><button class="btn btn-success" onclick="saveStock()">Simpan Stok</button></div>
+            </div>
         </div>
     </div>
 
-    <div id="modal-use" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
-            <h3 class="text-lg font-black text-emerald-700 uppercase mb-4">Catat Obat Keluar</h3>
-            <form id="form-use" class="space-y-4">
-                <select id="u-pasien" class="input-field font-bold" required></select>
-                <select id="u-obat" class="input-field font-bold" required></select>
-                <div class="grid grid-cols-2 gap-2"><input type="date" id="u-tgl" class="input-field"><input type="time" id="u-jam" class="input-field"></div>
-                <div class="grid grid-cols-2 gap-2"><input type="number" id="u-jml" placeholder="Jumlah" class="input-field text-center font-bold" required><input type="text" id="u-pj" placeholder="Nama PJ" class="input-field"></div>
-                <textarea id="u-ket" placeholder="Keterangan..." class="input-field h-16"></textarea>
-                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl">CATAT</button>
-            </form>
+    <div class="modal fade" id="modal-medicine-log" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning"><h5 class="modal-title">Catat Penggunaan</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-med-log">
+                        <select id="ml-patient" class="form-select mb-2" required><option value="">Pilih Pasien</option></select>
+                        <select id="ml-medicine" class="form-select mb-2" required><option value="">Pilih Obat (Stok)</option></select>
+                        <input type="number" id="ml-amount" class="form-control mb-2" placeholder="Jumlah (Tablet)" value="1">
+                        <input type="datetime-local" id="ml-date" class="form-control mb-2" required>
+                        <input type="text" id="ml-note" class="form-control mb-2" placeholder="Keterangan">
+                        <input type="text" id="ml-pj" class="form-control mb-2" placeholder="Nama PJ">
+                    </form>
+                </div>
+                <div class="modal-footer"><button class="btn btn-warning" onclick="saveMedLog()">Catat</button></div>
+            </div>
         </div>
     </div>
 
-    <div id="modal-ttv" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
-            <h3 class="text-lg font-black text-rose-700 uppercase mb-4">Input TTV & GDS</h3>
-            <form id="form-ttv" class="space-y-4">
-                <select id="t-pasien" class="input-field font-bold" required></select>
-                <div class="grid grid-cols-2 gap-2"><input type="date" id="t-tgl" class="input-field"><input type="time" id="t-jam" class="input-field"></div>
-                <div class="grid grid-cols-2 gap-3"><input type="text" id="t-td" placeholder="Tensi (120/80)" class="input-field"><input type="text" id="t-suhu" placeholder="Suhu (°C)" class="input-field"><input type="text" id="t-rr" placeholder="RR" class="input-field"><input type="text" id="t-gds" placeholder="GDS" class="input-field text-rose-600 font-bold"></div>
-                <div class="grid grid-cols-2 gap-3"><input type="number" id="t-bb" placeholder="BB (kg)" class="input-field"><input type="number" id="t-tb" placeholder="TB (cm)" class="input-field"></div>
-                <button type="submit" class="w-full bg-rose-600 text-white font-bold py-3 rounded-xl">SIMPAN</button>
-            </form>
+    <div class="modal fade" id="modal-ttv" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white"><h5 class="modal-title">Input TTV & GDS</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-ttv">
+                        <input type="hidden" id="ttv-id">
+                        <select id="t-patient" class="form-select mb-2"></select>
+                        <input type="datetime-local" id="t-date" class="form-control mb-2">
+                        <div class="row g-2">
+                            <div class="col-4"><input type="text" id="t-bp" class="form-control" placeholder="Tensi (ex: 120/80)"></div>
+                            <div class="col-4"><input type="number" id="t-sat" class="form-control" placeholder="Saturasi %"></div>
+                            <div class="col-4"><input type="number" id="t-rr" class="form-control" placeholder="RR"></div>
+                            <div class="col-6"><input type="number" id="t-height" class="form-control" placeholder="TB (cm)"></div>
+                            <div class="col-6"><input type="number" id="t-weight" class="form-control" placeholder="BB (kg)"></div>
+                        </div>
+                        <input type="text" id="t-gds" class="form-control mt-2" placeholder="Keterangan GDS">
+                    </form>
+                </div>
+                <div class="modal-footer"><button class="btn btn-info text-white" onclick="saveTTV()">Simpan</button></div>
+            </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <div class="modal fade" id="modal-crisis" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white"><h5 class="modal-title">BPSS Score & Rencana Program</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-crisis">
+                        <input type="hidden" id="c-id">
+                        <select id="c-patient" class="form-select mb-3"></select>
+                        <input type="datetime-local" id="c-date" class="form-control mb-3">
+                        
+                        <h6>BPSS Score (0-25)</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-3"><input type="number" id="c-bio" class="form-control" placeholder="Biological" max="25"></div>
+                            <div class="col-3"><input type="number" id="c-psy" class="form-control" placeholder="Psychological" max="25"></div>
+                            <div class="col-3"><input type="number" id="c-soc" class="form-control" placeholder="Social" max="25"></div>
+                            <div class="col-3"><input type="number" id="c-spi" class="form-control" placeholder="Spiritual" max="25"></div>
+                        </div>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><input type="text" id="c-change" class="form-control" placeholder="Perubahan (Detox 7 hari)"></div>
+                            <div class="col-6"><input type="text" id="c-discharge" class="form-control" placeholder="Discharge Eval"></div>
+                        </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
-            authDomain: "mmrc-stock.firebaseapp.com",
-            projectId: "mmrc-stock",
-            storageBucket: "mmrc-stock.firebasestorage.app",
-            messagingSenderId: "722563453659",
-            appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
+                        <h6>Rencana Program</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <select id="c-package" class="form-select">
+                                    <option value="Reguler">Paket Reguler</option>
+                                    <option value="Ekslusif">Paket Ekslusif</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <select id="c-duration" class="form-select">
+                                    <option value="7 Hari">7 Hari (Detox/Stabilisasi)</option>
+                                    <option value="14 Hari">14 Hari</option>
+                                    <option value="30 Hari">30 Hari</option>
+                                    <option value="60 Hari">60 Hari</option>
+                                </select>
+                            </div>
+                            <div class="col-12"><textarea id="c-therapy" class="form-control" placeholder="Rencana Terapi"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button class="btn btn-danger" onclick="saveCrisis()">Simpan Data</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- 1. DATA MANAGEMENT & AUTH ---
+        let db = {
+            patients: [],
+            medicines: [],
+            medLogs: [],
+            ttv: [],
+            crisis: []
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        let PATIENTS = [], STOCK = [], USAGE = [], TTV = [], VISITS = [];
-
-        document.getElementById('login-form').onsubmit = (e) => {
-            e.preventDefault();
-            if(document.getElementById('user-input').value === "ADMIN" && document.getElementById('pass-input').value === "MMRC2026") {
-                document.getElementById('login-page').style.display = 'none';
-                document.getElementById('main-content').classList.remove('hidden');
-                startSync();
-            } else { alert("Login Salah"); }
-        };
-
-        function startSync() {
-            onSnapshot(collection(db, "patients_v3"), s => { PATIENTS = s.docs.map(d => ({id:d.id, ...d.data()})); renderPatients(); updateDropdowns(); });
-            onSnapshot(collection(db, "stock_v3"), s => { STOCK = s.docs.map(d => ({id:d.id, ...d.data()})); renderStock(); updateDropdowns(); });
-            onSnapshot(collection(db, "usage_v3"), s => { USAGE = s.docs.map(d => ({id:d.id, ...d.data()})); renderUsage(); });
-            onSnapshot(collection(db, "ttv_v3"), s => { TTV = s.docs.map(d => ({id:d.id, ...d.data()})); renderTTV(); });
-            onSnapshot(collection(db, "visit_v3"), s => { VISITS = s.docs.map(d => ({id:d.id, ...d.data()})); renderVisit(); });
+        // Load data from LocalStorage on startup
+        if(localStorage.getItem('mmrc_db')) {
+            db = JSON.parse(localStorage.getItem('mmrc_db'));
         }
 
-        window.switchTab = (tab) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`btn-${tab}`).classList.add('active');
-        };
+        function saveData() {
+            localStorage.setItem('mmrc_db', JSON.stringify(db));
+            renderAll();
+        }
 
-        window.previewImage = (input, imgId, uiId, hiddenId) => {
-            const file = input.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById(imgId).src = e.target.result;
-                    document.getElementById(imgId).classList.remove('hidden');
-                    document.getElementById(uiId).classList.add('hidden');
-                    document.getElementById(hiddenId).value = e.target.result;
-                };
-                reader.readAsDataURL(file);
+        function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if (u === 'ADMIN.MMRC1999' && p === 'MADANI1999') {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'block';
+                renderAll();
+            } else {
+                document.getElementById('login-error').innerText = "Username atau Password Salah!";
             }
-        };
+        }
 
-        window.openModal = (type, id=null) => {
-            document.getElementById(`form-${type}`).reset();
-            const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
-            const timeStr = now.toTimeString().substring(0,5);
-            const prefix = type==='pasien'?'p':(type==='visit'?'v':(type==='use'?'u':'t'));
+        function logout() {
+            location.reload();
+        }
+
+        // --- 2. NAVIGATION ---
+        function showPage(pageId) {
+            document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
             
-            if(document.getElementById(`${prefix}-tgl`)) document.getElementById(`${prefix}-tgl`).value = dateStr;
-            if(document.getElementById(`${prefix}-jam`)) document.getElementById(`${prefix}-jam`).value = timeStr;
-
-            if(id) {
-                let d = (type==='pasien'?PATIENTS:type==='visit'?VISITS:STOCK).find(x=>x.id===id);
-                if(type==='pasien') {
-                    document.getElementById('p-id').value = id;
-                    ['nama','tgl','jam','ttl','usia','status','pendidikan','pekerjaan','alamat','wali','spotcheck','dokter','kondisi','paket','diagnosaBaru','planning','resepBaru'].forEach(k => {
-                        let el = document.getElementById(`p-${k==='diagnosaBaru'?'d-baru':k==='resepBaru'?'resep-baru':k==='planning'?'plan':k}`);
-                        if(el) el.value = d[k] || '';
-                    });
-                    document.getElementById('p-r-fisik').value = d.riwayatFisik||''; document.getElementById('p-r-psikis').value = d.riwayatPsikis||'';
-                    document.getElementById('p-d-lama').value = d.diagnosaLama||''; document.getElementById('p-obat-lama').value = d.obatLama||'';
-                    document.getElementById('i-injeksi').checked = d.injeksi; document.getElementById('i-urine').checked = d.urine; document.getElementById('i-fiksasi').checked = d.fiksasi;
-                    if(d.foto) { document.getElementById('p-preview').src = d.foto; document.getElementById('p-preview').classList.remove('hidden'); document.getElementById('p-ui').classList.add('hidden'); document.getElementById('p-foto-base64').value = d.foto; }
-                }
-            }
-            document.getElementById(`modal-${type}`).classList.remove('hidden');
-        };
-
-        window.closeModal = (t) => document.getElementById(`modal-${t}`).classList.add('hidden');
-
-        document.getElementById('form-pasien').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('p-id').value;
-            const data = {
-                nama: document.getElementById('p-nama').value, foto: document.getElementById('p-foto-base64').value,
-                tgl: document.getElementById('p-tgl').value, jam: document.getElementById('p-jam').value,
-                ttl: document.getElementById('p-ttl').value, usia: document.getElementById('p-usia').value, status: document.getElementById('p-status').value,
-                pendidikan: document.getElementById('p-pendidikan').value, pekerjaan: document.getElementById('p-pekerjaan').value,
-                alamat: document.getElementById('p-alamat').value, wali: document.getElementById('p-wali').value, spotcheck: document.getElementById('p-spotcheck').value,
-                riwayatFisik: document.getElementById('p-r-fisik').value, riwayatPsikis: document.getElementById('p-r-psikis').value,
-                diagnosaLama: document.getElementById('p-d-lama').value, obatLama: document.getElementById('p-obat-lama').value,
-                kondisi: document.getElementById('p-kondisi').value, dokter: document.getElementById('p-dokter').value,
-                diagnosaBaru: document.getElementById('p-d-baru').value, planning: document.getElementById('p-plan').value,
-                resepBaru: document.getElementById('p-resep-baru').value,
-                injeksi: document.getElementById('i-injeksi').checked, urine: document.getElementById('i-urine').checked, fiksasi: document.getElementById('i-fiksasi').checked,
-                paket: document.getElementById('p-paket').value
+            document.getElementById('page-' + pageId).style.display = 'block';
+            
+            // Highlight Menu
+            event.target.classList.add('active');
+            
+            // Set Title
+            const titles = {
+                'dashboard': 'Dashboard Operasional',
+                'medicine': 'Manajemen Obat (Medicine)',
+                'ttv': 'Monitoring TTV & GDS',
+                'crisis': 'Penanganan Pasien Crisis'
             };
-            id ? await updateDoc(doc(db, "patients_v3", id), data) : await addDoc(collection(db, "patients_v3"), data);
-            closeModal('pasien');
-        };
-
-        document.getElementById('form-visit').onsubmit = async (e) => {
-            e.preventDefault();
-            await addDoc(collection(db, "visit_v3"), { pasienId: document.getElementById('v-pasien').value, tgl: document.getElementById('v-tgl').value, jam: document.getElementById('v-jam').value, hasil: document.getElementById('v-hasil').value, foto: document.getElementById('v-foto-base64').value });
-            closeModal('visit');
-        };
-
-        document.getElementById('form-stok').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('s-id').value;
-            const data = { nama: document.getElementById('s-nama').value, awal: parseInt(document.getElementById('s-awal').value), pakai: parseInt(document.getElementById('s-pakai').value)||0 };
-            id ? await updateDoc(doc(db, "stock_v3", id), data) : await addDoc(collection(db, "stock_v3"), data);
-            closeModal('stok');
-        };
-
-        document.getElementById('form-use').onsubmit = async (e) => {
-            e.preventDefault();
-            const sId = document.getElementById('u-obat').value;
-            const item = STOCK.find(s=>s.id===sId);
-            const jml = parseInt(document.getElementById('u-jml').value);
-            await addDoc(collection(db, "usage_v3"), { pasienId: document.getElementById('u-pasien').value, sId, namaObat: item.nama, jml, tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value, pj: document.getElementById('u-pj').value });
-            await updateDoc(doc(db, "stock_v3", sId), { pakai: (item.pakai||0) + jml });
-            closeModal('use');
-        };
-
-        document.getElementById('form-ttv').onsubmit = async (e) => {
-            e.preventDefault();
-            await addDoc(collection(db, "ttv_v3"), { pasienId: document.getElementById('t-pasien').value, tgl: document.getElementById('t-tgl').value, jam: document.getElementById('t-jam').value, td: document.getElementById('t-td').value, suhu: document.getElementById('t-suhu').value, rr: document.getElementById('t-rr').value, bb: document.getElementById('t-bb').value, tb: document.getElementById('t-tb').value, gds: document.getElementById('t-gds').value });
-            closeModal('ttv');
-        };
-
-        window.renderPatients = () => {
-            const q = document.getElementById('global-search').value.toLowerCase();
-            document.getElementById('list-pasien').innerHTML = PATIENTS.filter(p=>p.nama.toLowerCase().includes(q)).map(p => `
-                <div class="card-base p-6 flex flex-col gap-4">
-                    <div class="flex gap-4">
-                        <div class="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0">${p.foto?`<img src="${p.foto}" class="w-full h-full object-cover">`:'<i class="fas fa-user text-slate-300 p-4"></i>'}</div>
-                        <div><h3 class="font-black text-slate-800">${p.nama}</h3><p class="text-[10px] text-indigo-600 font-bold uppercase">${p.diagnosaBaru||'-'}</p></div>
-                    </div>
-                    <div class="text-[10px] bg-emerald-50 p-2 rounded-lg border border-emerald-100"><b class="text-emerald-700">RESEP:</b> <span class="text-slate-600">${p.resepBaru || 'Belum ada resep'}</span></div>
-                    <div class="flex gap-2"><button onclick="openModal('pasien','${p.id}')" class="flex-1 bg-indigo-50 text-indigo-700 py-2 rounded-lg text-xs font-bold">EDIT</button><button onclick="deleteData('patients_v3','${p.id}')" class="bg-red-50 text-red-500 px-3 py-2 rounded-lg"><i class="fas fa-trash"></i></button></div>
-                </div>`).join('');
-        };
-
-        window.renderVisit = () => {
-            document.getElementById('list-visit').innerHTML = VISITS.map(v => {
-                const p = PATIENTS.find(x => x.id === v.pasienId);
-                return `
-                <div class="card-base p-0 overflow-hidden flex flex-col">
-                    ${v.foto ? `<div class="h-40 border-b"><img src="${v.foto}" class="w-full h-full object-cover"></div>` : ''}
-                    <div class="p-4"><div class="flex justify-between"><div><h4 class="font-black text-violet-800">${p?p.nama:'-'}</h4><span class="text-[9px] text-slate-400 font-bold">${v.tgl} | ${v.jam}</span></div><button onclick="deleteData('visit_v3','${v.id}')" class="text-red-300"><i class="fas fa-trash"></i></button></div><p class="text-xs text-slate-600 mt-2">${v.hasil}</p></div>
-                </div>`;
-            }).join('');
-        };
-
-        window.renderStock = () => {
-            document.getElementById('list-stok').innerHTML = STOCK.map(s => {
-                const sisa = s.awal - s.pakai;
-                return `<div class="card-base p-4 flex justify-between items-center"><div><h4 class="font-bold text-sm">${s.nama}</h4><p class="text-[9px] text-slate-400">Awal: ${s.awal}</p></div><div class="text-right"><span class="text-lg font-black ${sisa<=7?'blink-red':'text-indigo-600'}">${sisa}</span></div></div>`;
-            }).join('');
-        };
-
-        window.renderUsage = () => {
-            document.getElementById('list-use').innerHTML = USAGE.sort((a,b)=>(b.tgl+b.jam).localeCompare(a.tgl+a.jam)).map(u => {
-                const p = PATIENTS.find(x=>x.id===u.pasienId);
-                return `<tr class="border-b"><td class="p-4 text-[10px] text-slate-400">${u.tgl}<br>${u.jam}</td><td class="p-4 font-bold text-xs">${p?p.nama:'-'}</td><td class="p-4 text-xs text-indigo-600">${u.namaObat}</td><td class="p-4 font-black text-center">${u.jml}</td><td class="p-4 text-[10px]">${u.pj}</td><td class="p-4"><button onclick="deleteData('usage_v3','${u.id}')" class="text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
-            }).join('');
-        };
-
-        window.renderTTV = () => {
-            document.getElementById('list-ttv').innerHTML = TTV.sort((a,b)=>(b.tgl+b.jam).localeCompare(a.tgl+a.jam)).map(t => {
-                const p = PATIENTS.find(x=>x.id===t.pasienId);
-                return `<div class="card-base p-4 group relative"><div class="flex justify-between mb-2"><div><h4 class="font-black text-sm">${p?p.nama:'-'}</h4><p class="text-[9px] text-slate-400">${t.tgl}</p></div><button onclick="deleteData('ttv_v3','${t.id}')" class="text-red-200"><i class="fas fa-trash"></i></button></div><div class="grid grid-cols-2 text-[10px]"><div>TD: <b>${t.td}</b></div><div>Suhu: <b>${t.suhu}</b></div><div>GDS: <b class="text-rose-600">${t.gds}</b></div><div>BB: <b>${t.bb}kg</b></div></div></div>`;
-            }).join('');
-        };
-
-        function updateDropdowns() {
-            const pOpts = `<option value="">- Pasien -</option>` + PATIENTS.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
-            ['u-pasien','t-pasien','v-pasien'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = pOpts; });
-            if(document.getElementById('u-obat')) document.getElementById('u-obat').innerHTML = `<option value="">- Obat -</option>` + STOCK.map(s => `<option value="${s.id}">${s.nama} (Sisa: ${s.awal - s.pakai})</option>`).join('');
+            document.getElementById('page-title').innerText = titles[pageId];
         }
 
-        window.deleteData = async (col, id) => { if(confirm('Hapus?')) await deleteDoc(doc(db, col, id)); };
-        window.handleSearch = () => { renderPatients(); renderVisit(); };
+        function openModal(modalId) {
+            // Reset forms
+            document.querySelectorAll(`#${modalId} form`).forEach(f => f.reset());
+            
+            // Populate Dropdowns if needed
+            if(modalId === 'modal-medicine-log' || modalId === 'modal-ttv' || modalId === 'modal-crisis') {
+                populatePatientDropdowns();
+            }
+            if(modalId === 'modal-medicine-log') {
+                populateMedicineDropdown();
+            }
 
+            const modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal.show();
+        }
+
+        function populatePatientDropdowns() {
+            const opts = db.patients.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            const list = `<option value="">-- Pilih Pasien --</option>${opts}`;
+            ['ml-patient', 't-patient', 'c-patient'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.innerHTML = list;
+            });
+        }
+        
+        function populateMedicineDropdown() {
+            const opts = db.medicines.map(m => {
+                const sisa = m.initial - m.used;
+                return `<option value="${m.id}">${m.name} (Sisa: ${sisa})</option>`;
+            }).join('');
+            document.getElementById('ml-medicine').innerHTML = `<option value="">-- Pilih Obat --</option>${opts}`;
+        }
+
+        // --- 3. CRUD LOGIC ---
+
+        // A. DASHBOARD (Patients)
+        function savePatient() {
+            const id = document.getElementById('p-id').value || Date.now().toString();
+            const data = {
+                id: id,
+                date: document.getElementById('p-date').value,
+                name: document.getElementById('p-name').value,
+                dob: document.getElementById('p-dob').value,
+                age: document.getElementById('p-age').value,
+                status: document.getElementById('p-status').value,
+                edu: document.getElementById('p-edu').value,
+                job: document.getElementById('p-job').value,
+                address: document.getElementById('p-address').value,
+                spotcheck: document.getElementById('p-spotcheck').value,
+                guardian: document.getElementById('p-guardian').value,
+                history: document.getElementById('p-history').value,
+                prevDiag: document.getElementById('p-prev-diag').value,
+                drugHist: document.getElementById('p-drug-hist').value,
+                condition: document.getElementById('p-condition').value,
+                docName: document.getElementById('p-doc-name').value,
+                currDiag: document.getElementById('p-curr-diag').value,
+                planning: document.getElementById('p-planning').value,
+                interventions: {
+                    inj: document.getElementById('p-int-inj').checked,
+                    urine: document.getElementById('p-int-urine').checked,
+                    fix: document.getElementById('p-int-fix').checked
+                },
+                prescription: document.getElementById('p-prescription').value
+            };
+
+            const idx = db.patients.findIndex(p => p.id === id);
+            if(idx >= 0) db.patients[idx] = data;
+            else db.patients.push(data);
+
+            saveData();
+            bootstrap.Modal.getInstance(document.getElementById('modal-patient')).hide();
+        }
+
+        function renderDashboard() {
+            const tbody = document.querySelector('#table-dashboard tbody');
+            const term = document.getElementById('search-dashboard').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            db.patients.forEach(p => {
+                if(p.name.toLowerCase().includes(term)) {
+                    let interventions = [];
+                    if(p.interventions.inj) interventions.push("Inj");
+                    if(p.interventions.urine) interventions.push("Urine");
+                    if(p.interventions.fix) interventions.push("Fix");
+                    
+                    const row = `<tr>
+                        <td>${new Date(p.date).toLocaleString()}</td>
+                        <td><strong>${p.name}</strong><br><small>${p.age} thn | ${p.address}</small></td>
+                        <td>${p.currDiag}<br><small>Dr. ${p.docName}</small></td>
+                        <td>${p.condition} <span class="badge bg-secondary">${interventions.join(', ')}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-info text-white" onclick="editPatient('${p.id}')">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteItem('patients', '${p.id}')">Hapus</button>
+                        </td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                }
+            });
+        }
+
+        function editPatient(id) {
+            const p = db.patients.find(x => x.id === id);
+            if(!p) return;
+            // Load data to form
+            document.getElementById('p-id').value = p.id;
+            document.getElementById('p-date').value = p.date;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-dob').value = p.dob;
+            document.getElementById('p-age').value = p.age;
+            document.getElementById('p-status').value = p.status;
+            document.getElementById('p-edu').value = p.edu;
+            document.getElementById('p-job').value = p.job;
+            document.getElementById('p-address').value = p.address;
+            document.getElementById('p-spotcheck').value = p.spotcheck;
+            document.getElementById('p-guardian').value = p.guardian;
+            
+            document.getElementById('p-history').value = p.history;
+            document.getElementById('p-prev-diag').value = p.prevDiag;
+            document.getElementById('p-drug-hist').value = p.drugHist;
+            document.getElementById('p-condition').value = p.condition;
+
+            document.getElementById('p-doc-name').value = p.docName;
+            document.getElementById('p-curr-diag').value = p.currDiag;
+            document.getElementById('p-planning').value = p.planning;
+            
+            document.getElementById('p-int-inj').checked = p.interventions.inj;
+            document.getElementById('p-int-urine').checked = p.interventions.urine;
+            document.getElementById('p-int-fix').checked = p.interventions.fix;
+            
+            document.getElementById('p-prescription').value = p.prescription;
+
+            const modal = new bootstrap.Modal(document.getElementById('modal-patient'));
+            modal.show();
+        }
+
+        // B. MEDICINE LOGIC
+        function saveStock() {
+            const data = {
+                id: Date.now().toString(),
+                name: document.getElementById('m-name').value,
+                initial: parseInt(document.getElementById('m-initial').value),
+                used: 0
+            };
+            db.medicines.push(data);
+            saveData();
+            bootstrap.Modal.getInstance(document.getElementById('modal-medicine-stock')).hide();
+        }
+
+        function saveMedLog() {
+            const medId = document.getElementById('ml-medicine').value;
+            const amount = parseInt(document.getElementById('ml-amount').value);
+            
+            // Update stock
+            const medIdx = db.medicines.findIndex(m => m.id === medId);
+            if(medIdx >= 0) {
+                db.medicines[medIdx].used += amount;
+            }
+
+            // Save log
+            const log = {
+                id: Date.now().toString(),
+                date: document.getElementById('ml-date').value,
+                patientId: document.getElementById('ml-patient').value,
+                medId: medId,
+                amount: amount,
+                note: document.getElementById('ml-note').value,
+                pj: document.getElementById('ml-pj').value
+            };
+            db.medLogs.push(log);
+            saveData();
+            bootstrap.Modal.getInstance(document.getElementById('modal-medicine-log')).hide();
+        }
+
+        function renderMedicine() {
+            // Render Stock
+            const tbodyStock = document.querySelector('#table-medicine-stock tbody');
+            tbodyStock.innerHTML = '';
+            db.medicines.forEach(m => {
+                const sisa = m.initial - m.used;
+                const warningClass = sisa <= 7 ? 'stock-warning' : '';
+                const warningText = sisa <= 7 ? ' (KRITIS)' : '';
+                
+                tbodyStock.innerHTML += `<tr class="${warningClass}">
+                    <td>${m.name}</td>
+                    <td>${m.initial}</td>
+                    <td>${m.used}</td>
+                    <td>${sisa}</td>
+                    <td>${sisa <= 7 ? 'Restock!' : 'Aman'}</td>
+                </tr>`;
+            });
+
+            // Render Logs
+            const tbodyLog = document.querySelector('#table-medicine-log tbody');
+            tbodyLog.innerHTML = '';
+            // Sort by date desc
+            const sortedLogs = [...db.medLogs].sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            sortedLogs.forEach(l => {
+                const p = db.patients.find(x => x.id === l.patientId);
+                const m = db.medicines.find(x => x.id === l.medId);
+                tbodyLog.innerHTML += `<tr>
+                    <td>${new Date(l.date).toLocaleString()}</td>
+                    <td>${p ? p.name : 'Unknown'}</td>
+                    <td>${m ? m.name : 'Unknown'} (${l.amount})</td>
+                    <td>${l.note}</td>
+                    <td>${l.pj}</td>
+                </tr>`;
+            });
+        }
+
+        // C. TTV LOGIC
+        function saveTTV() {
+            const data = {
+                id: Date.now().toString(),
+                patientId: document.getElementById('t-patient').value,
+                date: document.getElementById('t-date').value,
+                bp: document.getElementById('t-bp').value,
+                sat: document.getElementById('t-sat').value,
+                rr: document.getElementById('t-rr').value,
+                height: document.getElementById('t-height').value,
+                weight: document.getElementById('t-weight').value,
+                gds: document.getElementById('t-gds').value
+            };
+            db.ttv.push(data);
+            saveData();
+            bootstrap.Modal.getInstance(document.getElementById('modal-ttv')).hide();
+        }
+
+        function renderTTV() {
+            const tbody = document.querySelector('#table-ttv tbody');
+            tbody.innerHTML = '';
+            db.ttv.forEach(t => {
+                const p = db.patients.find(x => x.id === t.patientId);
+                tbody.innerHTML += `<tr>
+                    <td>${new Date(t.date).toLocaleString()}</td>
+                    <td>${p ? p.name : '?'}</td>
+                    <td>TD:${t.bp}, Sat:${t.sat}%, RR:${t.rr}</td>
+                    <td>TB:${t.height}cm, BB:${t.weight}kg</td>
+                    <td>${t.gds}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="deleteItem('ttv', '${t.id}')">X</button></td>
+                </tr>`;
+            });
+        }
+
+        // D. CRISIS & CHART
+        let bpssChartInstance = null;
+
+        function saveCrisis() {
+            const data = {
+                id: Date.now().toString(),
+                patientId: document.getElementById('c-patient').value,
+                date: document.getElementById('c-date').value,
+                bio: document.getElementById('c-bio').value,
+                psy: document.getElementById('c-psy').value,
+                soc: document.getElementById('c-soc').value,
+                spi: document.getElementById('c-spi').value,
+                change: document.getElementById('c-change').value,
+                discharge: document.getElementById('c-discharge').value,
+                program: {
+                    package: document.getElementById('c-package').value,
+                    duration: document.getElementById('c-duration').value,
+                    therapy: document.getElementById('c-therapy').value
+                }
+            };
+            db.crisis.push(data);
+            saveData();
+            bootstrap.Modal.getInstance(document.getElementById('modal-crisis')).hide();
+        }
+
+        function renderCrisis() {
+            const tbody = document.querySelector('#table-crisis tbody');
+            tbody.innerHTML = '';
+            db.crisis.forEach(c => {
+                const p = db.patients.find(x => x.id === c.patientId);
+                tbody.innerHTML += `<tr>
+                    <td>${p ? p.name : '?'}</td>
+                    <td>${c.bio}</td>
+                    <td>${c.psy}</td>
+                    <td>${c.soc}</td>
+                    <td>${c.spi}</td>
+                    <td>${c.program.package} (${c.program.duration})</td>
+                    <td><button class="btn btn-sm btn-info text-white" onclick="showChart('${c.id}')">Lihat Grafik</button></td>
+                </tr>`;
+            });
+        }
+
+        function showChart(id) {
+            const c = db.crisis.find(x => x.id === id);
+            const p = db.patients.find(x => x.id === c.patientId);
+            
+            const ctx = document.getElementById('bpssChart').getContext('2d');
+            
+            if(bpssChartInstance) bpssChartInstance.destroy();
+
+            bpssChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
+                    datasets: [{
+                        label: `Score BPSS: ${p ? p.name : ''}`,
+                        data: [c.bio, c.psy, c.soc, c.spi],
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scale: { min: 0, max: 25 }
+                }
+            });
+        }
+
+        // --- COMMON UTILS ---
+        function renderAll() {
+            renderDashboard();
+            renderMedicine();
+            renderTTV();
+            renderCrisis();
+        }
+
+        function deleteItem(collection, id) {
+            if(confirm('Hapus data ini?')) {
+                db[collection] = db[collection].filter(x => x.id !== id);
+                saveData();
+            }
+        }
+
+        // --- EXPORT TO EXCEL ---
+        function exportData() {
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Patients
+            const wsPatients = XLSX.utils.json_to_sheet(db.patients.map(p => ({
+                Nama: p.name, Tgl_Masuk: p.date, Diagnosa: p.currDiag, Dokter: p.docName
+            })));
+            XLSX.utils.book_append_sheet(wb, wsPatients, "Data Pasien");
+
+            // Sheet 2: Medicines
+            const wsMeds = XLSX.utils.json_to_sheet(db.medicines);
+            XLSX.utils.book_append_sheet(wb, wsMeds, "Stok Obat");
+            
+            // Sheet 3: Logs
+            const wsLogs = XLSX.utils.json_to_sheet(db.medLogs);
+            XLSX.utils.book_append_sheet(wb, wsLogs, "Log Obat");
+
+            // Sheet 4: BPSS
+            const wsBPSS = XLSX.utils.json_to_sheet(db.crisis);
+            XLSX.utils.book_append_sheet(wb, wsBPSS, "BPSS Score");
+
+            XLSX.writeFile(wb, "MMRC_Data_Export.xlsx");
+        }
     </script>
 </body>
 </html>
