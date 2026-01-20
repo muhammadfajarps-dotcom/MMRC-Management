@@ -10,12 +10,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Custom Styles */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
         .sidebar-active { background-color: #0f766e; border-right: 4px solid #ccfbf1; }
         .hidden-section { display: none; }
-        .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        .modal { transition: opacity 0.25s ease; }
+        /* Animasi untuk expand row obat */
+        .medicine-row { transition: all 0.3s ease-out; overflow: hidden; }
+        .medicine-row.hidden-row { display: none; }
+        .fade-in { animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="text-gray-800">
@@ -42,10 +44,7 @@
             </div>
             <nav class="flex-1 overflow-y-auto py-4">
                 <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="flex items-center px-6 py-3 hover:bg-teal-700 transition sidebar-active">
-                    <i class="fas fa-hospital-user w-6"></i> Dashboard
-                </a>
-                <a href="#" onclick="showSection('medicine')" id="nav-medicine" class="flex items-center px-6 py-3 hover:bg-teal-700 transition">
-                    <i class="fas fa-pills w-6"></i> Medicine
+                    <i class="fas fa-hospital-user w-6"></i> Dashboard & Obat
                 </a>
                 <a href="#" onclick="showSection('ttv')" id="nav-ttv" class="flex items-center px-6 py-3 hover:bg-teal-700 transition">
                     <i class="fas fa-heartbeat w-6"></i> TTV & GDS
@@ -75,8 +74,8 @@
                     <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
                         <i class="fas fa-file-excel mr-1"></i> Export Excel
                     </button>
-                    <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                        <i class="fas fa-plus mr-1"></i> Input Data
+                    <button onclick="openModal('general')" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                        <i class="fas fa-plus mr-1"></i> Input Pasien
                     </button>
                 </div>
             </header>
@@ -102,20 +101,21 @@
     </div>
 
     <script>
-        // --- AUTH & STATE ---
+        // --- AUTH & CONFIG ---
         const CREDENTIALS = { u: "OPERASIONAL.MMRC", p: "MADANI1999" };
         let currentUser = null;
         let currentSection = 'dashboard';
-        
-        // Data Store (Simulasi Database)
-        let db = JSON.parse(localStorage.getItem('mmrc_db')) || {
-            patients: [], // Core Data: ID, Bio, History, Diagnosis, Program, Therapy
-            medicines: [], // Linked to patientID: Stock info, logs
-            vitals: [],    // Linked to patientID: TTV & GDS
-            crisis: []     // Linked to patientID: BPSS Score
+        let tempPatientIdForMedicine = null; // Menyimpan ID saat input obat
+
+        // Data Store
+        let db = JSON.parse(localStorage.getItem('mmrc_db_v2')) || {
+            patients: [],
+            medicines: [],
+            vitals: [],
+            crisis: []
         };
 
-        // --- AUTH FUNCTIONS ---
+        // --- AUTH LOGIC ---
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const u = document.getElementById('username').value;
@@ -129,22 +129,16 @@
                 document.getElementById('loginError').classList.remove('hidden');
             }
         });
+        function logout() { location.reload(); }
 
-        function logout() {
-            location.reload();
-        }
-
-        // --- NAVIGATION & RENDERING ---
+        // --- NAVIGATION ---
         function showSection(section) {
             currentSection = section;
-            // Update Sidebar UI
             document.querySelectorAll('aside nav a').forEach(el => el.classList.remove('sidebar-active'));
             document.getElementById('nav-' + section).classList.add('sidebar-active');
             
-            // Update Title
             const titles = {
-                dashboard: "Dashboard & Registrasi Pasien",
-                medicine: "Medicine Management & Stok",
+                dashboard: "Dashboard Pasien & Stok Obat",
                 ttv: "Tanda Tanda Vital & GDS",
                 crisis: "Pasien Crisis & BPSS Score",
                 program: "Rencana Program",
@@ -156,73 +150,72 @@
 
         function renderSection(section) {
             const contentDiv = document.getElementById('main-content');
-            contentDiv.innerHTML = ''; // Clear content
+            contentDiv.innerHTML = ''; 
 
-            let html = '';
-            
-            if (section === 'dashboard') {
-                html = renderDashboardTable();
-            } else if (section === 'medicine') {
-                html = renderMedicineTable();
-            } else if (section === 'ttv') {
-                html = renderTTVTable();
-            } else if (section === 'crisis') {
-                html = renderCrisisTable();
-            } else if (section === 'program') {
-                html = renderProgramTable();
-            } else if (section === 'terapi') {
-                html = renderTerapiTable();
-            }
-
-            contentDiv.innerHTML = html;
-
-            // Render Chart if in Crisis section
-            if(section === 'crisis') {
-                renderBPSSCharts();
-            }
+            if (section === 'dashboard') contentDiv.innerHTML = renderDashboardTable();
+            else if (section === 'ttv') contentDiv.innerHTML = renderTTVTable();
+            else if (section === 'crisis') { contentDiv.innerHTML = renderCrisisTable(); renderBPSSCharts(); }
+            else if (section === 'program') contentDiv.innerHTML = renderProgramTable();
+            else if (section === 'terapi') contentDiv.innerHTML = renderTerapiTable();
         }
 
-        // --- DATA RENDERING HELPERS (TABLES) ---
-        
+        // --- RENDER DASHBOARD (MERGED WITH MEDICINE) ---
         function renderDashboardTable() {
-            if(db.patients.length === 0) return '<div class="text-center p-10 text-gray-500">Belum ada data pasien. Klik "Input Data".</div>';
+            if(db.patients.length === 0) return '<div class="text-center p-10 text-gray-500">Belum ada data pasien. Klik "Input Pasien".</div>';
             
             let rows = db.patients.map((p, index) => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-3 text-sm">${p.regDate || '-'}</td>
-                    <td class="p-3">
-                        <div class="font-bold text-teal-700">${p.name}</div>
+                <tr class="border-b bg-white hover:bg-gray-50 transition">
+                    <td class="p-3 text-sm align-top">${p.regDate || '-'}</td>
+                    <td class="p-3 align-top">
+                        <div class="font-bold text-teal-700 text-lg">${p.name}</div>
                         <div class="text-xs text-gray-500">Usia: ${p.age} | ${p.status}</div>
                         <div class="text-xs text-gray-500">Wali: ${p.guardian}</div>
                     </td>
-                    <td class="p-3 text-sm">
+                    <td class="p-3 text-sm align-top">
                         <div class="text-xs"><b>Fisik:</b> ${p.histPhysical}</div>
                         <div class="text-xs"><b>Psikis:</b> ${p.histPsych}</div>
-                        <div class="text-xs mt-1 bg-yellow-100 p-1 rounded">Kondisi: ${p.condition}</div>
+                        <div class="text-xs mt-1 bg-yellow-100 p-1 rounded inline-block">Kondisi: ${p.condition}</div>
                     </td>
-                    <td class="p-3 text-sm">
-                        <div><b>Dr. ${p.docName}</b></div>
-                        <div class="italic text-gray-600">${p.diagnosis}</div>
-                        <div class="text-xs mt-1">
-                            Intervensi: ${p.interventions ? p.interventions.join(', ') : '-'}
+                    <td class="p-3 text-sm align-top">
+                        <div class="font-semibold">Dr. ${p.docName}</div>
+                        <div class="italic text-gray-600 text-xs mb-1">${p.diagnosis}</div>
+                        <div class="text-xs text-blue-600">Intervensi: ${p.interventions ? p.interventions.join(', ') : '-'}</div>
+                    </td>
+                    <td class="p-3 text-center align-middle space-y-2">
+                        <button onclick="toggleMedicineRow('${p.id}')" class="w-full bg-teal-100 text-teal-800 border border-teal-200 px-3 py-1 rounded text-sm hover:bg-teal-200 flex items-center justify-center">
+                            <i class="fas fa-pills mr-2"></i> Data Obat
+                        </button>
+                        <button onclick="deleteData('patients', ${index})" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i> Hapus Pasien</button>
+                    </td>
+                </tr>
+                
+                <tr id="med-row-${p.id}" class="medicine-row hidden-row bg-gray-50 border-b-2 border-teal-100">
+                    <td colspan="5" class="p-4">
+                        <div class="bg-white border rounded-lg shadow-inner p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-bold text-teal-800"><i class="fas fa-prescription-bottle-alt"></i> Stok & Penggunaan Obat: ${p.name}</h4>
+                                <button onclick="openModal('medicine', '${p.id}')" class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700">
+                                    <i class="fas fa-plus"></i> Tambah Obat Baru
+                                </button>
+                            </div>
+                            <div id="med-table-${p.id}">
+                                ${renderMedicineInnerTable(p.id)}
+                            </div>
                         </div>
-                    </td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteData('patients', ${index})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
 
             return `
-                <div class="overflow-x-auto bg-white rounded shadow">
+                <div class="overflow-x-auto bg-white rounded shadow-lg">
                     <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
+                        <thead class="bg-teal-600 text-white">
                             <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Registrasi</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Biodata Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Riwayat Penyakit</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Diagnosa & Plan Dokter</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
+                                <th class="p-3 text-sm font-semibold w-24">Registrasi</th>
+                                <th class="p-3 text-sm font-semibold w-1/4">Biodata Pasien</th>
+                                <th class="p-3 text-sm font-semibold w-1/4">Riwayat Penyakit</th>
+                                <th class="p-3 text-sm font-semibold w-1/4">Diagnosa & Plan</th>
+                                <th class="p-3 text-sm font-semibold text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -231,227 +224,152 @@
             `;
         }
 
-        function renderMedicineTable() {
-            // Flatten medicine data linked to patients
-            let rows = '';
-            db.medicines.forEach((m, idx) => {
-                const p = db.patients.find(pat => pat.id === m.patientId) || {name: 'Unknown'};
+        // Helper: Render tabel obat di dalam baris pasien
+        function renderMedicineInnerTable(patientId) {
+            // Filter obat milik pasien ini saja
+            const meds = db.medicines.filter(m => m.patientId === patientId);
+            
+            if (meds.length === 0) return '<p class="text-sm text-gray-500 italic">Belum ada data obat untuk pasien ini.</p>';
+
+            let medRows = meds.map((m) => {
+                // Cari index asli di array global untuk fungsi delete/update
+                const realIndex = db.medicines.indexOf(m); 
                 const isLow = m.currentStock <= 7;
-                
-                rows += `
-                <tr class="border-b hover:bg-gray-50 ${isLow ? 'bg-red-50' : ''}">
-                    <td class="p-3 font-bold text-teal-700">${p.name}</td>
-                    <td class="p-3">${m.drugName}</td>
-                    <td class="p-3 text-center">${m.initialStock}</td>
-                    <td class="p-3 text-center font-bold text-blue-600">${m.usedStock}</td>
-                    <td class="p-3 text-center font-bold ${isLow ? 'text-red-600 animate-pulse' : 'text-green-600'}">
-                        ${m.currentStock}
-                        ${isLow ? '<br><span class="text-xs bg-red-200 text-red-800 px-1 rounded">RESTOCK!</span>' : ''}
+
+                return `
+                <tr class="border-b text-sm">
+                    <td class="p-2 font-medium">${m.drugName}</td>
+                    <td class="p-2 text-center text-gray-500">${m.initialStock}</td>
+                    <td class="p-2 text-center font-bold text-blue-600">${m.usedStock}</td>
+                    <td class="p-2 text-center font-bold ${isLow ? 'text-red-600' : 'text-green-600'}">
+                        ${m.currentStock} ${isLow ? '<i class="fas fa-exclamation-circle text-red-500" title="Restock!"></i>' : ''}
                     </td>
-                    <td class="p-3 text-sm">
-                        ${m.logs ? m.logs.map(l => `<div class="text-xs border-b border-gray-100 pb-1 mb-1">${l.date}: -1 (${l.notes}) by ${l.pic}</div>`).join('') : '-'}
+                    <td class="p-2 text-xs text-gray-600 max-w-xs overflow-hidden">
+                        ${m.logs && m.logs.length > 0 ? 
+                            `<div class="h-16 overflow-y-auto border p-1 bg-gray-50 rounded">
+                                ${m.logs.slice().reverse().map(l => `<div><b>${l.date.split(' ')[0]}</b>: ${l.notes} (${l.pic})</div>`).join('')}
+                             </div>` 
+                            : '-'}
                     </td>
-                    <td class="p-3 text-center">
-                         <button onclick="addMedicineUsage(${idx})" class="bg-blue-500 text-white px-2 py-1 rounded text-xs mb-1">Minum Obat</button>
-                         <button onclick="deleteData('medicines', ${idx})" class="text-red-500 text-xs block mx-auto mt-1">Hapus</button>
+                    <td class="p-2 text-center">
+                        <button onclick="addMedicineUsage(${realIndex})" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 mb-1 w-full">Minum</button>
+                        <button onclick="deleteData('medicines', ${realIndex})" class="text-red-400 text-xs hover:text-red-600">Hapus</button>
                     </td>
                 </tr>`;
-            });
+            }).join('');
 
             return `
-                 <div class="overflow-x-auto bg-white rounded shadow">
-                    <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Nama Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Nama Obat</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Stok Awal</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Terpakai</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Sisa Stok</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Catatan Penggunaan</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
+                <table class="w-full text-left border text-sm">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="p-2">Nama Obat</th>
+                            <th class="p-2 text-center">Awal</th>
+                            <th class="p-2 text-center">Pakai</th>
+                            <th class="p-2 text-center">Sisa</th>
+                            <th class="p-2">Catatan Log</th>
+                            <th class="p-2 text-center w-20">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>${medRows}</tbody>
+                </table>
             `;
         }
 
+        // Fungsi Expand/Collapse Row
+        function toggleMedicineRow(id) {
+            const row = document.getElementById(`med-row-${id}`);
+            if (row.classList.contains('hidden-row')) {
+                row.classList.remove('hidden-row');
+                row.classList.add('fade-in');
+            } else {
+                row.classList.add('hidden-row');
+            }
+        }
+
+        // --- RENDER OTHER TABLES (UNCHANGED) ---
         function renderTTVTable() {
             let rows = db.vitals.map((v, idx) => {
-                const p = db.patients.find(pat => pat.id === v.patientId) || {name: 'Unknown'};
+                const p = db.patients.find(pat => pat.id === v.patientId) || {name: 'Deleted'};
                 return `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-3 text-sm">${v.timestamp}</td>
                     <td class="p-3 font-bold text-teal-700">${p.name}</td>
                     <td class="p-3 text-sm">TD: ${v.td} | Sat: ${v.sat}% | RR: ${v.rr}</td>
-                    <td class="p-3 text-sm">TB: ${v.tb} cm | BB: ${v.bb} kg</td>
+                    <td class="p-3 text-sm">TB: ${v.tb} | BB: ${v.bb}</td>
                     <td class="p-3 text-sm italic bg-gray-50">${v.gds}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteData('vitals', ${idx})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
+                    <td class="p-3 text-center"><button onclick="deleteData('vitals', ${idx})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).join('');
-
-            return `
-                <div class="overflow-x-auto bg-white rounded shadow">
-                    <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Waktu</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">TTV (Vital)</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Fisik</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Ket. GDS</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
-            `;
+            return createTableWrapper(['Waktu', 'Pasien', 'TTV', 'Fisik', 'GDS', 'Aksi'], rows);
         }
 
         function renderCrisisTable() {
             let rows = db.crisis.map((c, idx) => {
-                const p = db.patients.find(pat => pat.id === c.patientId) || {name: 'Unknown'};
+                const p = db.patients.find(pat => pat.id === c.patientId) || {name: 'Deleted'};
                 return `
                 <tr class="border-b hover:bg-gray-50 align-top">
-                    <td class="p-3 font-bold text-teal-700">${p.name} <br> <span class="text-xs font-normal text-gray-500">${c.timestamp}</span></td>
-                    <td class="p-3 text-sm">
-                        <ul class="list-none space-y-1">
-                            <li>Bio: <span class="font-bold">${c.bioScore}</span></li>
-                            <li>Psycho: <span class="font-bold">${c.psychoScore}</span></li>
-                            <li>Social: <span class="font-bold">${c.socialScore}</span></li>
-                            <li>Spiritual: <span class="font-bold">${c.spiritualScore}</span></li>
-                        </ul>
-                    </td>
+                    <td class="p-3 font-bold text-teal-700">${p.name}<br><span class="text-xs text-gray-500 font-normal">${c.timestamp}</span></td>
+                    <td class="p-3 text-sm">Bio: ${c.bioScore}, Psycho: ${c.psychoScore}, Soc: ${c.socialScore}, Spi: ${c.spiritualScore}</td>
                     <td class="p-3 text-sm">${c.dischargeEval}</td>
                     <td class="p-3 text-sm">${c.change7days}</td>
-                    <td class="p-3">
-                        <div style="width: 150px; height: 150px;">
-                            <canvas id="chart-${idx}"></canvas>
-                        </div>
-                    </td>
-                     <td class="p-3 text-center">
-                        <button onclick="deleteData('crisis', ${idx})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
+                    <td class="p-3"><div style="width:100px;height:100px"><canvas id="chart-${idx}"></canvas></div></td>
+                    <td class="p-3 text-center"><button onclick="deleteData('crisis', ${idx})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).join('');
-
-            return `
-                <div class="overflow-x-auto bg-white rounded shadow">
-                    <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">BPSS Scores (0-25)</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Evaluasi Discharge</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Change (7 Hari)</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Grafik Polygon</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
-            `;
+            return createTableWrapper(['Pasien', 'BPSS Scores', 'Evaluasi', 'Perubahan', 'Grafik', 'Aksi'], rows);
         }
 
         function renderProgramTable() {
              let rows = db.patients.map((p, index) => `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-3 font-bold text-teal-700">${p.name}</td>
-                    <td class="p-3 text-sm"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">${p.programPackage || 'Belum set'}</span></td>
-                    <td class="p-3 text-sm">${p.programDuration ? p.programDuration + ' Hari' : '-'}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="editProgram(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs">Edit Program</button>
-                    </td>
-                </tr>
-            `).join('');
-
-             return `
-                <div class="overflow-x-auto bg-white rounded shadow">
-                    <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Paket Program</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Durasi Waktu</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>`;
+                    <td class="p-3 text-sm"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">${p.programPackage || '-'}</span></td>
+                    <td class="p-3 text-sm">${p.programDuration || '-'} Hari</td>
+                    <td class="p-3 text-center"><button onclick="editProgram(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs">Edit</button></td>
+                </tr>`).join('');
+             return createTableWrapper(['Pasien', 'Paket', 'Durasi', 'Aksi'], rows);
         }
 
         function renderTerapiTable() {
              let rows = db.patients.map((p, index) => `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-3 font-bold text-teal-700">${p.name}</td>
-                    <td class="p-3 text-sm italic">${p.therapyPlan || 'Belum ada rencana terapi'}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="editTherapy(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs">Edit Terapi</button>
-                    </td>
-                </tr>
-            `).join('');
+                    <td class="p-3 text-sm italic">${p.therapyPlan || '-'}</td>
+                    <td class="p-3 text-center"><button onclick="editTherapy(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs">Edit</button></td>
+                </tr>`).join('');
+             return createTableWrapper(['Pasien', 'Rencana Terapi', 'Aksi'], rows);
+        }
 
-             return `
+        function createTableWrapper(headers, rows) {
+            return `
                 <div class="overflow-x-auto bg-white rounded shadow">
                     <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead class="bg-teal-50">
-                            <tr>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Pasien</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Keterangan Rencana Terapi</th>
-                                <th class="p-3 text-sm font-semibold text-teal-800">Aksi</th>
-                            </tr>
-                        </thead>
+                        <thead class="bg-teal-50"><tr>${headers.map(h=>`<th class="p-3 text-sm font-semibold text-teal-800">${h}</th>`).join('')}</tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>`;
         }
 
-        // --- CHART GENERATOR ---
+        // --- CHARTS & LOGIC ---
         function renderBPSSCharts() {
             db.crisis.forEach((c, idx) => {
                 const ctx = document.getElementById(`chart-${idx}`);
-                if(ctx) {
-                    new Chart(ctx, {
-                        type: 'radar',
-                        data: {
-                            labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
-                            datasets: [{
-                                label: 'BPSS',
-                                data: [c.bioScore, c.psychoScore, c.socialScore, c.spiritualScore],
-                                fill: true,
-                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                borderColor: 'rgb(54, 162, 235)',
-                                pointBackgroundColor: 'rgb(54, 162, 235)',
-                                pointBorderColor: '#fff',
-                                pointHoverBackgroundColor: '#fff',
-                                pointHoverBorderColor: 'rgb(54, 162, 235)'
-                            }]
-                        },
-                        options: {
-                            elements: { line: { borderWidth: 3 } },
-                            scales: { r: { min: 0, max: 25, ticks: { display: false } } },
-                            plugins: { legend: { display: false } }
-                        }
-                    });
-                }
+                if(ctx) new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Bio', 'Psy', 'Soc', 'Spi'],
+                        datasets: [{ data: [c.bioScore, c.psychoScore, c.socialScore, c.spiritualScore], 
+                        backgroundColor: 'rgba(13, 148, 136, 0.2)', borderColor: '#0d9488', borderWidth: 1, pointRadius: 0 }]
+                    },
+                    options: { scales: { r: { display: false, min: 0, max: 25 } }, plugins: { legend: { display: false } } }
+                });
             });
         }
 
-        // --- CRUD & LOGIC ---
-
-        function saveDataLocal() {
-            localStorage.setItem('mmrc_db', JSON.stringify(db));
-        }
-
+        function saveDataLocal() { localStorage.setItem('mmrc_db_v2', JSON.stringify(db)); }
+        
         function deleteData(collection, index) {
-            if(confirm('Yakin ingin menghapus data ini?')) {
+            if(confirm('Hapus data ini?')) {
                 db[collection].splice(index, 1);
                 saveDataLocal();
                 renderSection(currentSection);
@@ -459,224 +377,140 @@
         }
 
         function globalSearch() {
-            const input = document.getElementById("globalSearch");
-            const filter = input.value.toUpperCase();
-            const table = document.getElementById("dataTable");
-            const tr = table.getElementsByTagName("tr");
-
+            const filter = document.getElementById("globalSearch").value.toUpperCase();
+            const tr = document.getElementById("dataTable").getElementsByTagName("tr");
             for (let i = 1; i < tr.length; i++) {
+                // Skip hidden detail rows from search logic to avoid breaking layout
+                if(tr[i].classList.contains('medicine-row')) continue;
+                
                 let txtValue = tr[i].textContent || tr[i].innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
+                tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
 
-        // --- MODAL & FORM HANDLERS ---
+        // --- MODAL & FORM ---
         const modal = document.getElementById('inputModal');
         const formContainer = document.getElementById('dynamicForm');
 
-        function openModal() {
+        function openModal(type, specificId = null) {
             modal.classList.remove('hidden');
-            generateFormFields();
+            tempPatientIdForMedicine = specificId;
+            generateFormFields(type);
         }
+        function closeModal() { modal.classList.add('hidden'); }
 
-        function closeModal() {
-            modal.classList.add('hidden');
-        }
-
-        function generateFormFields() {
+        function generateFormFields(type) {
             let html = '';
-            
-            // Shared: Patient Selection dropdown
-            const patientOptions = db.patients.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-            const patientSelect = `<div class="flex flex-col"><label class="text-xs font-bold text-gray-600">Pilih Pasien</label><select id="patientId" class="border p-2 rounded">${patientOptions}</select></div>`;
+            // Dropdown Pasien (Untuk TTV/Crisis/General Medicine input)
+            const patientOpts = db.patients.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            const selectPat = `<div class="col-span-2"><label class="text-xs font-bold">Pasien</label><select id="patientId" class="border p-2 w-full rounded">${patientOpts}</select></div>`;
 
-            if (currentSection === 'dashboard') {
+            if (type === 'general' && currentSection === 'dashboard') {
                 html = `
-                    <div class="col-span-2 text-sm text-teal-800 font-bold border-b">Registrasi & Biodata</div>
+                    <div class="col-span-2 text-teal-800 font-bold border-b">Biodata</div>
                     <input type="date" id="regDate" class="border p-2 rounded" required>
                     <input type="text" id="name" placeholder="Nama Lengkap" class="border p-2 rounded">
-                    <input type="text" id="pob" placeholder="Tempat Lahir" class="border p-2 rounded">
                     <input type="number" id="age" placeholder="Usia" class="border p-2 rounded">
-                    <select id="status" class="border p-2 rounded"><option>Menikah</option><option>Belum Menikah</option><option>Janda/Duda</option></select>
-                    <input type="text" id="education" placeholder="Pendidikan Terakhir" class="border p-2 rounded">
-                    <input type="text" id="job" placeholder="Pekerjaan" class="border p-2 rounded">
-                    <input type="text" id="address" placeholder="Alamat" class="border p-2 rounded">
+                    <select id="status" class="border p-2 rounded"><option>Menikah</option><option>Belum</option><option>Cerai</option></select>
                     <input type="text" id="guardian" placeholder="Nama Wali" class="border p-2 rounded">
-                    <textarea id="spotcheck" placeholder="Spotcheck Barang Bawaan" class="border p-2 rounded col-span-2"></textarea>
-                    
-                    <div class="col-span-2 text-sm text-teal-800 font-bold border-b mt-4">Medis & Diagnosa</div>
+                    <div class="col-span-2 text-teal-800 font-bold border-b mt-2">Medis</div>
                     <textarea id="histPhysical" placeholder="Riwayat Fisik" class="border p-2 rounded"></textarea>
                     <textarea id="histPsych" placeholder="Riwayat Psikis" class="border p-2 rounded"></textarea>
-                    <textarea id="prevDiag" placeholder="Diagnosa Sebelumnya" class="border p-2 rounded"></textarea>
-                    <textarea id="medHist" placeholder="Riwayat Obat" class="border p-2 rounded"></textarea>
                     <input type="text" id="condition" placeholder="Kondisi Terkini" class="border p-2 rounded col-span-2">
-                    
-                    <input type="text" id="docName" placeholder="Nama Dokter" class="border p-2 rounded">
-                    <input type="text" id="diagnosis" placeholder="Diagnosa Masuk" class="border p-2 rounded">
-                    <textarea id="plan" placeholder="Planning Dokter" class="border p-2 rounded col-span-2"></textarea>
-                    <div class="col-span-2 flex space-x-4 bg-gray-100 p-2 rounded">
-                        <label><input type="checkbox" value="Injeksi" class="interv"> Injeksi</label>
-                        <label><input type="checkbox" value="Urine Test" class="interv"> Urine Test</label>
-                        <label><input type="checkbox" value="Fiksasi" class="interv"> Fiksasi</label>
-                    </div>
-                    <textarea id="prescription" placeholder="Resep & Jumlah Obat" class="border p-2 rounded col-span-2"></textarea>
+                    <input type="text" id="docName" placeholder="Dokter" class="border p-2 rounded">
+                    <input type="text" id="diagnosis" placeholder="Diagnosa" class="border p-2 rounded">
+                    <div class="col-span-2 flex gap-2"><label><input type="checkbox" value="Injeksi" class="interv"> Injeksi</label><label><input type="checkbox" value="Fiksasi" class="interv"> Fiksasi</label></div>
                 `;
-            } else if (currentSection === 'medicine') {
+            } else if (type === 'medicine') {
+                // Form Obat Spesifik
+                const pName = db.patients.find(p => p.id === tempPatientIdForMedicine)?.name;
+                document.getElementById('modalTitle').innerText = `Tambah Obat untuk: ${pName}`;
                 html = `
-                    ${patientSelect}
-                    <input type="text" id="drugName" placeholder="Nama Obat" class="border p-2 rounded">
-                    <input type="number" id="initialStock" placeholder="Stok Awal" class="border p-2 rounded">
-                    <p class="col-span-2 text-xs text-gray-500">*Input log penggunaan dilakukan di tabel utama.</p>
+                    <input type="hidden" id="patientId" value="${tempPatientIdForMedicine}">
+                    <input type="text" id="drugName" placeholder="Nama Obat" class="border p-2 rounded col-span-2">
+                    <input type="number" id="initialStock" placeholder="Jumlah Stok Awal" class="border p-2 rounded col-span-2">
                 `;
             } else if (currentSection === 'ttv') {
-                html = `
-                    ${patientSelect}
-                    <input type="datetime-local" id="timestamp" class="border p-2 rounded">
-                    <input type="text" id="td" placeholder="Tensi Darah (mmHg)" class="border p-2 rounded">
-                    <input type="number" id="sat" placeholder="Saturasi (%)" class="border p-2 rounded">
-                    <input type="number" id="rr" placeholder="Respiration Rate" class="border p-2 rounded">
-                    <input type="number" id="tb" placeholder="TB (cm)" class="border p-2 rounded">
-                    <input type="number" id="bb" placeholder="BB (kg)" class="border p-2 rounded">
-                    <textarea id="gds" placeholder="Keterangan GDS" class="border p-2 rounded col-span-2"></textarea>
-                `;
+                html = `${selectPat} <input type="datetime-local" id="timestamp" class="border p-2 rounded">
+                <input type="text" id="td" placeholder="TD" class="border p-2 rounded"><input type="number" id="sat" placeholder="Sat %" class="border p-2 rounded">
+                <input type="number" id="rr" placeholder="RR" class="border p-2 rounded"><input type="number" id="tb" placeholder="TB" class="border p-2 rounded">
+                <input type="number" id="bb" placeholder="BB" class="border p-2 rounded"><textarea id="gds" placeholder="Ket GDS" class="border p-2 rounded col-span-2"></textarea>`;
             } else if (currentSection === 'crisis') {
-                html = `
-                    ${patientSelect}
-                    <input type="datetime-local" id="timestamp" class="border p-2 rounded">
-                    <input type="number" id="bioScore" placeholder="Biological (0-25)" max="25" class="border p-2 rounded">
-                    <input type="number" id="psychoScore" placeholder="Psychological (0-25)" max="25" class="border p-2 rounded">
-                    <input type="number" id="socialScore" placeholder="Social (0-25)" max="25" class="border p-2 rounded">
-                    <input type="number" id="spiritualScore" placeholder="Spiritual (0-25)" max="25" class="border p-2 rounded">
-                    <textarea id="dischargeEval" placeholder="Evaluasi Discharge" class="border p-2 rounded"></textarea>
-                    <textarea id="change7days" placeholder="Perubahan 7 Hari Detox" class="border p-2 rounded"></textarea>
-                `;
+                html = `${selectPat} <input type="datetime-local" id="timestamp" class="border p-2 rounded">
+                <input type="number" id="bioScore" placeholder="Bio (0-25)" class="border p-2 rounded"><input type="number" id="psychoScore" placeholder="Psycho (0-25)" class="border p-2 rounded">
+                <input type="number" id="socialScore" placeholder="Social (0-25)" class="border p-2 rounded"><input type="number" id="spiritualScore" placeholder="Spiritual (0-25)" class="border p-2 rounded">
+                <textarea id="dischargeEval" placeholder="Evaluasi" class="border p-2 rounded col-span-2"></textarea>`;
             }
-            // Program & Terapi use special Edit modals, not general Add
-            
             formContainer.innerHTML = html;
         }
 
         function saveData() {
-            // Helper to get value safely
             const val = (id) => document.getElementById(id) ? document.getElementById(id).value : '';
-
-            if (currentSection === 'dashboard') {
-                const newPatient = {
-                    id: Date.now().toString(),
-                    regDate: val('regDate'),
-                    name: val('name'),
-                    age: val('age'),
-                    status: val('status'),
-                    guardian: val('guardian'),
-                    histPhysical: val('histPhysical'),
-                    histPsych: val('histPsych'),
-                    condition: val('condition'),
-                    docName: val('docName'),
-                    diagnosis: val('diagnosis'),
-                    interventions: Array.from(document.querySelectorAll('.interv:checked')).map(cb => cb.value),
-                    // ... other fields not explicitly mapped for brevity but stored in object if needed
-                    programPackage: '-',
-                    programDuration: '-',
-                    therapyPlan: '-'
-                };
-                db.patients.push(newPatient);
-            } else if (currentSection === 'medicine') {
-                const init = parseInt(val('initialStock')) || 0;
+            
+            // Cek jika ini input obat dari dalam dashboard
+            if (document.getElementById('modalTitle').innerText.includes('Tambah Obat')) {
                 db.medicines.push({
                     patientId: val('patientId'),
                     drugName: val('drugName'),
-                    initialStock: init,
+                    initialStock: parseInt(val('initialStock')) || 0,
                     usedStock: 0,
-                    currentStock: init,
+                    currentStock: parseInt(val('initialStock')) || 0,
                     logs: []
                 });
+            } 
+            // Input Pasien Baru
+            else if (currentSection === 'dashboard') {
+                db.patients.push({
+                    id: Date.now().toString(),
+                    regDate: val('regDate'), name: val('name'), age: val('age'), status: val('status'), guardian: val('guardian'),
+                    histPhysical: val('histPhysical'), histPsych: val('histPsych'), condition: val('condition'),
+                    docName: val('docName'), diagnosis: val('diagnosis'),
+                    interventions: Array.from(document.querySelectorAll('.interv:checked')).map(c=>c.value)
+                });
             } else if (currentSection === 'ttv') {
-                db.vitals.push({
-                    patientId: val('patientId'),
-                    timestamp: val('timestamp'),
-                    td: val('td'), sat: val('sat'), rr: val('rr'), tb: val('tb'), bb: val('bb'),
-                    gds: val('gds')
-                });
+                db.vitals.push({ patientId: val('patientId'), timestamp: val('timestamp'), td: val('td'), sat: val('sat'), rr: val('rr'), tb: val('tb'), bb: val('bb'), gds: val('gds') });
             } else if (currentSection === 'crisis') {
-                db.crisis.push({
-                    patientId: val('patientId'),
-                    timestamp: val('timestamp'),
-                    bioScore: parseInt(val('bioScore')),
-                    psychoScore: parseInt(val('psychoScore')),
-                    socialScore: parseInt(val('socialScore')),
-                    spiritualScore: parseInt(val('spiritualScore')),
-                    dischargeEval: val('dischargeEval'),
-                    change7days: val('change7days')
-                });
+                db.crisis.push({ patientId: val('patientId'), timestamp: val('timestamp'), bioScore: val('bioScore'), psychoScore: val('psychoScore'), socialScore: val('socialScore'), spiritualScore: val('spiritualScore'), dischargeEval: val('dischargeEval'), change7days: '-' });
             }
 
             saveDataLocal();
             closeModal();
             renderSection(currentSection);
+            
+            // Jika baru tambah obat, buka lagi row nya
+            if(tempPatientIdForMedicine) {
+                setTimeout(() => {
+                    const row = document.getElementById(`med-row-${tempPatientIdForMedicine}`);
+                    if(row) row.classList.remove('hidden-row');
+                }, 100);
+            }
         }
-
-        // --- SPECIAL FEATURES ---
 
         function addMedicineUsage(idx) {
             const med = db.medicines[idx];
-            if(med.currentStock <= 0) return alert('Stok obat habis!');
+            if(med.currentStock <= 0) return alert('Stok habis!');
             
-            const notes = prompt("Masukkan keterangan penggunaan:");
+            const notes = prompt(`Gunakan ${med.drugName}. Masukkan keterangan (cth: Pagi/Siang/Malam):`);
             if(notes) {
-                const now = new Date().toLocaleString();
-                med.usedStock += 1;
-                med.currentStock -= 1;
-                med.logs.push({
-                    date: now,
-                    notes: notes,
-                    pic: currentUser
-                });
-                
-                if(med.currentStock <= 7) alert(`PERINGATAN: Stok ${med.drugName} sisa ${med.currentStock}!`);
-                
+                med.usedStock++;
+                med.currentStock--;
+                med.logs.push({ date: new Date().toLocaleString(), notes: notes, pic: currentUser });
+                if(med.currentStock <= 7) alert(`Warning: Sisa stok ${med.drugName} tinggal ${med.currentStock}!`);
                 saveDataLocal();
-                renderSection('medicine');
+                renderSection('dashboard');
+                // Re-open row
+                setTimeout(() => document.getElementById(`med-row-${med.patientId}`).classList.remove('hidden-row'), 50);
             }
         }
 
-        function editProgram(index) {
-            const p = db.patients[index];
-            const pack = prompt("Paket Program (Reguler/Ekslusif):", p.programPackage);
-            const dur = prompt("Durasi (7/14/30/60):", p.programDuration);
-            if(pack && dur) {
-                p.programPackage = pack;
-                p.programDuration = dur;
-                saveDataLocal();
-                renderSection('program');
-            }
-        }
-
-        function editTherapy(index) {
-            const p = db.patients[index];
-            const plan = prompt("Keterangan Rencana Terapi:", p.therapyPlan);
-            if(plan) {
-                p.therapyPlan = plan;
-                saveDataLocal();
-                renderSection('terapi');
-            }
-        }
-
-        // --- EXPORT TO EXCEL ---
+        function editProgram(i) { const p = db.patients[i]; p.programPackage = prompt("Paket:", p.programPackage); p.programDuration = prompt("Durasi:", p.programDuration); saveDataLocal(); renderSection('program'); }
+        function editTherapy(i) { const p = db.patients[i]; p.therapyPlan = prompt("Plan Terapi:", p.therapyPlan); saveDataLocal(); renderSection('terapi'); }
+        
         function exportToExcel() {
             const table = document.getElementById("dataTable");
-            if(!table) return alert("Tidak ada data untuk diekspor.");
-            
-            /* Generate workbook */
-            const wb = XLSX.utils.table_to_book(table, {sheet: "Sheet 1"});
-            
-            /* Generate file download */
-            XLSX.writeFile(wb, `MMRC_Export_${currentSection}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Data"});
+            XLSX.writeFile(wb, `MMRC_Data_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
-
     </script>
 </body>
 </html>
