@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMHC PRO V4.3 - Advanced Clinical System</title>
+    <title>MMHC PRO V4.4 - Full CRUD System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -22,12 +22,12 @@
 
     <div id="login-page" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 text-center shadow-2xl">
-            <h1 class="text-3xl font-black text-indigo-600 mb-2 italic">MMHC PRO <span class="text-slate-800">V4.3</span></h1>
+            <h1 class="text-3xl font-black text-indigo-600 mb-2 italic">MMHC PRO <span class="text-slate-800">V4.4</span></h1>
             <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-8">Clinical Database Management</p>
             <form id="login-form" class="space-y-4">
                 <input type="text" id="user-input" placeholder="ID Admin" class="w-full bg-slate-100 p-4 rounded-2xl outline-none font-bold" required>
                 <input type="password" id="pass-input" placeholder="Passcode" class="w-full bg-slate-100 p-4 rounded-2xl outline-none font-bold" required>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg">MASUK SISTEM</button>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl">MASUK SISTEM</button>
             </form>
         </div>
     </div>
@@ -57,9 +57,8 @@
                 <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-3xl shadow-sm gap-4">
                     <button onclick="closeDetail()" class="text-slate-600 font-black flex items-center gap-2 px-4"><i class="fas fa-arrow-left"></i> KEMBALI</button>
                     <div class="flex gap-2">
-                        <button id="btn-edit-pasien" class="bg-amber-500 text-white px-4 py-2 rounded-xl text-[10px] font-black italic">EDIT BIO</button>
-                        <button onclick="exportToWord()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black italic">UNDUH WORD</button>
-                        <button onclick="exportExcel7H()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black italic">LAPORAN 7H</button>
+                        <button id="btn-edit-pasien" class="bg-amber-500 text-white px-4 py-2 rounded-xl text-[10px] font-black italic">EDIT BIODATA</button>
+                        <button id="btn-hapus-pasien" class="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black italic">HAPUS PASIEN</button>
                     </div>
                 </div>
                 <div id="detail-render"></div>
@@ -69,46 +68,35 @@
 
     <div id="modal-pasien" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[3rem] w-full max-w-6xl p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <h3 id="modal-title" class="text-2xl font-black mb-8 border-l-8 border-indigo-600 pl-4 uppercase italic">Form Rekam Medis</h3>
+            <h3 id="modal-title" class="text-2xl font-black mb-8 border-l-8 border-indigo-600 pl-4 uppercase italic italic">Form Biodata Pasien</h3>
             <form id="form-pasien" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <input type="hidden" id="p-id">
                 <div class="space-y-4">
-                    <p class="text-[10px] font-black text-indigo-500 uppercase border-b pb-2 italic">I. Identitas Pasien</p>
+                    <p class="text-[10px] font-black text-indigo-500 uppercase border-b pb-2 italic">I. Identitas</p>
                     <input type="text" id="p-nama" placeholder="Nama Lengkap" class="input-medis" required>
                     <div class="grid grid-cols-2 gap-2">
                         <input type="text" id="p-ttl" placeholder="TTL" class="input-medis">
                         <input type="number" id="p-umur" placeholder="Usia" class="input-medis">
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <select id="p-jk" class="input-medis"><option>Laki-laki</option><option>Perempuan</option></select>
-                        <select id="p-status" class="input-medis"><option>Belum Kawin</option><option>Kawin</option><option>Cerai</option></select>
-                    </div>
+                    <select id="p-jk" class="input-medis"><option>Laki-laki</option><option>Perempuan</option></select>
                     <input type="text" id="p-pekerjaan" placeholder="Pekerjaan" class="input-medis">
-                    <textarea id="p-alamat" placeholder="Alamat Lengkap" class="input-medis h-24"></textarea>
-                    <input type="text" id="p-penjamin" placeholder="Penjamin / Keluarga" class="input-medis">
+                    <textarea id="p-alamat" placeholder="Alamat" class="input-medis h-24"></textarea>
                 </div>
                 <div class="space-y-4">
-                    <p class="text-[10px] font-black text-red-500 uppercase border-b pb-2 italic">II. Klinis & Riwayat</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="p-tgl-masuk" class="input-medis">
-                        <input type="time" id="p-jam-masuk" class="input-medis">
-                    </div>
-                    <textarea id="p-riwayat" placeholder="Riwayat Penyakit Pasien" class="input-medis h-24" required></textarea>
-                    <textarea id="p-planning" placeholder="Planning Dokter" class="input-medis h-24 bg-emerald-50"></textarea>
-                    <textarea id="p-diagnosa" placeholder="Diagnosa Utama" class="input-medis h-24 bg-indigo-50 font-black"></textarea>
+                    <p class="text-[10px] font-black text-red-500 uppercase border-b pb-2 italic">II. Klinis</p>
+                    <input type="text" id="p-diagnosa" placeholder="Diagnosa" class="input-medis font-black italic">
+                    <textarea id="p-riwayat" placeholder="Riwayat Penyakit" class="input-medis h-24"></textarea>
+                    <textarea id="p-planning" placeholder="Planning Dokter" class="input-medis h-24"></textarea>
                 </div>
                 <div class="space-y-4">
-                    <p class="text-[10px] font-black text-orange-500 uppercase border-b pb-2 italic">III. Intervensi & Resep</p>
-                    <div class="bg-slate-900 text-white p-6 rounded-[2rem] space-y-3">
-                        <div class="flex items-center gap-3"><input type="checkbox" id="i-fiksasi" class="w-5 h-5"><label class="text-[10px] font-bold">Fiksasi</label></div>
-                        <input type="text" id="p-injeksi" placeholder="Intervensi Injeksi" class="w-full bg-white/10 p-3 rounded-xl text-xs border-none outline-none">
-                        <input type="text" id="i-urine" placeholder="Hasil Test Urine" class="w-full bg-white/10 p-3 rounded-xl text-xs border-none outline-none">
-                    </div>
-                    <textarea id="p-resep" placeholder="Resep Obat Dokter..." class="input-medis h-32 bg-orange-50"></textarea>
-                    <input type="file" id="p-foto" accept="image/*" class="text-[10px] font-bold">
+                    <p class="text-[10px] font-black text-orange-500 uppercase border-b pb-2 italic">III. Injeksi & Foto</p>
+                    <input type="text" id="p-injeksi" placeholder="Input Injeksi" class="input-medis">
+                    <input type="text" id="i-urine" placeholder="Input Urine" class="input-medis">
+                    <textarea id="p-resep" placeholder="Resep Obat" class="input-medis h-24"></textarea>
+                    <input type="file" id="p-foto" class="text-xs">
                     <input type="hidden" id="p-foto-base64">
                     <div class="flex gap-2 pt-4">
-                        <button type="button" onclick="closeModals()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-black text-slate-400">BATAL</button>
+                        <button type="button" onclick="closeModals()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-black">BATAL</button>
                         <button type="submit" class="flex-[2] bg-indigo-600 text-white py-4 rounded-2xl font-black">SIMPAN DATA</button>
                     </div>
                 </div>
@@ -118,55 +106,36 @@
 
     <div id="modal-ttv" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-xl font-black mb-6 italic border-b pb-2 uppercase text-indigo-600">Input TTV & GDS</h3>
+            <h3 id="ttv-title" class="text-xl font-black mb-6 uppercase text-indigo-600 italic">Input TTV & GDS</h3>
             <form id="form-ttv" class="space-y-4">
                 <input type="hidden" id="v-id">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="v-td" placeholder="TD (120/80)" class="input-medis">
-                    <input type="text" id="v-suhu" placeholder="Suhu °C" class="input-medis">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="v-spo2" placeholder="SpO2 %" class="input-medis">
-                    <input type="number" id="v-rr" placeholder="RR x/m" class="input-medis">
+                    <input type="text" id="v-td" placeholder="TD" class="input-medis">
+                    <input type="text" id="v-suhu" placeholder="Suhu" class="input-medis">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <input type="number" id="v-bb" placeholder="BB kg" class="input-medis">
                     <input type="number" id="v-tb" placeholder="TB cm" class="input-medis">
                 </div>
-                <input type="text" id="v-gds" placeholder="Keterangan GDS (Contoh: 150 mg/dL atau HI)" class="input-medis bg-orange-50 text-orange-700">
+                <input type="text" id="v-gds" placeholder="Keterangan GDS (Contoh: 150 mg/dL)" class="input-medis bg-orange-50">
                 <div class="grid grid-cols-2 gap-2">
                     <input type="date" id="v-tgl" class="input-medis text-xs">
                     <input type="time" id="v-jam" class="input-medis text-xs">
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-black">SIMPAN TTV</button>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-black">SIMPAN</button>
             </form>
         </div>
     </div>
 
     <div id="modal-obat" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-xl font-black mb-6 italic border-b pb-2 uppercase text-indigo-600">Manajemen Stok</h3>
+            <h3 id="obat-title" class="text-xl font-black mb-6 uppercase text-indigo-600 italic">Input/Edit Stok</h3>
             <form id="form-obat" class="space-y-4">
                 <input type="hidden" id="o-id">
                 <input type="text" id="o-nama" placeholder="Nama Obat" class="input-medis" required>
                 <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <p class="text-[8px] font-bold ml-2 mb-1 uppercase">Stok Awal</p>
-                        <input type="number" id="o-stok-awal" placeholder="Stok Awal" class="input-medis" required>
-                    </div>
-                    <div>
-                        <p class="text-[8px] font-bold ml-2 mb-1 uppercase">Stok Digunakan</p>
-                        <input type="number" id="o-stok-pakai" placeholder="0" class="input-medis bg-slate-200" readonly>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 bg-indigo-50 p-4 rounded-xl">
-                    <div class="text-center"><p class="text-[8px] font-bold">PAGI</p><input type="number" id="o-pagi" value="1" class="w-full p-2 rounded-lg text-center font-bold"></div>
-                    <div class="text-center"><p class="text-[8px] font-bold">SIANG</p><input type="number" id="o-siang" value="1" class="w-full p-2 rounded-lg text-center font-bold"></div>
-                    <div class="text-center"><p class="text-[8px] font-bold">MALAM</p><input type="number" id="o-malam" value="1" class="w-full p-2 rounded-lg text-center font-bold"></div>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="date" id="o-tgl" class="input-medis text-xs">
-                    <input type="time" id="o-jam" class="input-medis text-xs">
+                    <input type="number" id="o-stok-awal" placeholder="Stok Awal" class="input-medis">
+                    <input type="number" id="o-stok-pakai" placeholder="Stok Digunakan" class="input-medis bg-slate-100" readonly>
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-black">SIMPAN STOK</button>
             </form>
@@ -175,17 +144,18 @@
 
     <div id="modal-penggunaan" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-xl font-black mb-6 italic border-b pb-2 uppercase text-emerald-600">Log Penggunaan</h3>
+            <h3 id="use-title" class="text-xl font-black mb-6 uppercase text-emerald-600 italic">Log Penggunaan</h3>
             <form id="form-penggunaan" class="space-y-4">
                 <input type="hidden" id="u-id">
+                <input type="hidden" id="u-old-jml" value="0">
                 <select id="u-nama" class="input-medis" required><option value="">Pilih Obat...</option></select>
+                <input type="number" id="u-jml" placeholder="Jumlah Digunakan" class="input-medis" required>
+                <textarea id="u-ket" placeholder="Keterangan..." class="input-medis h-24"></textarea>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="date" id="u-tgl" class="input-medis text-xs">
                     <input type="time" id="u-jam" class="input-medis text-xs">
                 </div>
-                <input type="number" id="u-jml" placeholder="Jumlah Digunakan" class="input-medis" required value="1">
-                <textarea id="u-ket" placeholder="Keterangan..." class="input-medis h-24"></textarea>
-                <button type="submit" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-black">CATAT LOG</button>
+                <button type="submit" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-black">SIMPAN LOG</button>
             </form>
         </div>
     </div>
@@ -208,6 +178,7 @@
 
         let PASIEN = [], OBAT = [], TTV = [], USE = [], SELECTED_ID = null;
 
+        // AUTH
         document.getElementById('login-form').onsubmit = (e) => {
             e.preventDefault();
             if(document.getElementById('user-input').value === "MMRC.Stock1999" && document.getElementById('pass-input').value === "Madani1999") {
@@ -218,20 +189,20 @@
         };
 
         function startSync() {
-            onSnapshot(collection(db, "pasien_v43"), s => { PASIEN = s.docs.map(d => ({id:d.id, ...d.data()})); renderPasien(); if(SELECTED_ID) renderDetail(); });
-            onSnapshot(collection(db, "obat_v43"), s => { OBAT = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
-            onSnapshot(collection(db, "ttv_v43"), s => { TTV = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
-            onSnapshot(collection(db, "penggunaan_v43"), s => { USE = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
+            onSnapshot(collection(db, "pasien_v44"), s => { PASIEN = s.docs.map(d => ({id:d.id, ...d.data()})); renderPasien(); if(SELECTED_ID) renderDetail(); });
+            onSnapshot(collection(db, "obat_v44"), s => { OBAT = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
+            onSnapshot(collection(db, "ttv_v44"), s => { TTV = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
+            onSnapshot(collection(db, "penggunaan_v44"), s => { USE = s.docs.map(d => ({id:d.id, ...d.data()})); if(SELECTED_ID) renderDetail(); });
         }
 
         // BIODATA CRUD
         window.openModalPasien = (id = null) => {
             const f = document.getElementById('form-pasien'); f.reset();
             document.getElementById('p-id').value = id || '';
+            document.getElementById('modal-title').innerText = id ? "Edit Biodata" : "Register Pasien Baru";
             if(id) {
                 const p = PASIEN.find(x => x.id === id);
                 Object.keys(p).forEach(k => { if(document.getElementById(`p-${k}`)) document.getElementById(`p-${k}`).value = p[k]; });
-                document.getElementById('i-fiksasi').checked = p.fiksasi;
             }
             document.getElementById('modal-pasien').classList.remove('hidden');
         };
@@ -247,15 +218,13 @@
             const data = {
                 nama: document.getElementById('p-nama').value, ttl: document.getElementById('p-ttl').value,
                 umur: document.getElementById('p-umur').value, jk: document.getElementById('p-jk').value,
-                status: document.getElementById('p-status').value, pekerjaan: document.getElementById('p-pekerjaan').value,
-                alamat: document.getElementById('p-alamat').value, penjamin: document.getElementById('p-penjamin').value,
-                riwayat: document.getElementById('p-riwayat').value, tglMasuk: document.getElementById('p-tgl-masuk').value,
-                jamMasuk: document.getElementById('p-jam-masuk').value, planning: document.getElementById('p-planning').value,
-                diagnosa: document.getElementById('p-diagnosa').value, fiksasi: document.getElementById('i-fiksasi').checked,
-                injeksi: document.getElementById('p-injeksi').value, urine: document.getElementById('i-urine').value,
-                resep: document.getElementById('p-resep').value, foto: document.getElementById('p-foto-base64').value || (id ? PASIEN.find(x => x.id === id).foto : '')
+                pekerjaan: document.getElementById('p-pekerjaan').value, alamat: document.getElementById('p-alamat').value,
+                riwayat: document.getElementById('p-riwayat').value, planning: document.getElementById('p-planning').value,
+                diagnosa: document.getElementById('p-diagnosa').value, injeksi: document.getElementById('p-injeksi').value,
+                urine: document.getElementById('i-urine').value, resep: document.getElementById('p-resep').value,
+                foto: document.getElementById('p-foto-base64').value || (id ? PASIEN.find(x => x.id === id).foto : '')
             };
-            id ? await updateDoc(doc(db, "pasien_v43", id), data) : await addDoc(collection(db, "pasien_v43"), data);
+            id ? await updateDoc(doc(db, "pasien_v44", id), data) : await addDoc(collection(db, "pasien_v44"), data);
             closeModals();
         };
 
@@ -263,108 +232,92 @@
             const s = document.getElementById('search-pasien').value.toLowerCase();
             document.getElementById('list-pasien').innerHTML = PASIEN.filter(p => p.nama.toLowerCase().includes(s))
             .map(p => `
-                <div onclick="openDetail('${p.id}')" class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl cursor-pointer flex gap-4 items-center transition-all border border-transparent hover:border-indigo-600">
+                <div onclick="openDetail('${p.id}')" class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl cursor-pointer flex gap-4 items-center border border-transparent hover:border-indigo-600 transition-all">
                     <img src="${p.foto}" class="w-16 h-16 rounded-2xl object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${p.nama}'">
-                    <div><h4 class="font-black text-slate-800">${p.nama}</h4><p class="text-[9px] font-black text-indigo-500 uppercase italic">${p.diagnosa || 'Diagnosa Belum Ada'}</p></div>
+                    <div><h4 class="font-black">${p.nama}</h4><p class="text-[9px] font-black text-indigo-500 uppercase italic">${p.diagnosa || 'Diagnosa Belum Ada'}</p></div>
                 </div>
             `).join('');
         };
 
-        window.openDetail = (id) => { SELECTED_ID = id; document.getElementById('view-list').classList.add('hidden'); document.getElementById('view-detail').classList.remove('hidden'); document.getElementById('btn-edit-pasien').onclick = () => openModalPasien(id); renderDetail(); };
+        window.openDetail = (id) => { 
+            SELECTED_ID = id; 
+            document.getElementById('view-list').classList.add('hidden'); 
+            document.getElementById('view-detail').classList.remove('hidden'); 
+            document.getElementById('btn-edit-pasien').onclick = () => openModalPasien(id);
+            document.getElementById('btn-hapus-pasien').onclick = () => deleteData('pasien_v44', id, true);
+            renderDetail(); 
+        };
         window.closeDetail = () => { SELECTED_ID = null; document.getElementById('view-list').classList.remove('hidden'); document.getElementById('view-detail').classList.add('hidden'); };
 
         function renderDetail() {
             const p = PASIEN.find(x => x.id === SELECTED_ID);
             if(!p) return;
 
-            const ttvP = TTV.filter(t => t.pasienId === SELECTED_ID).reverse();
-            const obatP = OBAT.filter(o => o.pasienId === SELECTED_ID);
-            const useP = USE.filter(u => u.pasienId === SELECTED_ID).reverse();
+            const qTTV = (document.getElementById('sh-ttv')?.value || "").toLowerCase();
+            const qStok = (document.getElementById('sh-stok')?.value || "").toLowerCase();
+            const qUse = (document.getElementById('sh-use')?.value || "").toLowerCase();
+
+            const ttvP = TTV.filter(t => t.pasienId === SELECTED_ID && t.tgl.includes(qTTV)).reverse();
+            const obatP = OBAT.filter(o => o.pasienId === SELECTED_ID && o.nama.toLowerCase().includes(qStok));
+            const useP = USE.filter(u => u.pasienId === SELECTED_ID && u.nama.toLowerCase().includes(qUse)).reverse();
 
             document.getElementById('detail-render').innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-6">
                         <div class="bg-white p-8 rounded-[3rem] shadow-sm flex flex-col md:flex-row gap-8">
-                            <img src="${p.foto}" class="w-32 h-32 rounded-[2rem] object-cover shadow-xl">
+                            <img src="${p.foto}" class="w-32 h-32 rounded-[2rem] object-cover">
                             <div class="flex-1">
-                                <h2 class="text-3xl font-black mb-1">${p.nama}</h2>
-                                <p class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-4 italic">${p.pekerjaan} • ${p.status}</p>
-                                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold border-t pt-4">
-                                    <p><span class="text-slate-400 uppercase">TTL/Umur:</span> ${p.ttl} / ${p.umur} TH</p>
-                                    <p><span class="text-slate-400 uppercase">Tgl Masuk:</span> ${p.tglMasuk} [${p.jamMasuk}]</p>
-                                    <p class="col-span-2"><span class="text-slate-400 uppercase">Penjamin:</span> ${p.penjamin}</p>
-                                    <p class="col-span-2"><span class="text-slate-400 uppercase">Alamat:</span> ${p.alamat}</p>
+                                <h2 class="text-3xl font-black">${p.nama}</h2>
+                                <p class="text-xs font-black text-indigo-500 mb-4 italic uppercase">${p.pekerjaan} | ${p.umur} TH</p>
+                                <div class="grid grid-cols-2 gap-2 text-[10px] font-bold border-t pt-4">
+                                    <p><span class="text-slate-400">ALAMAT:</span> ${p.alamat}</p>
+                                    <p><span class="text-slate-400">DIAGNOSA:</span> ${p.diagnosa}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200">
-                            <h5 class="text-[9px] font-black text-slate-400 uppercase mb-2 italic">Riwayat Penyakit</h5>
-                            <p class="text-sm font-bold text-slate-700 leading-relaxed">${p.riwayat || '-'}</p>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-emerald-600 text-white p-7 rounded-[2.5rem]"><p class="text-[9px] font-black opacity-60 uppercase mb-1 italic">Planning Dokter</p><p class="text-sm font-bold">${p.planning || '-'}</p></div>
-                            <div class="bg-indigo-600 text-white p-7 rounded-[2.5rem]"><p class="text-[9px] font-black opacity-60 uppercase mb-1 italic">Diagnosa Utama</p><p class="text-sm font-black italic">${p.diagnosa || '-'}</p></div>
-                        </div>
-
-                        <div class="bg-slate-900 text-white p-8 rounded-[3rem]">
-                             <h5 class="text-[10px] font-black uppercase mb-6 text-indigo-400 italic">Intervensi & Tindakan</h5>
-                             <div class="grid grid-cols-3 gap-4">
-                                <div><p class="text-[7px] font-black opacity-40 uppercase">Fiksasi</p><p class="font-black text-base ${p.fiksasi ? 'text-red-400' : 'text-slate-500'}">${p.fiksasi ? 'AKTIF' : 'TIDAK'}</p></div>
-                                <div><p class="text-[7px] font-black opacity-40 uppercase">Injeksi</p><p class="font-bold text-[10px] text-indigo-200">${p.injeksi || '-'}</p></div>
-                                <div><p class="text-[7px] font-black opacity-40 uppercase">Urine</p><p class="font-bold text-[10px]">${p.urine || '-'}</p></div>
-                             </div>
-                        </div>
-
-                        <div class="bg-white p-8 rounded-[3rem] border-l-[12px] border-orange-500 shadow-sm">
-                             <h5 class="text-[10px] font-black uppercase mb-4 text-slate-400 italic">Resep Obat Dokter</h5>
-                             <p class="bg-orange-50 p-6 rounded-2xl italic text-slate-700 font-bold whitespace-pre-line">${p.resep || '-'}</p>
-                        </div>
-
                         <div class="bg-white p-8 rounded-[3rem] shadow-sm">
-                            <div class="flex justify-between items-center mb-6">
-                                <h5 class="text-[11px] font-black uppercase text-emerald-600 italic">Catatan Penggunaan Obat</h5>
-                                <button onclick="openModalPenggunaan()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ INPUT LOG</button>
+                            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                                <h5 class="text-[11px] font-black uppercase text-emerald-600 italic">Penggunaan Obat</h5>
+                                <div class="flex gap-2">
+                                    <input type="text" id="sh-use" oninput="renderDetail()" placeholder="Cari Log..." class="text-[10px] p-2 bg-slate-50 rounded-lg outline-none border">
+                                    <button onclick="openModalPenggunaan()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ LOG</button>
+                                </div>
                             </div>
-                            <div class="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
+                            <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                                 ${useP.map(u => `
-                                    <div class="bg-emerald-50/50 p-4 rounded-2xl flex justify-between items-center group">
-                                        <div>
-                                            <p class="text-xs font-black text-emerald-800">${u.nama} (-${u.jml} Tab)</p>
-                                            <p class="text-[8px] font-bold text-slate-400">${u.tgl} | ${u.jam}</p>
-                                            <p class="text-[10px] text-slate-600 mt-1 italic">${u.ket || '-'}</p>
+                                    <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center group">
+                                        <div><p class="text-xs font-black">${u.nama} (-${u.jml})</p><p class="text-[8px] text-slate-400">${u.tgl} | ${u.jam}</p></div>
+                                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button onclick="openModalPenggunaan('${u.id}')" class="text-blue-500 text-xs"><i class="fas fa-edit"></i></button>
+                                            <button onclick="deleteData('penggunaan_v44','${u.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
                                         </div>
-                                        <button onclick="deleteData('penggunaan_v43','${u.id}')" class="text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash"></i></button>
                                     </div>
-                                `).join('') || '<p class="text-center text-[10px] font-bold py-4 text-slate-300 italic uppercase">Belum ada penggunaan obat</p>'}
+                                `).join('')}
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-6">
                         <div class="bg-white p-8 rounded-[3rem] shadow-sm">
-                            <div class="flex justify-between items-center mb-6">
-                                <h5 class="text-[11px] font-black text-slate-400 italic uppercase">Stok Obat</h5>
+                            <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                                <h5 class="text-[11px] font-black text-slate-400 uppercase italic">Stok Obat</h5>
                                 <button onclick="openModalObat()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ STOK</button>
                             </div>
+                            <input type="text" id="sh-stok" oninput="renderDetail()" placeholder="Cari Obat..." class="w-full text-[10px] p-2 bg-slate-50 rounded-lg mb-4 outline-none border">
                             <div class="space-y-3">
                                 ${obatP.map(o => {
                                     const sisa = o.stokAwal - (o.stokPakai || 0);
-                                    const isCritical = sisa <= 5;
                                     return `
-                                    <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center group relative border border-white">
+                                    <div class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center group">
                                         <div>
                                             <p class="text-xs font-black">${o.nama}</p>
-                                            <p class="text-[7px] font-bold text-slate-400 uppercase">Awal: ${o.stokAwal} | Pakai: ${o.stokPakai || 0}</p>
-                                            ${isCritical ? '<p class="critical-alert text-[8px] mt-1">⚠️ STOK KRITIS (TERSISA '+sisa+')</p>' : ''}
+                                            <p class="text-[8px] font-bold text-slate-400">Sisa: ${sisa}</p>
+                                            ${sisa <= 5 ? '<p class="critical-alert text-[7px]">⚠️ KRITIS</p>' : ''}
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-xl font-black ${isCritical?'text-red-600':'text-indigo-600'}">${sisa}</p>
-                                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button onclick="openModalObat('${o.id}')" class="text-blue-500 text-[10px]"><i class="fas fa-edit"></i></button>
-                                                <button onclick="deleteData('obat_v43','${o.id}')" class="text-red-400 text-[10px]"><i class="fas fa-trash"></i></button>
-                                            </div>
+                                        <div class="flex gap-2 opacity-0 group-hover:opacity-100">
+                                            <button onclick="openModalObat('${o.id}')" class="text-blue-500 text-xs"><i class="fas fa-edit"></i></button>
+                                            <button onclick="deleteData('obat_v44','${o.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
                                         </div>
                                     </div>`;
                                 }).join('')}
@@ -372,25 +325,20 @@
                         </div>
 
                         <div class="bg-white p-8 rounded-[3rem] shadow-sm">
-                            <div class="flex justify-between items-center mb-6">
-                                <h5 class="text-[11px] font-black text-slate-400 italic uppercase">TTV GDS Tracker</h5>
-                                <button onclick="openModalTTV()" class="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ CEK</button>
+                             <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                                <h5 class="text-[11px] font-black text-slate-400 uppercase italic">TTV GDS Log</h5>
+                                <button onclick="openModalTTV()" class="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black">+ TTV</button>
                             </div>
-                            <div class="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
+                            <input type="text" id="sh-ttv" oninput="renderDetail()" placeholder="Cari Tanggal..." class="w-full text-[10px] p-2 bg-slate-50 rounded-lg mb-4 outline-none border">
+                            <div class="space-y-4">
                                 ${ttvP.map(t => `
-                                    <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm relative group hover:border-red-200 transition-all">
-                                        <div class="flex justify-between text-[9px] font-black mb-2"><span class="text-slate-400">${t.tgl}</span><span class="text-orange-600 italic">GDS: ${t.gds || '-'}</span></div>
-                                        <div class="grid grid-cols-3 gap-y-3 text-center text-[10px] font-bold">
-                                            <div><p class="text-[7px] text-slate-300 uppercase">TD</p><p>${t.td}</p></div>
-                                            <div><p class="text-[7px] text-slate-300 uppercase">SpO2</p><p>${t.spo2}%</p></div>
-                                            <div><p class="text-[7px] text-slate-300 uppercase">Suhu</p><p>${t.suhu}°C</p></div>
-                                            <div><p class="text-[7px] text-slate-300 uppercase">BB</p><p>${t.bb || '-'} kg</p></div>
-                                            <div><p class="text-[7px] text-slate-300 uppercase">TB</p><p>${t.tb || '-'} cm</p></div>
-                                            <div><p class="text-[7px] text-slate-300 uppercase">RR</p><p>${t.rr} x/m</p></div>
-                                        </div>
-                                        <div class="absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-all bg-white/90 p-1 rounded-lg">
-                                            <button onclick="openModalTTV('${t.id}')" class="text-blue-500 text-[10px]"><i class="fas fa-edit"></i></button>
-                                            <button onclick="deleteData('ttv_v43','${t.id}')" class="text-red-400 text-[10px]"><i class="fas fa-trash"></i></button>
+                                    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group">
+                                        <p class="text-[9px] font-black text-slate-400">${t.tgl} | ${t.jam}</p>
+                                        <p class="text-[10px] font-black text-orange-600">GDS: ${t.gds}</p>
+                                        <p class="text-[8px] font-bold">BB: ${t.bb}kg | TB: ${t.tb}cm</p>
+                                        <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100">
+                                            <button onclick="openModalTTV('${t.id}')" class="text-blue-500 text-xs"><i class="fas fa-edit"></i></button>
+                                            <button onclick="deleteData('ttv_v44','${t.id}')" class="text-red-400 text-xs"><i class="fas fa-trash"></i></button>
                                         </div>
                                     </div>
                                 `).join('')}
@@ -401,16 +349,16 @@
             `;
         }
 
-        // TTV CRUD (GDS IS TEXT)
+        // TTV CRUD
         window.openModalTTV = (id = null) => {
             const f = document.getElementById('form-ttv'); f.reset();
             document.getElementById('v-id').value = id || '';
+            document.getElementById('ttv-title').innerText = id ? "Edit TTV & GDS" : "Input TTV & GDS";
             if(id) {
                 const t = TTV.find(x => x.id === id);
                 Object.keys(t).forEach(k => { if(document.getElementById(`v-${k}`)) document.getElementById(`v-${k}`).value = t[k]; });
             } else {
                 document.getElementById('v-tgl').value = new Date().toISOString().split('T')[0];
-                document.getElementById('v-jam').value = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
             }
             document.getElementById('modal-ttv').classList.remove('hidden');
         };
@@ -420,31 +368,23 @@
             const id = document.getElementById('v-id').value;
             const data = {
                 pasienId: SELECTED_ID, td: document.getElementById('v-td').value, suhu: document.getElementById('v-suhu').value,
-                spo2: document.getElementById('v-spo2').value, rr: document.getElementById('v-rr').value,
                 bb: document.getElementById('v-bb').value, tb: document.getElementById('v-tb').value,
                 gds: document.getElementById('v-gds').value, tgl: document.getElementById('v-tgl').value, jam: document.getElementById('v-jam').value
             };
-            id ? await updateDoc(doc(db, "ttv_v43", id), data) : await addDoc(collection(db, "ttv_v43"), data);
+            id ? await updateDoc(doc(db, "ttv_v44", id), data) : await addDoc(collection(db, "ttv_v44"), data);
             closeModals();
         };
 
-        // STOK CRUD (MODIFIED)
+        // OBAT CRUD
         window.openModalObat = (id = null) => {
             const f = document.getElementById('form-obat'); f.reset();
             document.getElementById('o-id').value = id || '';
+            document.getElementById('obat-title').innerText = id ? "Edit Master Stok" : "Input Master Stok";
             if(id) {
                 const o = OBAT.find(x => x.id === id);
                 document.getElementById('o-nama').value = o.nama;
                 document.getElementById('o-stok-awal').value = o.stokAwal;
                 document.getElementById('o-stok-pakai').value = o.stokPakai || 0;
-                document.getElementById('o-pagi').value = o.pagi;
-                document.getElementById('o-siang').value = o.siang;
-                document.getElementById('o-malam').value = o.malam;
-                document.getElementById('o-tgl').value = o.tglBeri;
-                document.getElementById('o-jam').value = o.jamBeri;
-            } else {
-                document.getElementById('o-tgl').value = new Date().toISOString().split('T')[0];
-                document.getElementById('o-jam').value = "08:00";
             }
             document.getElementById('modal-obat').classList.remove('hidden');
         };
@@ -453,71 +393,79 @@
             e.preventDefault();
             const id = document.getElementById('o-id').value;
             const data = {
-                pasienId: SELECTED_ID, nama: document.getElementById('o-nama').value, 
+                pasienId: SELECTED_ID, nama: document.getElementById('o-nama').value,
                 stokAwal: parseInt(document.getElementById('o-stok-awal').value),
-                stokPakai: parseInt(document.getElementById('o-stok-pakai').value) || 0,
-                tglBeri: document.getElementById('o-tgl').value, jamBeri: document.getElementById('o-jam').value,
-                pagi: document.getElementById('o-pagi').value, siang: document.getElementById('o-siang').value, malam: document.getElementById('o-malam').value
+                stokPakai: parseInt(document.getElementById('o-stok-pakai').value) || 0
             };
-            id ? await updateDoc(doc(db, "obat_v43", id), data) : await addDoc(collection(db, "obat_v43"), data);
+            id ? await updateDoc(doc(db, "obat_v44", id), data) : await addDoc(collection(db, "obat_v44"), data);
             closeModals();
         };
 
-        // PENGGUNAAN (AUTOMATE ADD TO STOK PAKAI)
-        window.openModalPenggunaan = () => {
+        // PENGGUNAAN CRUD
+        window.openModalPenggunaan = (id = null) => {
             const f = document.getElementById('form-penggunaan'); f.reset();
-            const sel = document.getElementById('u-nama'); sel.innerHTML = '<option value="">Pilih Obat Stok...</option>';
-            OBAT.filter(o => o.pasienId === SELECTED_ID).forEach(o => { 
-                sel.innerHTML += `<option value="${o.id}">${o.nama} (Sisa: ${o.stokAwal - (o.stokPakai || 0)})</option>`; 
-            });
-            document.getElementById('u-tgl').value = new Date().toISOString().split('T')[0];
-            document.getElementById('u-jam').value = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+            const sel = document.getElementById('u-nama'); sel.innerHTML = '<option value="">Pilih Obat...</option>';
+            OBAT.filter(o => o.pasienId === SELECTED_ID).forEach(o => { sel.innerHTML += `<option value="${o.id}">${o.nama}</option>`; });
+            
+            document.getElementById('u-id').value = id || '';
+            document.getElementById('use-title').innerText = id ? "Edit Log Penggunaan" : "Input Log Penggunaan";
+            
+            if(id) {
+                const u = USE.find(x => x.id === id);
+                document.getElementById('u-nama').value = OBAT.find(o => o.nama === u.nama && o.pasienId === SELECTED_ID)?.id || "";
+                document.getElementById('u-jml').value = u.jml;
+                document.getElementById('u-old-jml').value = u.jml;
+                document.getElementById('u-ket').value = u.ket;
+                document.getElementById('u-tgl').value = u.tgl;
+                document.getElementById('u-jam').value = u.jam;
+            } else {
+                document.getElementById('u-tgl').value = new Date().toISOString().split('T')[0];
+            }
             document.getElementById('modal-penggunaan').classList.remove('hidden');
         };
 
         document.getElementById('form-penggunaan').onsubmit = async (e) => {
             e.preventDefault();
+            const id = document.getElementById('u-id').value;
             const obatId = document.getElementById('u-nama').value;
             const jml = parseInt(document.getElementById('u-jml').value);
+            const oldJml = parseInt(document.getElementById('u-old-jml').value);
             const oRef = OBAT.find(x => x.id === obatId);
 
-            // 1. Tambah ke stok digunakan
-            const newPakai = (oRef.stokPakai || 0) + jml;
-            await updateDoc(doc(db, "obat_v43", obatId), { stokPakai: newPakai });
-
-            // 2. Tambah Log Penggunaan
-            await addDoc(collection(db, "penggunaan_v43"), {
-                pasienId: SELECTED_ID, nama: oRef.nama, jml: jml,
-                tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value,
-                ket: document.getElementById('u-ket').value
-            });
-            
+            if(id) {
+                // Edit: Hitung selisih stok
+                const diff = jml - oldJml;
+                await updateDoc(doc(db, "obat_v44", obatId), { stokPakai: (oRef.stokPakai || 0) + diff });
+                await updateDoc(doc(db, "penggunaan_v44", id), {
+                    nama: oRef.nama, jml: jml, ket: document.getElementById('u-ket').value,
+                    tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value
+                });
+            } else {
+                // Input Baru
+                await updateDoc(doc(db, "obat_v44", obatId), { stokPakai: (oRef.stokPakai || 0) + jml });
+                await addDoc(collection(db, "penggunaan_v44"), {
+                    pasienId: SELECTED_ID, nama: oRef.nama, jml: jml, ket: document.getElementById('u-ket').value,
+                    tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value
+                });
+            }
             closeModals();
         };
 
-        // EXPORTS
-        window.exportToWord = () => {
-            const p = PASIEN.find(x => x.id === SELECTED_ID);
-            const content = `DATA REKAM MEDIS LENGKAP - MMHC PRO V4.3\n\nI. IDENTITAS\nNama: ${p.nama}\nTTL/Usia: ${p.ttl} / ${p.umur}\nJenis Kelamin: ${p.jk}\nStatus: ${p.status}\nPekerjaan: ${p.pekerjaan}\nAlamat: ${p.alamat}\nPenjamin: ${p.penjamin}\n\nII. KLINIS & RIWAYAT\nRiwayat Penyakit: ${p.riwayat}\nPlanning: ${p.planning}\nDiagnosa: ${p.diagnosa}\n\nIII. INTERVENSI\nFiksasi: ${p.fiksasi?'AKTIF':'TIDAK'}\nInjeksi: ${p.injeksi}\nUrine: ${p.urine}\nResep: ${p.resep}`;
-            const b = new Blob(['\ufeff', content], {type: 'application/msword'});
-            const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `RM_LENGKAP_${p.nama}.doc`; l.click();
+        window.deleteData = async (col, id, isPasien = false) => {
+            if(confirm('Hapus data ini secara permanen?')) {
+                // Logika khusus hapus log penggunaan: kembalikan stok
+                if(col === 'penggunaan_v44') {
+                    const u = USE.find(x => x.id === id);
+                    const o = OBAT.find(x => x.nama === u.nama && x.pasienId === SELECTED_ID);
+                    if(o) await updateDoc(doc(db, "obat_v44", o.id), { stokPakai: Math.max(0, o.stokPakai - u.jml) });
+                }
+                await deleteDoc(doc(db, col, id));
+                if(isPasien) closeDetail();
+            }
         };
 
-        window.exportExcel7H = () => {
-            const p = PASIEN.find(x => x.id === SELECTED_ID);
-            const ttvP = TTV.filter(t => t.pasienId === SELECTED_ID);
-            const obatP = OBAT.filter(o => o.pasienId === SELECTED_ID);
-            let csv = `LAPORAN KESEHATAN & STOK: ${p.nama}\n\nBAGIAN 1: TTV GDS\nTanggal,Jam,TD,Suhu,SpO2,RR,GDS (Keterangan),BB,TB\n`;
-            ttvP.forEach(t => csv += `${t.tgl},${t.jam},${t.td},${t.suhu},${t.spo2},${t.rr},${t.gds},${t.bb},${t.tb}\n`);
-            csv += `\nBAGIAN 2: STOK OBAT\nNama Obat,Stok Awal,Stok Digunakan,Stok Sisa\n`;
-            obatP.forEach(o => csv += `${o.nama},${o.stokAwal},${o.stokPakai || 0},${o.stokAwal - (o.stokPakai || 0)}\n`);
-            const b = new Blob(['\ufeff', csv], {type: 'text/csv'});
-            const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `LAP_7H_${p.nama}.csv`; l.click();
-        };
-
-        window.deleteData = async (col, id) => { if(confirm('Hapus data ini?')) await deleteDoc(doc(db, col, id)); };
         window.closeModals = () => document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden'));
 
     </script>
 </body>
-                            </html>
+</html>
