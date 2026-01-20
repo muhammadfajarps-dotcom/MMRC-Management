@@ -6,27 +6,18 @@
     <title>MMRC PRO - Integrated System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F1F5F9; }
-        
-        /* Custom Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 10px; }
-        
-        /* UI Components */
         .nav-btn.active { background: #4338ca; color: white; box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3); }
         .card-base { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; }
         .input-field { border: 1px solid #CBD5E1; border-radius: 10px; padding: 8px 12px; width: 100%; font-size: 13px; outline: none; transition: 0.2s; }
         .input-field:focus { border-color: #4338ca; ring: 2px solid #e0e7ff; }
-        
-        /* Photo Upload UI */
         .upload-box { border: 2px dashed #CBD5E1; border-radius: 16px; height: 140px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #F8FAFC; overflow: hidden; position: relative; transition: 0.3s; }
         .upload-box:hover { border-color: #4338ca; background: #EEF2FF; }
         .preview-img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        
-        /* Reminder Animation */
         .blink-red { animation: blinker 1.5s linear infinite; color: #DC2626; font-weight: 800; }
         @keyframes blinker { 50% { opacity: 0.5; } }
     </style>
@@ -53,56 +44,52 @@
                     <div><h1 class="font-black text-xl italic tracking-tight text-indigo-900">MMRC <span class="text-indigo-600">PRO</span></h1><p class="text-[10px] font-bold text-slate-400 uppercase">Operational Dashboard</p></div>
                 </div>
                 <nav class="flex bg-slate-100 p-1.5 rounded-xl gap-1 overflow-x-auto">
-                    <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap">Dashboard</button>
-                    <button onclick="switchTab('visit')" id="btn-visit" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap">Visit Dokter</button>
-                    <button onclick="switchTab('medicine')" id="btn-medicine" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap">Medicine</button>
-                    <button onclick="switchTab('ttv')" id="btn-ttv" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap">TTV & GDS</button>
+                    <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Dashboard</button>
+                    <button onclick="switchTab('visit')" id="btn-visit" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Visit Dokter</button>
+                    <button onclick="switchTab('medicine')" id="btn-medicine" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">Medicine</button>
+                    <button onclick="switchTab('ttv')" id="btn-ttv" class="nav-btn px-4 py-2 rounded-lg text-xs font-bold uppercase transition">TTV & GDS</button>
                 </nav>
             </div>
         </header>
 
         <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
-            
             <div class="mb-8 relative max-w-lg mx-auto">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="global-search" oninput="handleSearch()" placeholder="Cari data (Nama Pasien / Obat / Catatan)..." class="w-full pl-12 pr-4 py-3 rounded-2xl border-none shadow-sm focus:ring-2 ring-indigo-500 font-bold text-sm">
+                <input type="text" id="global-search" oninput="handleSearch()" placeholder="Cari data..." class="w-full pl-12 pr-4 py-3 rounded-2xl border-none shadow-sm focus:ring-2 ring-indigo-500 font-bold text-sm">
             </div>
 
             <div id="tab-dashboard" class="tab-content space-y-6">
                 <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-indigo-900">DATA PASIEN</h2><p class="text-xs text-slate-500 font-medium">Registrasi, Biodata & Diagnosa</p></div>
-                    <button onclick="openModal('pasien')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-2"><i class="fas fa-plus"></i> REGISTRASI BARU</button>
+                    <div><h2 class="text-2xl font-black text-indigo-900">DATA PASIEN</h2><p class="text-xs text-slate-500 font-medium">Registrasi & Biodata</p></div>
+                    <button onclick="openModal('pasien')" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ REGISTRASI BARU</button>
                 </div>
                 <div id="list-pasien" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"></div>
             </div>
 
             <div id="tab-visit" class="tab-content hidden space-y-6">
                 <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-violet-700">VISIT DOKTER</h2><p class="text-xs text-slate-500 font-medium">Catatan Perkembangan & Dokumentasi</p></div>
-                    <button onclick="openModal('visit')" class="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-2"><i class="fas fa-camera"></i> INPUT VISIT</button>
+                    <div><h2 class="text-2xl font-black text-violet-700">VISIT DOKTER</h2><p class="text-xs text-slate-500 font-medium">Catatan & Dokumentasi</p></div>
+                    <button onclick="openModal('visit')" class="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ INPUT VISIT</button>
                 </div>
                 <div id="list-visit" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
 
             <div id="tab-medicine" class="tab-content hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1 space-y-6">
+                    <div class="lg:col-span-1 space-y-4">
                         <div class="flex justify-between items-center card-base p-4 bg-indigo-50 border-indigo-100">
-                            <h3 class="font-black text-indigo-900 uppercase italic">Stok Obat</h3>
-                            <button onclick="openModal('stok')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shadow">+ OBAT</button>
+                            <h3 class="font-black text-indigo-900 uppercase italic text-sm">Stok Obat</h3>
+                            <button onclick="openModal('stok')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">+ STOK</button>
                         </div>
                         <div id="list-stok" class="space-y-3 h-[70vh] overflow-y-auto custom-scroll pr-2"></div>
                     </div>
-                    <div class="lg:col-span-2 space-y-6">
+                    <div class="lg:col-span-2 space-y-4">
                          <div class="flex justify-between items-center card-base p-4 bg-emerald-50 border-emerald-100">
-                            <h3 class="font-black text-emerald-900 uppercase italic">Log Penggunaan (Auto-Deduct)</h3>
-                            <button onclick="openModal('use')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shadow">+ CATAT KELUAR</button>
+                            <h3 class="font-black text-emerald-900 uppercase italic text-sm">Log Penggunaan</h3>
+                            <button onclick="openModal('use')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">+ CATAT KELUAR</button>
                         </div>
                         <div class="card-base overflow-hidden">
-                            <table class="w-full text-sm text-left">
-                                <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold"><tr><th class="p-4">Waktu</th><th class="p-4">Pasien</th><th class="p-4">Obat</th><th class="p-4">Jml</th><th class="p-4">PJ</th><th class="p-4">Aksi</th></tr></thead>
-                                <tbody id="list-use" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                            <table class="w-full text-sm text-left"><thead class="bg-slate-50 text-[10px] uppercase text-slate-500"><tr><th class="p-4">Waktu</th><th class="p-4">Pasien</th><th class="p-4">Obat</th><th class="p-4">Jml</th><th class="p-4">PJ</th><th class="p-4">Aksi</th></tr></thead><tbody id="list-use" class="divide-y divide-slate-100"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -110,8 +97,8 @@
 
             <div id="tab-ttv" class="tab-content hidden space-y-6">
                 <div class="flex justify-between items-end border-b pb-4 border-slate-200">
-                    <div><h2 class="text-2xl font-black text-rose-700">TTV & GDS</h2><p class="text-xs text-slate-500 font-medium">Monitoring Tanda Vital & Gula Darah</p></div>
-                    <button onclick="openModal('ttv')" class="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-2"><i class="fas fa-heartbeat"></i> INPUT DATA</button>
+                    <div><h2 class="text-2xl font-black text-rose-700">TTV & GDS</h2><p class="text-xs text-slate-500 font-medium">Monitoring Tanda Vital</p></div>
+                    <button onclick="openModal('ttv')" class="bg-rose-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg transition">+ INPUT DATA</button>
                 </div>
                 <div id="list-ttv" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
             </div>
@@ -122,97 +109,59 @@
         <div class="bg-white rounded-[2rem] w-full max-w-6xl p-8 max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl">
             <h3 class="text-2xl font-black mb-6 uppercase text-indigo-700 border-b pb-4">Formulir Pasien MMRC</h3>
             <form id="form-pasien" class="grid grid-cols-1 lg:grid-cols-3 gap-8 text-sm">
-                <input type="hidden" id="p-id">
-                <input type="hidden" id="p-foto-base64">
-
+                <input type="hidden" id="p-id"><input type="hidden" id="p-foto-base64">
                 <div class="space-y-4">
-                    <div class="bg-indigo-50 p-3 rounded-lg"><h4 class="font-black text-indigo-800 text-xs uppercase">1. Biodata & Registrasi</h4></div>
-                    <div class="upload-box" onclick="document.getElementById('p-file').click()">
-                        <img id="p-preview" class="preview-img hidden">
-                        <div id="p-ui" class="text-center text-slate-400"><i class="fas fa-camera text-2xl mb-2"></i><p class="text-[10px] font-bold">Foto Pasien</p></div>
-                    </div>
+                    <div class="bg-indigo-50 p-3 rounded-lg"><h4 class="font-black text-indigo-800 text-xs uppercase">1. Registrasi</h4></div>
+                    <div class="upload-box" onclick="document.getElementById('p-file').click()"><img id="p-preview" class="preview-img hidden"><div id="p-ui" class="text-center text-slate-400"><i class="fas fa-camera text-2xl mb-2"></i><p class="text-[10px] font-bold">Foto Pasien</p></div></div>
                     <input type="file" id="p-file" class="hidden" accept="image/*" onchange="previewImage(this, 'p-preview', 'p-ui', 'p-foto-base64')">
-                    
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="text-[10px] font-bold text-slate-500">TGL MASUK</label><input type="date" id="p-tgl" class="input-field"></div>
-                        <div><label class="text-[10px] font-bold text-slate-500">JAM</label><input type="time" id="p-jam" class="input-field"></div>
-                    </div>
+                    <div class="grid grid-cols-2 gap-2"><div><label class="text-[9px] font-bold text-slate-500">TGL MASUK</label><input type="date" id="p-tgl" class="input-field"></div><div><label class="text-[9px] font-bold text-slate-500">JAM</label><input type="time" id="p-jam" class="input-field"></div></div>
                     <input type="text" id="p-nama" placeholder="Nama Lengkap" class="input-field font-bold" required>
-                    <input type="text" id="p-ttl" placeholder="TTL" class="input-field">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" id="p-usia" placeholder="Usia" class="input-field">
-                        <select id="p-status" class="input-field text-slate-600"><option>Belum Kawin</option><option>Kawin</option><option>Cerai</option></select>
-                    </div>
+                    <input type="text" id="p-ttl" placeholder="Tempat, Tanggal Lahir" class="input-field">
+                    <div class="grid grid-cols-2 gap-2"><input type="number" id="p-usia" placeholder="Usia" class="input-field"><select id="p-status" class="input-field"><option>Belum Kawin</option><option>Kawin</option><option>Cerai</option></select></div>
                     <input type="text" id="p-pendidikan" placeholder="Pendidikan" class="input-field">
                     <input type="text" id="p-pekerjaan" placeholder="Pekerjaan" class="input-field">
                     <textarea id="p-alamat" placeholder="Alamat Domisili" class="input-field h-14"></textarea>
                     <input type="text" id="p-wali" placeholder="Nama Wali" class="input-field bg-slate-50 font-semibold">
-                    <textarea id="p-spotcheck" placeholder="Spotcheck Barang" class="input-field h-14 bg-amber-50"></textarea>
+                    <textarea id="p-spotcheck" placeholder="Spotcheck Barang Bawaan" class="input-field h-14 bg-amber-50"></textarea>
                 </div>
-
                 <div class="space-y-4">
-                    <div class="bg-red-50 p-3 rounded-lg"><h4 class="font-black text-red-800 text-xs uppercase">2. Riwayat Medis</h4></div>
-                    <textarea id="p-r-fisik" placeholder="Riwayat Fisik" class="input-field h-20"></textarea>
-                    <textarea id="p-r-psikis" placeholder="Riwayat Psikis" class="input-field h-20"></textarea>
-                    <textarea id="p-d-lama" placeholder="Diagnosa Lama" class="input-field h-16 font-medium"></textarea>
-                    <textarea id="p-obat-lama" placeholder="Riwayat Obat" class="input-field h-16 bg-slate-50"></textarea>
-                    <textarea id="p-kondisi" placeholder="Kondisi Terkini" class="input-field h-20 bg-blue-50"></textarea>
+                    <div class="bg-red-50 p-3 rounded-lg"><h4 class="font-black text-red-800 text-xs uppercase">2. Riwayat Penyakit</h4></div>
+                    <textarea id="p-r-fisik" placeholder="Riwayat Penyakit Fisik" class="input-field h-20"></textarea>
+                    <textarea id="p-r-psikis" placeholder="Riwayat Penyakit Psikis" class="input-field h-20"></textarea>
+                    <textarea id="p-d-lama" placeholder="Diagnosa Dokter Sebelumnya" class="input-field h-16"></textarea>
+                    <textarea id="p-obat-lama" placeholder="Riwayat Dosis Obat" class="input-field h-16 bg-slate-50"></textarea>
+                    <textarea id="p-kondisi" placeholder="Kondisi Terkini Pasien" class="input-field h-20 bg-blue-50"></textarea>
                 </div>
-
                 <div class="space-y-4">
-                    <div class="bg-emerald-50 p-3 rounded-lg"><h4 class="font-black text-emerald-800 text-xs uppercase">3. Diagnosa & Planning</h4></div>
+                    <div class="bg-emerald-50 p-3 rounded-lg"><h4 class="font-black text-emerald-800 text-xs uppercase">3. Diagnosa & Resep</h4></div>
                     <input type="text" id="p-dokter" placeholder="Nama Dokter" class="input-field font-bold">
-                    <textarea id="p-d-baru" placeholder="Diagnosa MMRC" class="input-field h-20 font-bold italic text-indigo-700"></textarea>
-                    <textarea id="p-plan" placeholder="Planning" class="input-field h-20"></textarea>
+                    <textarea id="p-d-baru" placeholder="Diagnosa Dokter Saat Masuk" class="input-field h-16 font-bold text-indigo-700"></textarea>
+                    <textarea id="p-plan" placeholder="Planning Dokter" class="input-field h-16"></textarea>
                     
-                    <div class="bg-slate-100 p-4 rounded-xl">
+                    <textarea id="p-resep-baru" placeholder="RESEP OBAT DOKTER (Input Detail Resep Di Sini)" class="input-field h-24 bg-emerald-100 border-emerald-300 font-bold placeholder:text-emerald-500"></textarea>
+                    
+                    <div class="bg-slate-100 p-3 rounded-xl">
                         <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Intervensi:</p>
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-injeksi" class="accent-indigo-600"> <span class="text-xs font-bold">Injeksi</span></label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-urine" class="accent-indigo-600"> <span class="text-xs font-bold">Urine</span></label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-fiksasi" class="accent-indigo-600"> <span class="text-xs font-bold">Fiksasi</span></label>
-                        </div>
+                        <div class="flex gap-4"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-injeksi" class="accent-indigo-600"> <span class="text-xs font-bold">Injeksi</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-urine" class="accent-indigo-600"> <span class="text-xs font-bold">Urine</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="i-fiksasi" class="accent-indigo-600"> <span class="text-xs font-bold">Fiksasi</span></label></div>
                     </div>
-
-                    <select id="p-paket" class="input-field font-bold bg-emerald-50 text-emerald-800">
-                        <option value="7 Hari">Paket 7 HARI</option>
-                        <option value="14 Hari">Paket 14 HARI</option>
-                        <option value="1 Bulan">Paket 1 BULAN</option>
-                        <option value="3 Bulan">Paket 3 BULAN</option>
-                    </select>
-
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" onclick="closeModal('pasien')" class="flex-1 bg-slate-200 py-3 rounded-xl font-bold">BATAL</button>
-                        <button type="submit" class="flex-[2] bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg">SIMPAN</button>
-                    </div>
+                    <select id="p-paket" class="input-field font-bold bg-emerald-50"><option value="7 Hari">Paket 7 HARI</option><option value="14 Hari">Paket 14 HARI</option><option value="1 Bulan">Paket 1 BULAN</option><option value="3 Bulan">Paket 3 BULAN</option></select>
+                    <div class="flex gap-2"><button type="button" onclick="closeModal('pasien')" class="flex-1 bg-slate-200 py-3 rounded-xl font-bold">BATAL</button><button type="submit" class="flex-[2] bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg">SIMPAN DATA</button></div>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modal-visit" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-xl font-black mb-6 uppercase text-violet-700 border-b pb-2">Catat Visit Dokter</h3>
+    <div id="modal-visit" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
+            <h3 class="text-xl font-black mb-4 uppercase text-violet-700 border-b pb-2">Visit Dokter</h3>
             <form id="form-visit" class="space-y-4">
-                <input type="hidden" id="v-id">
-                <input type="hidden" id="v-foto-base64">
-                
-                <select id="v-pasien" class="input-field font-bold" required><option value="">- Pilih Pasien -</option></select>
-                
-                <div class="upload-box h-32" onclick="document.getElementById('v-file').click()">
-                    <img id="v-preview" class="preview-img hidden">
-                    <div id="v-ui" class="text-center text-slate-400"><i class="fas fa-image text-2xl mb-1"></i><p class="text-[10px] font-bold">Bukti Visit / Resep</p></div>
-                </div>
+                <input type="hidden" id="v-id"><input type="hidden" id="v-foto-base64">
+                <select id="v-pasien" class="input-field font-bold" required></select>
+                <div class="upload-box h-32" onclick="document.getElementById('v-file').click()"><img id="v-preview" class="preview-img hidden"><div id="v-ui" class="text-center text-slate-400"><i class="fas fa-image text-2xl mb-1"></i><p class="text-[10px] font-bold">Upload Bukti Visit</p></div></div>
                 <input type="file" id="v-file" class="hidden" accept="image/*" onchange="previewImage(this, 'v-preview', 'v-ui', 'v-foto-base64')">
-
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="date" id="v-tgl" class="input-field">
-                    <input type="time" id="v-jam" class="input-field">
-                </div>
-                
-                <textarea id="v-hasil" placeholder="Hasil Perkembangan Pasien..." class="input-field h-32 bg-violet-50" required></textarea>
-                
-                <button type="submit" class="w-full bg-violet-600 text-white font-bold py-3 rounded-xl shadow-lg">SIMPAN VISIT</button>
+                <div class="grid grid-cols-2 gap-2"><input type="date" id="v-tgl" class="input-field"><input type="time" id="v-jam" class="input-field"></div>
+                <textarea id="v-hasil" placeholder="Hasil Perkembangan..." class="input-field h-24 bg-violet-50" required></textarea>
+                <button type="submit" class="w-full bg-violet-600 text-white font-bold py-3 rounded-xl shadow-lg">SIMPAN</button>
                 <button type="button" onclick="closeModal('visit')" class="w-full text-slate-400 text-xs font-bold pt-2">BATAL</button>
             </form>
         </div>
@@ -220,16 +169,11 @@
 
     <div id="modal-stok" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
-            <h3 class="text-lg font-black text-indigo-700 uppercase mb-4">Master Stok Obat</h3>
+            <h3 class="text-lg font-black text-indigo-700 uppercase mb-4">Master Obat</h3>
             <form id="form-stok" class="space-y-4">
-                <input type="hidden" id="s-id">
-                <input type="text" id="s-nama" placeholder="Nama Obat" class="input-field font-bold" required>
-                <div class="grid grid-cols-2 gap-2">
-                    <div><label class="text-[9px] font-bold text-slate-400">AWAL</label><input type="number" id="s-awal" class="input-field" required></div>
-                    <div><label class="text-[9px] font-bold text-slate-400">PAKAI</label><input type="number" id="s-pakai" class="input-field bg-slate-100" readonly value="0"></div>
-                </div>
+                <input type="hidden" id="s-id"><input type="text" id="s-nama" placeholder="Nama Obat" class="input-field font-bold" required>
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-[9px] font-bold">AWAL</label><input type="number" id="s-awal" class="input-field"></div><div><label class="text-[9px] font-bold">PAKAI</label><input type="number" id="s-pakai" class="input-field bg-slate-100" readonly value="0"></div></div>
                 <button type="submit" class="w-full bg-indigo-700 text-white font-bold py-3 rounded-xl">SIMPAN</button>
-                <button type="button" onclick="closeModal('stok')" class="w-full text-slate-400 text-xs font-bold">BATAL</button>
             </form>
         </div>
     </div>
@@ -238,19 +182,12 @@
         <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
             <h3 class="text-lg font-black text-emerald-700 uppercase mb-4">Catat Obat Keluar</h3>
             <form id="form-use" class="space-y-4">
-                <select id="u-pasien" class="input-field font-bold" required><option value="">- Pasien -</option></select>
-                <select id="u-obat" class="input-field font-bold" required><option value="">- Obat -</option></select>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="date" id="u-tgl" class="input-field">
-                    <input type="time" id="u-jam" class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="number" id="u-jml" placeholder="Jumlah" class="input-field text-center font-bold" required>
-                    <input type="text" id="u-pj" placeholder="Nama PJ" class="input-field">
-                </div>
+                <select id="u-pasien" class="input-field font-bold" required></select>
+                <select id="u-obat" class="input-field font-bold" required></select>
+                <div class="grid grid-cols-2 gap-2"><input type="date" id="u-tgl" class="input-field"><input type="time" id="u-jam" class="input-field"></div>
+                <div class="grid grid-cols-2 gap-2"><input type="number" id="u-jml" placeholder="Jumlah" class="input-field text-center font-bold" required><input type="text" id="u-pj" placeholder="Nama PJ" class="input-field"></div>
                 <textarea id="u-ket" placeholder="Keterangan..." class="input-field h-16"></textarea>
                 <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl">CATAT</button>
-                <button type="button" onclick="closeModal('use')" class="w-full text-slate-400 text-xs font-bold pt-2">BATAL</button>
             </form>
         </div>
     </div>
@@ -259,24 +196,11 @@
         <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
             <h3 class="text-lg font-black text-rose-700 uppercase mb-4">Input TTV & GDS</h3>
             <form id="form-ttv" class="space-y-4">
-                <input type="hidden" id="t-id">
-                <select id="t-pasien" class="input-field font-bold mb-4" required><option value="">- Pilih Pasien -</option></select>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="date" id="t-tgl" class="input-field">
-                    <input type="time" id="t-jam" class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" id="t-td" placeholder="Tensi (120/80)" class="input-field text-center">
-                    <input type="text" id="t-suhu" placeholder="Suhu (°C)" class="input-field text-center">
-                    <input type="text" id="t-rr" placeholder="RR (x/m)" class="input-field text-center">
-                    <input type="text" id="t-gds" placeholder="GDS" class="input-field text-center font-bold text-rose-600">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="number" id="t-bb" placeholder="BB (kg)" class="input-field text-center">
-                    <input type="number" id="t-tb" placeholder="TB (cm)" class="input-field text-center">
-                </div>
+                <select id="t-pasien" class="input-field font-bold" required></select>
+                <div class="grid grid-cols-2 gap-2"><input type="date" id="t-tgl" class="input-field"><input type="time" id="t-jam" class="input-field"></div>
+                <div class="grid grid-cols-2 gap-3"><input type="text" id="t-td" placeholder="Tensi (120/80)" class="input-field"><input type="text" id="t-suhu" placeholder="Suhu (°C)" class="input-field"><input type="text" id="t-rr" placeholder="RR" class="input-field"><input type="text" id="t-gds" placeholder="GDS" class="input-field text-rose-600 font-bold"></div>
+                <div class="grid grid-cols-2 gap-3"><input type="number" id="t-bb" placeholder="BB (kg)" class="input-field"><input type="number" id="t-tb" placeholder="TB (cm)" class="input-field"></div>
                 <button type="submit" class="w-full bg-rose-600 text-white font-bold py-3 rounded-xl">SIMPAN</button>
-                <button type="button" onclick="closeModal('ttv')" class="w-full text-slate-400 text-xs font-bold pt-2">BATAL</button>
             </form>
         </div>
     </div>
@@ -299,7 +223,6 @@
 
         let PATIENTS = [], STOCK = [], USAGE = [], TTV = [], VISITS = [];
 
-        // AUTH
         document.getElementById('login-form').onsubmit = (e) => {
             e.preventDefault();
             if(document.getElementById('user-input').value === "ADMIN" && document.getElementById('pass-input').value === "MMRC2026") {
@@ -310,14 +233,13 @@
         };
 
         function startSync() {
-            onSnapshot(collection(db, "patients_v2"), s => { PATIENTS = s.docs.map(d => ({id:d.id, ...d.data()})); renderPatients(); updateDropdowns(); });
-            onSnapshot(collection(db, "stock_v2"), s => { STOCK = s.docs.map(d => ({id:d.id, ...d.data()})); renderStock(); updateDropdowns(); });
-            onSnapshot(collection(db, "usage_v2"), s => { USAGE = s.docs.map(d => ({id:d.id, ...d.data()})); renderUsage(); });
-            onSnapshot(collection(db, "ttv_v2"), s => { TTV = s.docs.map(d => ({id:d.id, ...d.data()})); renderTTV(); });
-            onSnapshot(collection(db, "visit_v2"), s => { VISITS = s.docs.map(d => ({id:d.id, ...d.data()})); renderVisit(); });
+            onSnapshot(collection(db, "patients_v3"), s => { PATIENTS = s.docs.map(d => ({id:d.id, ...d.data()})); renderPatients(); updateDropdowns(); });
+            onSnapshot(collection(db, "stock_v3"), s => { STOCK = s.docs.map(d => ({id:d.id, ...d.data()})); renderStock(); updateDropdowns(); });
+            onSnapshot(collection(db, "usage_v3"), s => { USAGE = s.docs.map(d => ({id:d.id, ...d.data()})); renderUsage(); });
+            onSnapshot(collection(db, "ttv_v3"), s => { TTV = s.docs.map(d => ({id:d.id, ...d.data()})); renderTTV(); });
+            onSnapshot(collection(db, "visit_v3"), s => { VISITS = s.docs.map(d => ({id:d.id, ...d.data()})); renderVisit(); });
         }
 
-        // --- NAVIGATION & UI ---
         window.switchTab = (tab) => {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -340,61 +262,34 @@
         };
 
         window.openModal = (type, id=null) => {
-            const form = document.getElementById(`form-${type}`);
-            form.reset();
+            document.getElementById(`form-${type}`).reset();
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toTimeString().substring(0,5);
-            
-            // Set Default DateTime
             const prefix = type==='pasien'?'p':(type==='visit'?'v':(type==='use'?'u':'t'));
+            
             if(document.getElementById(`${prefix}-tgl`)) document.getElementById(`${prefix}-tgl`).value = dateStr;
             if(document.getElementById(`${prefix}-jam`)) document.getElementById(`${prefix}-jam`).value = timeStr;
 
-            // Reset Foto UI
-            if(type==='pasien' || type==='visit') {
-                document.getElementById(`${prefix}-preview`).classList.add('hidden');
-                document.getElementById(`${prefix}-ui`).classList.remove('hidden');
-                document.getElementById(`${prefix}-foto-base64`).value = "";
-            }
-
-            // Fill Data (Edit Mode)
             if(id) {
-                let data;
+                let d = (type==='pasien'?PATIENTS:type==='visit'?VISITS:STOCK).find(x=>x.id===id);
                 if(type==='pasien') {
-                    data = PATIENTS.find(x => x.id === id);
                     document.getElementById('p-id').value = id;
-                    ['nama','tgl','jam','ttl','usia','status','pendidikan','pekerjaan','alamat','wali','spotcheck','dokter','kondisi','paket'].forEach(k => { if(document.getElementById(`p-${k}`)) document.getElementById(`p-${k}`).value = data[k] || '' });
-                    document.getElementById('p-r-fisik').value = data.riwayatFisik; document.getElementById('p-r-psikis').value = data.riwayatPsikis;
-                    document.getElementById('p-d-lama').value = data.diagnosaLama; document.getElementById('p-obat-lama').value = data.obatLama;
-                    document.getElementById('p-d-baru').value = data.diagnosaBaru; document.getElementById('p-plan').value = data.planning;
-                    document.getElementById('i-injeksi').checked = data.injeksi; document.getElementById('i-urine').checked = data.urine; document.getElementById('i-fiksasi').checked = data.fiksasi;
-                    if(data.foto) {
-                        document.getElementById('p-preview').src = data.foto; document.getElementById('p-preview').classList.remove('hidden');
-                        document.getElementById('p-ui').classList.add('hidden'); document.getElementById('p-foto-base64').value = data.foto;
-                    }
-                } else if(type==='visit') {
-                    data = VISITS.find(x => x.id === id);
-                    document.getElementById('v-id').value = id;
-                    document.getElementById('v-pasien').value = data.pasienId;
-                    document.getElementById('v-tgl').value = data.tgl; document.getElementById('v-jam').value = data.jam;
-                    document.getElementById('v-hasil').value = data.hasil;
-                    if(data.foto) {
-                        document.getElementById('v-preview').src = data.foto; document.getElementById('v-preview').classList.remove('hidden');
-                        document.getElementById('v-ui').classList.add('hidden'); document.getElementById('v-foto-base64').value = data.foto;
-                    }
-                } else if(type==='stok') {
-                    data = STOCK.find(x => x.id === id);
-                    document.getElementById('s-id').value = id; document.getElementById('s-nama').value = data.nama;
-                    document.getElementById('s-awal').value = data.awal; document.getElementById('s-pakai').value = data.pakai;
+                    ['nama','tgl','jam','ttl','usia','status','pendidikan','pekerjaan','alamat','wali','spotcheck','dokter','kondisi','paket','diagnosaBaru','planning','resepBaru'].forEach(k => {
+                        let el = document.getElementById(`p-${k==='diagnosaBaru'?'d-baru':k==='resepBaru'?'resep-baru':k==='planning'?'plan':k}`);
+                        if(el) el.value = d[k] || '';
+                    });
+                    document.getElementById('p-r-fisik').value = d.riwayatFisik||''; document.getElementById('p-r-psikis').value = d.riwayatPsikis||'';
+                    document.getElementById('p-d-lama').value = d.diagnosaLama||''; document.getElementById('p-obat-lama').value = d.obatLama||'';
+                    document.getElementById('i-injeksi').checked = d.injeksi; document.getElementById('i-urine').checked = d.urine; document.getElementById('i-fiksasi').checked = d.fiksasi;
+                    if(d.foto) { document.getElementById('p-preview').src = d.foto; document.getElementById('p-preview').classList.remove('hidden'); document.getElementById('p-ui').classList.add('hidden'); document.getElementById('p-foto-base64').value = d.foto; }
                 }
             }
             document.getElementById(`modal-${type}`).classList.remove('hidden');
         };
-        
+
         window.closeModal = (t) => document.getElementById(`modal-${t}`).classList.add('hidden');
 
-        // --- SUBMITS ---
         document.getElementById('form-pasien').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('p-id').value;
@@ -408,23 +303,17 @@
                 diagnosaLama: document.getElementById('p-d-lama').value, obatLama: document.getElementById('p-obat-lama').value,
                 kondisi: document.getElementById('p-kondisi').value, dokter: document.getElementById('p-dokter').value,
                 diagnosaBaru: document.getElementById('p-d-baru').value, planning: document.getElementById('p-plan').value,
+                resepBaru: document.getElementById('p-resep-baru').value,
                 injeksi: document.getElementById('i-injeksi').checked, urine: document.getElementById('i-urine').checked, fiksasi: document.getElementById('i-fiksasi').checked,
                 paket: document.getElementById('p-paket').value
             };
-            id ? await updateDoc(doc(db, "patients_v2", id), data) : await addDoc(collection(db, "patients_v2"), data);
+            id ? await updateDoc(doc(db, "patients_v3", id), data) : await addDoc(collection(db, "patients_v3"), data);
             closeModal('pasien');
         };
 
         document.getElementById('form-visit').onsubmit = async (e) => {
             e.preventDefault();
-            const id = document.getElementById('v-id').value;
-            const data = {
-                pasienId: document.getElementById('v-pasien').value,
-                tgl: document.getElementById('v-tgl').value, jam: document.getElementById('v-jam').value,
-                hasil: document.getElementById('v-hasil').value,
-                foto: document.getElementById('v-foto-base64').value
-            };
-            id ? await updateDoc(doc(db, "visit_v2", id), data) : await addDoc(collection(db, "visit_v2"), data);
+            await addDoc(collection(db, "visit_v3"), { pasienId: document.getElementById('v-pasien').value, tgl: document.getElementById('v-tgl').value, jam: document.getElementById('v-jam').value, hasil: document.getElementById('v-hasil').value, foto: document.getElementById('v-foto-base64').value });
             closeModal('visit');
         };
 
@@ -432,60 +321,46 @@
             e.preventDefault();
             const id = document.getElementById('s-id').value;
             const data = { nama: document.getElementById('s-nama').value, awal: parseInt(document.getElementById('s-awal').value), pakai: parseInt(document.getElementById('s-pakai').value)||0 };
-            id ? await updateDoc(doc(db, "stock_v2", id), data) : await addDoc(collection(db, "stock_v2"), data);
+            id ? await updateDoc(doc(db, "stock_v3", id), data) : await addDoc(collection(db, "stock_v3"), data);
             closeModal('stok');
         };
 
         document.getElementById('form-use').onsubmit = async (e) => {
             e.preventDefault();
-            const stokId = document.getElementById('u-obat').value;
-            const item = STOCK.find(s=>s.id===stokId);
+            const sId = document.getElementById('u-obat').value;
+            const item = STOCK.find(s=>s.id===sId);
             const jml = parseInt(document.getElementById('u-jml').value);
-            await addDoc(collection(db, "usage_v2"), { pasienId: document.getElementById('u-pasien').value, stokId, namaObat: item.nama, jml, tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value, pj: document.getElementById('u-pj').value });
-            await updateDoc(doc(db, "stock_v2", stokId), { pakai: (item.pakai||0) + jml });
+            await addDoc(collection(db, "usage_v3"), { pasienId: document.getElementById('u-pasien').value, sId, namaObat: item.nama, jml, tgl: document.getElementById('u-tgl').value, jam: document.getElementById('u-jam').value, pj: document.getElementById('u-pj').value });
+            await updateDoc(doc(db, "stock_v3", sId), { pakai: (item.pakai||0) + jml });
             closeModal('use');
         };
 
         document.getElementById('form-ttv').onsubmit = async (e) => {
             e.preventDefault();
-            await addDoc(collection(db, "ttv_v2"), {
-                pasienId: document.getElementById('t-pasien').value, tgl: document.getElementById('t-tgl').value, jam: document.getElementById('t-jam').value,
-                td: document.getElementById('t-td').value, suhu: document.getElementById('t-suhu').value, rr: document.getElementById('t-rr').value,
-                bb: document.getElementById('t-bb').value, tb: document.getElementById('t-tb').value, gds: document.getElementById('t-gds').value
-            });
+            await addDoc(collection(db, "ttv_v3"), { pasienId: document.getElementById('t-pasien').value, tgl: document.getElementById('t-tgl').value, jam: document.getElementById('t-jam').value, td: document.getElementById('t-td').value, suhu: document.getElementById('t-suhu').value, rr: document.getElementById('t-rr').value, bb: document.getElementById('t-bb').value, tb: document.getElementById('t-tb').value, gds: document.getElementById('t-gds').value });
             closeModal('ttv');
         };
 
-        // --- RENDERERS ---
         window.renderPatients = () => {
             const q = document.getElementById('global-search').value.toLowerCase();
             document.getElementById('list-pasien').innerHTML = PATIENTS.filter(p=>p.nama.toLowerCase().includes(q)).map(p => `
                 <div class="card-base p-6 flex flex-col gap-4">
                     <div class="flex gap-4">
-                        <div class="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden shrink-0">${p.foto?`<img src="${p.foto}" class="w-full h-full object-cover">`:'<div class="flex h-full items-center justify-center text-slate-400"><i class="fas fa-user"></i></div>'}</div>
-                        <div><h3 class="font-black text-lg">${p.nama}</h3><p class="text-xs text-indigo-600 font-bold uppercase">${p.diagnosaBaru||'-'}</p></div>
+                        <div class="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0">${p.foto?`<img src="${p.foto}" class="w-full h-full object-cover">`:'<i class="fas fa-user text-slate-300 p-4"></i>'}</div>
+                        <div><h3 class="font-black text-slate-800">${p.nama}</h3><p class="text-[10px] text-indigo-600 font-bold uppercase">${p.diagnosaBaru||'-'}</p></div>
                     </div>
-                    <div class="mt-auto flex gap-2"><button onclick="openModal('pasien','${p.id}')" class="flex-1 bg-indigo-50 text-indigo-700 py-2 rounded-lg text-xs font-bold">DETAIL / EDIT</button><button onclick="deleteData('patients_v2','${p.id}')" class="bg-red-50 text-red-500 px-3 py-2 rounded-lg"><i class="fas fa-trash"></i></button></div>
+                    <div class="text-[10px] bg-emerald-50 p-2 rounded-lg border border-emerald-100"><b class="text-emerald-700">RESEP:</b> <span class="text-slate-600">${p.resepBaru || 'Belum ada resep'}</span></div>
+                    <div class="flex gap-2"><button onclick="openModal('pasien','${p.id}')" class="flex-1 bg-indigo-50 text-indigo-700 py-2 rounded-lg text-xs font-bold">EDIT</button><button onclick="deleteData('patients_v3','${p.id}')" class="bg-red-50 text-red-500 px-3 py-2 rounded-lg"><i class="fas fa-trash"></i></button></div>
                 </div>`).join('');
         };
 
         window.renderVisit = () => {
-            const q = document.getElementById('global-search').value.toLowerCase();
             document.getElementById('list-visit').innerHTML = VISITS.map(v => {
                 const p = PATIENTS.find(x => x.id === v.pasienId);
-                const pName = p ? p.nama : 'Pasien Terhapus';
-                if(!pName.toLowerCase().includes(q)) return '';
                 return `
                 <div class="card-base p-0 overflow-hidden flex flex-col">
-                    ${v.foto ? `<div class="h-40 overflow-hidden border-b"><img src="${v.foto}" class="w-full h-full object-cover"></div>` : ''}
-                    <div class="p-5 flex-1">
-                        <div class="flex justify-between items-start mb-2">
-                            <div><h4 class="font-black text-violet-800">${pName}</h4><span class="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500 font-bold">${v.tgl} | ${v.jam}</span></div>
-                            <button onclick="deleteData('visit_v2','${v.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                        </div>
-                        <p class="text-sm text-slate-700 mt-2 leading-relaxed">${v.hasil}</p>
-                        <button onclick="openModal('visit','${v.id}')" class="mt-4 text-xs font-bold text-violet-600 hover:underline">Edit Catatan</button>
-                    </div>
+                    ${v.foto ? `<div class="h-40 border-b"><img src="${v.foto}" class="w-full h-full object-cover"></div>` : ''}
+                    <div class="p-4"><div class="flex justify-between"><div><h4 class="font-black text-violet-800">${p?p.nama:'-'}</h4><span class="text-[9px] text-slate-400 font-bold">${v.tgl} | ${v.jam}</span></div><button onclick="deleteData('visit_v3','${v.id}')" class="text-red-300"><i class="fas fa-trash"></i></button></div><p class="text-xs text-slate-600 mt-2">${v.hasil}</p></div>
                 </div>`;
             }).join('');
         };
@@ -493,33 +368,33 @@
         window.renderStock = () => {
             document.getElementById('list-stok').innerHTML = STOCK.map(s => {
                 const sisa = s.awal - s.pakai;
-                return `<div class="card-base p-4 flex justify-between items-center group"><div><h4 class="font-bold text-sm text-slate-700">${s.nama}</h4><div class="text-[10px] text-slate-400">Awal: ${s.awal} | Pakai: ${s.pakai}</div></div><div class="text-right"><span class="text-xl font-black ${sisa<=7?'blink-red':'text-indigo-600'}">${sisa}</span><p class="text-[9px] font-bold text-slate-400">SISA</p></div><button onclick="openModal('stok','${s.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600"><i class="fas fa-edit"></i></button></div>`;
+                return `<div class="card-base p-4 flex justify-between items-center"><div><h4 class="font-bold text-sm">${s.nama}</h4><p class="text-[9px] text-slate-400">Awal: ${s.awal}</p></div><div class="text-right"><span class="text-lg font-black ${sisa<=7?'blink-red':'text-indigo-600'}">${sisa}</span></div></div>`;
             }).join('');
         };
 
         window.renderUsage = () => {
             document.getElementById('list-use').innerHTML = USAGE.sort((a,b)=>(b.tgl+b.jam).localeCompare(a.tgl+a.jam)).map(u => {
-                const pName = PATIENTS.find(p => p.id === u.pasienId)?.nama || '-';
-                return `<tr class="hover:bg-slate-50 border-b last:border-0"><td class="p-4 text-xs text-slate-500">${u.tgl}<br>${u.jam}</td><td class="p-4 font-bold text-slate-700">${pName}</td><td class="p-4 text-indigo-600 font-medium">${u.namaObat}</td><td class="p-4 font-black text-center">${u.jml}</td><td class="p-4 text-xs">${u.pj}</td><td class="p-4"><button onclick="deleteData('usage_v2','${u.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
+                const p = PATIENTS.find(x=>x.id===u.pasienId);
+                return `<tr class="border-b"><td class="p-4 text-[10px] text-slate-400">${u.tgl}<br>${u.jam}</td><td class="p-4 font-bold text-xs">${p?p.nama:'-'}</td><td class="p-4 text-xs text-indigo-600">${u.namaObat}</td><td class="p-4 font-black text-center">${u.jml}</td><td class="p-4 text-[10px]">${u.pj}</td><td class="p-4"><button onclick="deleteData('usage_v3','${u.id}')" class="text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         };
 
         window.renderTTV = () => {
             document.getElementById('list-ttv').innerHTML = TTV.sort((a,b)=>(b.tgl+b.jam).localeCompare(a.tgl+a.jam)).map(t => {
-                const pName = PATIENTS.find(p => p.id === t.pasienId)?.nama || '-';
-                return `<div class="card-base p-4 group relative"><div class="flex justify-between mb-2"><div><h4 class="font-black text-slate-700 text-sm">${pName}</h4><p class="text-[10px] text-slate-400">${t.tgl} | ${t.jam}</p></div><button onclick="deleteData('ttv_v2','${t.id}')" class="text-red-300 hover:text-red-500"><i class="fas fa-trash"></i></button></div><div class="grid grid-cols-2 gap-y-2 text-xs"><div><span class="text-slate-400 text-[9px] block">TD</span><b>${t.td||'-'}</b></div><div><span class="text-slate-400 text-[9px] block">Suhu</span><b>${t.suhu||'-'}°C</b></div><div><span class="text-slate-400 text-[9px] block">RR</span><b>${t.rr||'-'}</b></div><div><span class="text-slate-400 text-[9px] block">BB/TB</span><b>${t.bb}/${t.tb}</b></div></div><div class="mt-2 bg-rose-50 p-1 text-center border border-rose-100"><span class="text-[9px] text-rose-400 block">GDS</span><b class="text-rose-600">${t.gds||'-'}</b></div></div>`;
+                const p = PATIENTS.find(x=>x.id===t.pasienId);
+                return `<div class="card-base p-4 group relative"><div class="flex justify-between mb-2"><div><h4 class="font-black text-sm">${p?p.nama:'-'}</h4><p class="text-[9px] text-slate-400">${t.tgl}</p></div><button onclick="deleteData('ttv_v3','${t.id}')" class="text-red-200"><i class="fas fa-trash"></i></button></div><div class="grid grid-cols-2 text-[10px]"><div>TD: <b>${t.td}</b></div><div>Suhu: <b>${t.suhu}</b></div><div>GDS: <b class="text-rose-600">${t.gds}</b></div><div>BB: <b>${t.bb}kg</b></div></div></div>`;
             }).join('');
         };
 
         function updateDropdowns() {
-            const pOpts = `<option value="">- Pilih Pasien -</option>` + PATIENTS.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
+            const pOpts = `<option value="">- Pasien -</option>` + PATIENTS.map(p => `<option value="${p.id}">${p.nama}</option>`).join('');
             ['u-pasien','t-pasien','v-pasien'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = pOpts; });
-            if(document.getElementById('u-obat')) document.getElementById('u-obat').innerHTML = `<option value="">- Pilih Obat -</option>` + STOCK.map(s => `<option value="${s.id}">${s.nama} (Sisa: ${s.awal - s.pakai})</option>`).join('');
+            if(document.getElementById('u-obat')) document.getElementById('u-obat').innerHTML = `<option value="">- Obat -</option>` + STOCK.map(s => `<option value="${s.id}">${s.nama} (Sisa: ${s.awal - s.pakai})</option>`).join('');
         }
 
-        window.deleteData = async (col, id) => { if(confirm('Hapus data?')) await deleteDoc(doc(db, col, id)); };
+        window.deleteData = async (col, id) => { if(confirm('Hapus?')) await deleteDoc(doc(db, col, id)); };
         window.handleSearch = () => { renderPatients(); renderVisit(); };
 
     </script>
 </body>
-                            </html>
+</html>
