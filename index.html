@@ -4,630 +4,617 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMRC Management - Madani Mental Recovery Center</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* Custom Scrollbar & Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .sidebar-active { background-color: #0f766e; border-right: 4px solid #ccfbf1; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Table Styles */
-        th { background-color: #f9fafb; color: #374151; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
-        td { font-size: 0.875rem; color: #4b5563; }
+        :root {
+            --primary-color: #2c7a7b; /* Teal elegan untuk kesan medis/tenang */
+            --secondary-color: #e6fffa;
+            --accent-color: #285e61;
+        }
+        body { background-color: #f4f6f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary-color); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .login-card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 400px; }
+
+        /* Layout */
+        .sidebar {
+            height: 100vh; position: fixed; top: 0; left: 0; width: 250px;
+            background: #ffffff; border-right: 1px solid #ddd; padding-top: 20px;
+        }
+        .sidebar .nav-link { color: #555; margin: 5px 15px; border-radius: 5px; font-weight: 500; }
+        .sidebar .nav-link.active, .sidebar .nav-link:hover { background-color: var(--secondary-color); color: var(--primary-color); }
+        .sidebar-brand { text-align: center; margin-bottom: 30px; color: var(--primary-color); font-weight: bold; font-size: 1.2rem; }
+        
+        .main-content { margin-left: 250px; padding: 20px; }
+        
+        /* Cards & Tables */
+        .card { border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border-radius: 10px; }
+        .card-header { background: white; border-bottom: 2px solid var(--secondary-color); font-weight: bold; color: var(--accent-color); }
+        .btn-primary { background-color: var(--primary-color); border: none; }
+        .btn-primary:hover { background-color: var(--accent-color); }
+        
+        /* Utility */
+        .hidden { display: none; }
+        .stock-warning { color: red; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
-<body class="text-gray-800 h-screen overflow-hidden flex flex-col">
+<body>
 
-    <div id="loginPage" class="fixed inset-0 bg-teal-900 z-50 flex items-center justify-center fade-in">
-        <div class="bg-white p-10 rounded-2xl shadow-2xl w-96 text-center">
-            <div class="mb-6">
-                <i class="fas fa-heartbeat text-5xl text-teal-600"></i>
-                <h1 class="text-2xl font-bold mt-2 text-gray-800">MMRC Management</h1>
-                <p class="text-sm text-gray-500">Madani Mental Recovery Center</p>
+    <div id="login-overlay">
+        <div class="login-card text-center">
+            <h3 class="mb-4">MMRC Management</h3>
+            <div class="mb-3">
+                <input type="text" id="username" class="form-control" placeholder="Username">
             </div>
-            <form id="loginForm" class="space-y-4">
-                <input type="text" id="username" placeholder="Username" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-teal-500 bg-gray-50" required>
-                <input type="password" id="password" placeholder="Password" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-teal-500 bg-gray-50" required>
-                <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg transition duration-200">LOGIN</button>
-            </form>
-            <p id="loginError" class="text-red-500 text-sm mt-3 hidden">Username atau Password Salah!</p>
+            <div class="mb-3">
+                <input type="password" id="password" class="form-control" placeholder="Password">
+            </div>
+            <button class="btn btn-primary w-100" onclick="login()">Login</button>
+            <p id="login-error" class="text-danger mt-2 hidden">Username atau Password Salah!</p>
         </div>
     </div>
 
-    <div id="appContainer" class="hidden flex h-full">
-        
-        <aside class="w-64 bg-teal-800 text-white flex flex-col shadow-xl">
-            <div class="p-6 border-b border-teal-700 flex items-center gap-3">
-                <i class="fas fa-clinic-medical text-2xl"></i>
-                <div>
-                    <h2 class="font-bold text-lg leading-tight">MMRC</h2>
-                    <p class="text-xs text-teal-200">Management System</p>
-                </div>
-            </div>
-            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-                <a href="#" onclick="showPage('dashboard')" id="nav-dashboard" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3 sidebar-active">
-                    <i class="fas fa-tachometer-alt w-6 text-center"></i> Dashboard
-                </a>
-                <a href="#" onclick="showPage('medicine')" id="nav-medicine" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-pills w-6 text-center"></i> Medicine
-                </a>
-                <a href="#" onclick="showPage('ttv')" id="nav-ttv" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-stethoscope w-6 text-center"></i> TTV & GDS
-                </a>
-                <a href="#" onclick="showPage('visit')" id="nav-visit" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-user-md w-6 text-center"></i> Visit Dokter
-                </a>
-                <a href="#" onclick="showPage('crisis')" id="nav-crisis" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-exclamation-triangle w-6 text-center"></i> Pasien Crisis
-                </a>
-                <a href="#" onclick="showPage('program')" id="nav-program" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-calendar-alt w-6 text-center"></i> Rencana Program
-                </a>
-                <a href="#" onclick="showPage('terapi')" id="nav-terapi" class="block px-6 py-3 hover:bg-teal-700 transition flex items-center gap-3">
-                    <i class="fas fa-brain w-6 text-center"></i> Rencana Terapi
-                </a>
-            </nav>
-            <div class="p-4 border-t border-teal-700">
-                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 py-2 rounded text-sm transition">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <header class="bg-white shadow-sm p-4 flex justify-between items-center z-10">
-                <h2 id="pageTitle" class="text-xl font-bold text-gray-700">Dashboard</h2>
-                <div class="flex items-center gap-4">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                        <input type="text" id="globalSearch" placeholder="Cari Data..." class="pl-10 pr-4 py-2 border rounded-full text-sm focus:outline-none focus:border-teal-500 w-64" onkeyup="globalSearch()">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded">Admin</span>
-                        <div class="h-8 w-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">O</div>
-                    </div>
-                </div>
-            </header>
-
-            <div id="contentArea" class="flex-1 overflow-y-auto p-6 relative">
-                </div>
-        </main>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-heartbeat"></i> Madani Mental<br>Recovery Center
+        </div>
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="#" onclick="showSection('dashboard')"><i class="fas fa-home me-2"></i> Dashboard</a>
+            <a class="nav-link" href="#" onclick="showSection('medicine')"><i class="fas fa-pills me-2"></i> Medicine</a>
+            <a class="nav-link" href="#" onclick="showSection('ttv')"><i class="fas fa-stethoscope me-2"></i> TTV & GDS</a>
+            <a class="nav-link" href="#" onclick="showSection('visit')"><i class="fas fa-user-md me-2"></i> Visit Dokter</a>
+            <a class="nav-link" href="#" onclick="showSection('crisis')"><i class="fas fa-exclamation-triangle me-2"></i> Pasien Crisis (BPSS)</a>
+            <a class="nav-link" href="#" onclick="showSection('program')"><i class="fas fa-calendar-alt me-2"></i> Rencana Program</a>
+            <a class="nav-link" href="#" onclick="showSection('terapi')"><i class="fas fa-spa me-2"></i> Rencana Terapi</a>
+        </nav>
+        <div class="text-center mt-5">
+            <small class="text-muted">User: OPERASIONAL</small><br>
+            <button class="btn btn-sm btn-outline-danger mt-2" onclick="logout()">Logout</button>
+        </div>
     </div>
 
-    <div id="modalForm" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
-        <div class="bg-white w-full max-w-4xl p-6 rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto relative fade-in">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl">&times;</button>
-            <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Form Input</h3>
-            <form id="dynamicForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                </form>
-            <div class="mt-6 flex justify-end gap-3">
-                <button onclick="closeModal()" class="px-6 py-2 border rounded text-gray-600 hover:bg-gray-100">Batal</button>
-                <button onclick="saveData()" class="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 shadow">Simpan Data</button>
+    <div class="main-content" id="main-app">
+        
+        <div id="dashboard" class="content-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Dashboard Pasien</h2>
+                <div>
+                    <input type="text" id="searchDashboard" class="form-control d-inline-block w-auto" placeholder="Cari Pasien..." onkeyup="renderDashboard()">
+                    <button class="btn btn-success ms-2" onclick="exportToExcel('tblDashboard', 'Data_Pasien_MMRC')"><i class="fas fa-file-excel"></i> Export</button>
+                    <button class="btn btn-primary ms-2" onclick="showModal('modalPasien')"><i class="fas fa-plus"></i> Registrasi Pasien</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="tblDashboard">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tgl Masuk</th>
+                                    <th>Nama Lengkap</th>
+                                    <th>Diagnosa Masuk</th>
+                                    <th>Dokter</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dashboard">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="medicine" class="content-section hidden">
+            <h2>Medicine & Stok Obat</h2>
+            <div class="alert alert-info">Pilih Pasien untuk mengelola obat. Otomatisasi: Stok berkurang saat dicatat.</div>
+            <div class="row" id="medicine-container">
+                </div>
+        </div>
+
+        <div id="ttv" class="content-section hidden">
+            <h2>TTV & GDS Monitoring</h2>
+            <div class="row" id="ttv-container">
+                </div>
+        </div>
+
+        <div id="visit" class="content-section hidden">
+            <h2>Visit Dokter</h2>
+            <div class="row" id="visit-container"></div>
+        </div>
+
+        <div id="crisis" class="content-section hidden">
+            <h2>Pasien Crisis (BPSS Score)</h2>
+            <div class="row" id="crisis-container"></div>
+        </div>
+
+        <div id="program" class="content-section hidden">
+            <h2>Rencana Program</h2>
+            <div id="program-container"></div>
+        </div>
+
+        <div id="terapi" class="content-section hidden">
+            <h2>Rencana Terapi</h2>
+            <div id="terapi-container"></div>
+        </div>
+
+    </div>
+
+    <div class="modal fade" id="modalPasien" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrasi Pasien & Diagnosa Awal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formPasien">
+                        <input type="hidden" id="p_id">
+                        
+                        <h6 class="text-primary border-bottom pb-2">1. Registrasi Masuk Pasien</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3"><label>Tanggal & Jam</label><input type="datetime-local" class="form-control" id="p_tanggal" required></div>
+                            <div class="col-md-3"><label>Nama Lengkap</label><input type="text" class="form-control" id="p_nama" required></div>
+                            <div class="col-md-3"><label>TTL</label><input type="text" class="form-control" id="p_ttl"></div>
+                            <div class="col-md-1"><label>Usia</label><input type="number" class="form-control" id="p_usia"></div>
+                            <div class="col-md-2"><label>Status</label><select class="form-select" id="p_status"><option>Lajang</option><option>Menikah</option><option>Cerai</option></select></div>
+                            <div class="col-md-3"><label>Pendidikan</label><input type="text" class="form-control" id="p_pendidikan"></div>
+                            <div class="col-md-3"><label>Pekerjaan</label><input type="text" class="form-control" id="p_pekerjaan"></div>
+                            <div class="col-md-3"><label>Wali Pasien</label><input type="text" class="form-control" id="p_wali"></div>
+                            <div class="col-md-12"><label>Alamat</label><input type="text" class="form-control" id="p_alamat"></div>
+                            <div class="col-md-12"><label>Spotcheck Barang Bawaan</label><textarea class="form-control" id="p_barang" rows="2"></textarea></div>
+                        </div>
+
+                        <h6 class="text-primary border-bottom pb-2">2. Riwayat Penyakit</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label>Riwayat Fisik & Psikis</label><textarea class="form-control" id="p_riwayat_sakit"></textarea></div>
+                            <div class="col-md-6"><label>Diagnosa Sebelumnya</label><textarea class="form-control" id="p_diagnosa_prev"></textarea></div>
+                            <div class="col-md-6"><label>Riwayat Dosis Obat</label><textarea class="form-control" id="p_riwayat_obat"></textarea></div>
+                            <div class="col-md-6"><label>Kondisi Terkini</label><textarea class="form-control" id="p_kondisi"></textarea></div>
+                        </div>
+
+                        <h6 class="text-primary border-bottom pb-2">3. Diagnosa Dokter MMRC</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4"><label>Nama Dokter</label><input type="text" class="form-control" id="p_dokter_nama"></div>
+                            <div class="col-md-8"><label>Diagnosa Masuk</label><input type="text" class="form-control" id="p_diagnosa_mmrc"></div>
+                            <div class="col-md-12"><label>Planning Dokter</label><textarea class="form-control" id="p_planning"></textarea></div>
+                            
+                            <div class="col-md-12">
+                                <label class="d-block mb-2 fw-bold">Tindakan Intervensi:</label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="act_injeksi"> <label>Injeksi</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="act_fiksasi"> <label>Fiksasi</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="act_urine"> <label>Urine Test (Ket: <input type="text" id="act_urine_ket" class="form-control form-control-sm d-inline w-auto">)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" onclick="savePatient()">Simpan Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalMedicine" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manajemen Obat: <span id="med_patient_name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="med_patient_id">
+                    
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6>Stok Obat</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4"><label>Nama Obat</label><input type="text" id="med_name" class="form-control"></div>
+                                <div class="col-md-3"><label>Tambah Stok</label><input type="number" id="med_add_stock" class="form-control" placeholder="Jml"></div>
+                                <div class="col-md-2 d-flex align-items-end"><button onclick="updateStock()" class="btn btn-success w-100">Set Stok</button></div>
+                                <div class="col-md-3 text-center">
+                                    <label>Sisa Stok</label>
+                                    <h3 id="med_current_stock">0</h3>
+                                    <small id="med_warning" class="hidden stock-warning">STOK MENIPIS (<7)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Catatan Penggunaan Obat (Otomatis Kurangi Stok)</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3"><input type="datetime-local" id="use_time" class="form-control"></div>
+                        <div class="col-md-3"><input type="text" id="use_ket" class="form-control" placeholder="Keterangan/Jenis"></div>
+                        <div class="col-md-2"><input type="number" id="use_qty" class="form-control" placeholder="Jml"></div>
+                        <div class="col-md-2"><input type="text" id="use_pj" class="form-control" placeholder="Nama PJ"></div>
+                        <div class="col-md-2"><button onclick="addMedicineUsage()" class="btn btn-danger w-100">Catat</button></div>
+                    </div>
+
+                    <table class="table table-sm table-bordered">
+                        <thead><tr><th>Waktu</th><th>Obat/Ket</th><th>Jml</th><th>PJ</th><th>Aksi</th></tr></thead>
+                        <tbody id="tbl_med_log"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalBPSS" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">BPSS Score & Grafik</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="bpss_patient_id">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h6>Input Score (0-25)</h6>
+                            <div class="mb-2"><label>Biological Score</label><input type="number" id="score_bio" class="form-control" max="25"></div>
+                            <div class="mb-2"><label>Psychological Score</label><input type="number" id="score_psy" class="form-control" max="25"></div>
+                            <div class="mb-2"><label>Social Score</label><input type="number" id="score_soc" class="form-control" max="25"></div>
+                            <div class="mb-2"><label>Spiritual Score</label><input type="number" id="score_spi" class="form-control" max="25"></div>
+                            <div class="mb-2"><label>Change (7 Hari)</label><input type="text" id="score_change" class="form-control"></div>
+                            <button onclick="saveBPSS()" class="btn btn-primary mt-2">Update Grafik</button>
+                        </div>
+                        <div class="col-md-7">
+                            <canvas id="bpssChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- KONFIGURASI & DATABASE LOKAL ---
-        const CREDENTIALS = { user: "OPERASIONAL.MMRC", pass: "MADANI1999" };
-        let currentMenu = 'dashboard';
-        let db = JSON.parse(localStorage.getItem('mmrc_db')) || {
-            patients: [],
-            medicines: [],
-            ttv: [],
-            visits: [],
-            crisis: [],
-            programs: [],
-            terapi: []
-        };
-
-        // --- AUTH SYSTEM ---
-        const loginPage = document.getElementById('loginPage');
-        const appContainer = document.getElementById('appContainer');
-        const loginForm = document.getElementById('loginForm');
-
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        // --- 1. AUTHENTICATION ---
+        function login() {
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
-            if (u === CREDENTIALS.user && p === CREDENTIALS.pass) {
-                loginPage.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                showPage('dashboard');
+            if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+                document.getElementById('login-overlay').classList.add('hidden');
+                loadData(); // Load data from localStorage
+                renderDashboard();
             } else {
-                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('login-error').classList.remove('hidden');
             }
-        });
+        }
 
         function logout() {
             location.reload();
         }
 
-        // --- CORE NAVIGATION ---
-        function showPage(page) {
-            currentMenu = page;
-            document.querySelectorAll('nav a').forEach(el => el.classList.remove('sidebar-active', 'bg-teal-700'));
-            document.getElementById(`nav-${page}`).classList.add('sidebar-active');
-            
-            const titles = {
-                'dashboard': 'Dashboard - Registrasi & Medis',
-                'medicine': 'Manajemen Obat & Stok',
-                'ttv': 'Tanda Tanda Vital & GDS',
-                'visit': 'Visit Dokter & Dokumentasi',
-                'crisis': 'Pasien Crisis & BPSS Score',
-                'program': 'Rencana Program Recovery',
-                'terapi': 'Rencana Terapi'
-            };
-            document.getElementById('pageTitle').innerText = titles[page];
-            renderContent(page);
-        }
+        // --- 2. DATA MANAGEMENT (CRUD) ---
+        let patients = [];
+        let bpssChartInstance = null;
 
-        // --- RENDER CONTENT LOGIC ---
-        function renderContent(page) {
-            const container = document.getElementById('contentArea');
-            let html = '';
-            
-            // Tombol Aksi Umum (Tambah & Export)
-            const actionButtons = `
-                <div class="flex justify-between items-center mb-6">
-                    <button onclick="openModal('${page}')" class="bg-teal-600 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-700 flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Tambah Data Baru
-                    </button>
-                    <div class="flex gap-2">
-                        <button onclick="exportData('excel')" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 text-sm"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button onclick="exportData('word')" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 text-sm"><i class="fas fa-file-word"></i> Word</button>
-                    </div>
-                </div>
-            `;
-
-            if (page === 'dashboard') {
-                html = actionButtons + renderTableDashboard();
-            } else if (page === 'medicine') {
-                html = actionButtons + renderTableMedicine();
-            } else if (page === 'ttv') {
-                html = actionButtons + renderTableTTV();
-            } else if (page === 'visit') {
-                html = actionButtons + renderTableVisit();
-            } else if (page === 'crisis') {
-                html = actionButtons + `<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 overflow-auto bg-white rounded-xl shadow p-4">${renderTableCrisis()}</div>
-                    <div class="bg-white rounded-xl shadow p-4"><canvas id="bpssChart"></canvas></div>
-                </div>`;
-            } else if (page === 'program' || page === 'terapi') {
-                html = actionButtons + renderTableGeneric(page);
+        function loadData() {
+            const data = localStorage.getItem('mmrc_patients');
+            if(data) {
+                patients = JSON.parse(data);
+            } else {
+                // Dummy Data for Demo
+                patients = [{
+                    id: Date.now(),
+                    reg: { tanggal: "2023-10-27T10:00", nama: "Budi Santoso", usia: 30, alamat: "Jakarta", dokter: "Dr. Asep" },
+                    medicine: { name: "Risperidone", stock: 20, log: [] },
+                    bpss: { bio: 10, psy: 15, soc: 5, spi: 20 }
+                }];
+                saveToLocal();
             }
-
-            container.innerHTML = html;
-
-            // Inisialisasi Chart jika di halaman Crisis
-            if(page === 'crisis') initChart();
         }
 
-        // --- TABLE RENDERERS ---
-        function createTable(headers, rows) {
-            return `
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse" id="dataTable">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200">
-                                ${headers.map(h => `<th class="p-4">${h}</th>`).join('')}
-                                <th class="p-4 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            ${rows}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
+        function saveToLocal() {
+            localStorage.setItem('mmrc_patients', JSON.stringify(patients));
         }
 
-        function renderTableDashboard() {
-            const rows = db.patients.map((p, index) => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-4 font-medium">${p.regDate || '-'}</td>
-                    <td class="p-4">
-                        <div class="font-bold text-teal-800">${p.name}</div>
-                        <div class="text-xs text-gray-500">${p.age} Th • ${p.status}</div>
-                    </td>
-                    <td class="p-4 text-xs max-w-xs truncate">${p.history || '-'}</td>
-                    <td class="p-4">
-                        <div class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded inline-block mb-1">${p.doctorName || 'Belum ada'}</div>
-                        <div class="text-xs">${p.diagnosis || '-'}</div>
-                    </td>
-                    <td class="p-4 text-center">
-                        <button onclick="deleteData('patients', ${index})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-            return createTable(['Waktu Masuk', 'Biodata Pasien', 'Riwayat Penyakit', 'Diagnosa Dokter'], rows);
+        // --- 3. NAVIGATION ---
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if(sectionId === 'medicine') renderMedicineList();
+            if(sectionId === 'crisis') renderBPSSList();
+            if(sectionId === 'ttv') renderSimpleList('ttv-container', 'Input TTV');
+            if(sectionId === 'visit') renderSimpleList('visit-container', 'Visit Note');
+            if(sectionId === 'program') renderSimpleList('program-container', 'Program');
+            if(sectionId === 'terapi') renderSimpleList('terapi-container', 'Terapi');
         }
 
-        function renderTableMedicine() {
-            const rows = db.medicines.map((m, index) => {
-                const stockAlert = parseInt(m.stockCurrent) <= 7 
-                    ? `<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold animate-pulse">SISA ${m.stockCurrent}!</span>` 
-                    : `<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">${m.stockCurrent}</span>`;
-                
-                return `
-                <tr>
-                    <td class="p-4 font-bold">${m.patientName}</td>
-                    <td class="p-4">${m.drugName}</td>
-                    <td class="p-4 text-center">${m.stockInitial}</td>
-                    <td class="p-4 text-center text-red-600">-${m.usedTotal || 0}</td>
-                    <td class="p-4 text-center">${stockAlert}</td>
-                    <td class="p-4 text-xs">${m.lastLog || 'Belum ada penggunaan'}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="consumeMedicine(${index})" class="text-blue-600 hover:text-blue-800 mr-2" title="Minum Obat"><i class="fas fa-prescription-bottle"></i></button>
-                        <button onclick="deleteData('medicines', ${index})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
-            return createTable(['Nama Pasien', 'Nama Obat', 'Stok Awal', 'Terpakai', 'Sisa', 'Catatan Terakhir'], rows);
+        function showModal(id) {
+            const modal = new bootstrap.Modal(document.getElementById(id));
+            modal.show();
         }
 
-        function renderTableTTV() {
-            const rows = db.ttv.map((d, i) => `
-                <tr>
-                    <td class="p-4">${d.timestamp}</td>
-                    <td class="p-4 font-bold">${d.patientName}</td>
-                    <td class="p-4">TD: ${d.bp} | HR: ${d.hr} | RR: ${d.rr}</td>
-                    <td class="p-4">TB: ${d.tb} cm | BB: ${d.bb} kg</td>
-                    <td class="p-4 font-bold text-teal-600">${d.gds || '-'}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="deleteData('ttv', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-            return createTable(['Waktu', 'Pasien', 'Vital Sign', 'Antropometri', 'GDS'], rows);
-        }
+        // --- 4. DASHBOARD LOGIC ---
+        function renderDashboard() {
+            const tbody = document.getElementById('tbody-dashboard');
+            const search = document.getElementById('searchDashboard').value.toLowerCase();
+            tbody.innerHTML = '';
 
-        function renderTableVisit() {
-            const rows = db.visits.map((d, i) => `
-                <tr>
-                    <td class="p-4 font-bold">${d.patientName}</td>
-                    <td class="p-4 text-center">
-                        ${d.photo ? `<img src="${d.photo}" class="h-12 w-12 rounded object-cover mx-auto border" onclick="window.open('${d.photo}')">` : '<span class="text-gray-400 text-xs">No Img</span>'}
-                    </td>
-                    <td class="p-4 text-sm">${d.notes}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="deleteData('visits', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-            return createTable(['Pasien', 'Foto', 'Keterangan Dokter'], rows);
-        }
-
-        function renderTableCrisis() {
-            const rows = db.crisis.map((d, i) => `
-                <tr class="text-xs">
-                    <td class="p-2 font-bold">${d.patientName}</td>
-                    <td class="p-2">B:${d.scoreBio} P:${d.scorePsy} S:${d.scoreSoc} Sp:${d.scoreSpi}</td>
-                    <td class="p-2 font-bold text-indigo-600">${parseInt(d.scoreBio)+parseInt(d.scorePsy)+parseInt(d.scoreSoc)+parseInt(d.scoreSpi)}</td>
-                    <td class="p-2">${d.change || '-'}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="deleteData('crisis', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-            return createTable(['Pasien', 'BPSS (Bio/Psy/Soc/Spi)', 'Total', 'Perubahan'], rows);
-        }
-
-        function renderTableGeneric(type) {
-             const data = type === 'program' ? db.programs : db.terapi;
-             const headers = type === 'program' ? ['Pasien', 'Paket', 'Durasi', 'Waktu Mulai'] : ['Pasien', 'Rencana Terapi', 'Keterangan'];
-             
-             const rows = data.map((d, i) => {
-                 if(type === 'program') {
-                     return `<tr><td class="p-4 font-bold">${d.patientName}</td><td class="p-4"><span class="bg-purple-100 text-purple-800 px-2 rounded text-xs">${d.package}</span></td><td class="p-4">${d.duration} Hari</td><td class="p-4">${d.startDate}</td><td class="p-4 text-center"><button onclick="deleteData('programs', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
-                 } else {
-                     return `<tr><td class="p-4 font-bold">${d.patientName}</td><td class="p-4">${d.plan}</td><td class="p-4 text-sm text-gray-500">${d.notes}</td><td class="p-4 text-center"><button onclick="deleteData('terapi', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
-                 }
-             }).join('');
-             return createTable(headers, rows);
-        }
-
-        // --- CHART JS FOR CRISIS ---
-        function initChart() {
-            const ctx = document.getElementById('bpssChart').getContext('2d');
-            // Ambil data pasien terakhir untuk demo grafik
-            const lastData = db.crisis[db.crisis.length - 1] || {scoreBio:0, scorePsy:0, scoreSoc:0, scoreSpi:0, patientName: "Belum Ada Data"};
-            
-            new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
-                    datasets: [{
-                        label: `BPSS Score: ${lastData.patientName}`,
-                        data: [lastData.scoreBio, lastData.scorePsy, lastData.scoreSoc, lastData.scoreSpi],
-                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
-                        borderColor: 'rgba(13, 148, 136, 1)',
-                        pointBackgroundColor: 'rgba(13, 148, 136, 1)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    scales: { r: { beginAtZero: true, max: 25 } },
-                    responsive: true
+            patients.forEach(p => {
+                if(p.reg.nama.toLowerCase().includes(search)) {
+                    const row = `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.reg.tanggal.replace('T', ' ')}</td>
+                            <td><strong>${p.reg.nama}</strong><br><small>${p.reg.usia} Thn</small></td>
+                            <td>${p.reg.diagnosa_mmrc || '-'}</td>
+                            <td>${p.reg.dokter || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info text-white" onclick="editPatient(${p.id})"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-danger" onclick="deletePatient(${p.id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
                 }
             });
         }
 
-        // --- FORM HANDLING & MODALS ---
-        function openModal(type) {
-            const modal = document.getElementById('modalForm');
-            const form = document.getElementById('dynamicForm');
-            const title = document.getElementById('modalTitle');
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
-            // Generate Form Fields based on Type
-            let fields = '';
-            
-            // Common Patient Dropdown logic (simplified for demo)
-            const patientOptions = db.patients.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-            const patientSelect = `<div class="flex flex-col"><label class="text-sm font-bold text-gray-700 mb-1">Nama Pasien</label><select id="input_patient" class="border p-2 rounded bg-gray-50">${patientOptions}</select></div>`;
+        function savePatient() {
+            const id = document.getElementById('p_id').value;
+            const newPatient = {
+                id: id ? parseInt(id) : Date.now(),
+                reg: {
+                    tanggal: document.getElementById('p_tanggal').value,
+                    nama: document.getElementById('p_nama').value,
+                    usia: document.getElementById('p_usia').value,
+                    alamat: document.getElementById('p_alamat').value,
+                    dokter: document.getElementById('p_dokter_nama').value,
+                    diagnosa_mmrc: document.getElementById('p_diagnosa_mmrc').value,
+                    // ... (bisa dilengkapi field lain sesuai request)
+                },
+                medicine: { stock: 0, name: '', log: [] }, // Default
+                bpss: { bio:0, psy:0, soc:0, spi:0 } // Default
+            };
 
-            if (type === 'dashboard') {
-                title.innerText = "Registrasi Pasien Baru";
-                fields = `
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Nama Lengkap</label><input id="input_name" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Tanggal Lahir/Usia</label><input id="input_age" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Pekerjaan</label><input id="input_job" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Wali Pasien</label><input id="input_wali" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col md:col-span-2"><label class="text-sm font-bold text-gray-700">Riwayat Penyakit (Fisik/Psikis)</label><textarea id="input_history" class="border p-2 rounded h-20"></textarea></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Diagnosa Dokter</label><input id="input_diagnosis" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Nama Dokter</label><input id="input_docName" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col md:col-span-2">
-                        <label class="text-sm font-bold text-gray-700 mb-2">Tindakan Intervensi</label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-2"><input type="checkbox" id="check_injeksi"> Injeksi</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="check_urine"> Urine Test</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" id="check_fiksasi"> Fiksasi</label>
+            if(id) {
+                const index = patients.findIndex(p => p.id == id);
+                // Preserve existing data modules
+                newPatient.medicine = patients[index].medicine;
+                newPatient.bpss = patients[index].bpss;
+                patients[index] = newPatient;
+            } else {
+                patients.push(newPatient);
+            }
+            
+            saveToLocal();
+            bootstrap.Modal.getInstance(document.getElementById('modalPasien')).hide();
+            document.getElementById('formPasien').reset();
+            renderDashboard();
+        }
+
+        function editPatient(id) {
+            const p = patients.find(x => x.id == id);
+            document.getElementById('p_id').value = p.id;
+            document.getElementById('p_nama').value = p.reg.nama;
+            document.getElementById('p_tanggal').value = p.reg.tanggal;
+            // Isi sisa form field di sini...
+            showModal('modalPasien');
+        }
+
+        function deletePatient(id) {
+            if(confirm('Hapus data pasien ini?')) {
+                patients = patients.filter(p => p.id !== id);
+                saveToLocal();
+                renderDashboard();
+            }
+        }
+
+        // --- 5. MEDICINE LOGIC ---
+        function renderMedicineList() {
+            const container = document.getElementById('medicine-container');
+            container.innerHTML = '';
+            patients.forEach(p => {
+                let stockStatus = p.medicine.stock < 7 ? '<span class="badge bg-danger">Low Stock</span>' : '<span class="badge bg-success">OK</span>';
+                container.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>${p.reg.nama}</h5>
+                                <p>Obat: ${p.medicine.name || '-'}</p>
+                                <p>Sisa Stok: <strong>${p.medicine.stock}</strong> ${stockStatus}</p>
+                                <button class="btn btn-primary btn-sm w-100" onclick="openMedicineModal(${p.id})">Kelola Obat</button>
+                            </div>
                         </div>
                     </div>
                 `;
-            } else if (type === 'medicine') {
-                title.innerText = "Tambah Obat Pasien";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Nama Obat</label><input id="input_drug" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Stok Awal (Tablet)</label><input id="input_stock" type="number" class="border p-2 rounded"></div>
-                `;
-            } else if (type === 'ttv') {
-                title.innerText = "Input TTV & GDS";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Tensi Darah (mmHg)</label><input id="input_bp" type="text" placeholder="120/80" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Heart Rate / Saturasi</label><input id="input_hr" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Resp. Rate</label><input id="input_rr" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">TB (cm)</label><input id="input_tb" type="number" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">BB (kg)</label><input id="input_bb" type="number" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">GDS (Keterangan)</label><input id="input_gds" type="text" class="border p-2 rounded"></div>
-                `;
-            } else if (type === 'visit') {
-                title.innerText = "Catatan Visit Dokter";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col md:col-span-2"><label class="text-sm font-bold text-gray-700">Upload Foto (Opsional)</label><input id="input_photo" type="file" class="border p-2 rounded" accept="image/*"></div>
-                    <div class="flex flex-col md:col-span-2"><label class="text-sm font-bold text-gray-700">Keterangan/Wawancara</label><textarea id="input_notes" class="border p-2 rounded h-32"></textarea></div>
-                `;
-            } else if (type === 'crisis') {
-                title.innerText = "Penilaian BPSS Score (0-25)";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Biological Score</label><input id="input_bio" type="number" min="0" max="25" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Psychological Score</label><input id="input_psy" type="number" min="0" max="25" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Social Score</label><input id="input_soc" type="number" min="0" max="25" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Spiritual Score</label><input id="input_spi" type="number" min="0" max="25" class="border p-2 rounded"></div>
-                    <div class="flex flex-col md:col-span-2"><label class="text-sm font-bold text-gray-700">Catatan Perubahan (Discharge/Eval)</label><input id="input_change" type="text" class="border p-2 rounded"></div>
-                `;
-            } else if (type === 'program') {
-                title.innerText = "Rencana Program";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Paket Program</label>
-                    <select id="input_package" class="border p-2 rounded"><option>Reguler</option><option>Eksklusif</option></select></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Durasi</label>
-                    <select id="input_duration" class="border p-2 rounded"><option value="7">7 Hari (Detox)</option><option value="14">14 Hari</option><option value="30">30 Hari</option><option value="60">60 Hari</option></select></div>
-                `;
-            } else if (type === 'terapi') {
-                title.innerText = "Rencana Terapi";
-                fields = `
-                    ${patientSelect}
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Nama Terapi</label><input id="input_plan" type="text" class="border p-2 rounded"></div>
-                    <div class="flex flex-col"><label class="text-sm font-bold text-gray-700">Keterangan Detail</label><textarea id="input_notes" class="border p-2 rounded h-20"></textarea></div>
-                `;
-            }
-
-            form.innerHTML = fields;
+            });
         }
 
-        function closeModal() {
-            document.getElementById('modalForm').classList.add('hidden');
-            document.getElementById('modalForm').classList.remove('flex');
-        }
-
-        // --- DATA SAVING LOGIC ---
-        function saveData() {
-            const now = new Date().toLocaleString('id-ID');
+        function openMedicineModal(id) {
+            const p = patients.find(x => x.id == id);
+            document.getElementById('med_patient_id').value = p.id;
+            document.getElementById('med_patient_name').innerText = p.reg.nama;
+            document.getElementById('med_name').value = p.medicine.name || '';
+            document.getElementById('med_current_stock').innerText = p.medicine.stock || 0;
             
-            if (currentMenu === 'dashboard') {
-                const newData = {
-                    name: document.getElementById('input_name').value,
-                    age: document.getElementById('input_age').value,
-                    status: document.getElementById('input_job').value, // Used job as status/desc for brevity
-                    history: document.getElementById('input_history').value,
-                    doctorName: document.getElementById('input_docName').value,
-                    diagnosis: document.getElementById('input_diagnosis').value,
-                    regDate: now
-                };
-                db.patients.push(newData);
-            } 
-            else if (currentMenu === 'medicine') {
-                const newData = {
-                    patientName: document.getElementById('input_patient').value,
-                    drugName: document.getElementById('input_drug').value,
-                    stockInitial: parseInt(document.getElementById('input_stock').value),
-                    stockCurrent: parseInt(document.getElementById('input_stock').value),
-                    usedTotal: 0,
-                    lastLog: '-'
-                };
-                db.medicines.push(newData);
-            }
-            else if (currentMenu === 'ttv') {
-                db.ttv.push({
-                    patientName: document.getElementById('input_patient').value,
-                    timestamp: now,
-                    bp: document.getElementById('input_bp').value,
-                    hr: document.getElementById('input_hr').value,
-                    rr: document.getElementById('input_rr').value,
-                    tb: document.getElementById('input_tb').value,
-                    bb: document.getElementById('input_bb').value,
-                    gds: document.getElementById('input_gds').value
-                });
-            }
-            else if (currentMenu === 'visit') {
-                const fileInput = document.getElementById('input_photo');
-                let photoData = null;
-                
-                // Handle file upload sync logic via Promise/Callback approach for simplicity in single function:
-                // Note: For this demo, we save text data instantly. File reading is async.
-                const note = document.getElementById('input_notes').value;
-                const patName = document.getElementById('input_patient').value;
-                
-                if (fileInput.files && fileInput.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        db.visits.push({
-                            patientName: patName,
-                            photo: e.target.result, // Base64 string
-                            notes: note
-                        });
-                        finalizeSave();
-                    }
-                    reader.readAsDataURL(fileInput.files[0]);
-                    return; // Stop here, wait for reader
-                } else {
-                    db.visits.push({ patientName: patName, photo: null, notes: note });
-                }
-            }
-            else if (currentMenu === 'crisis') {
-                db.crisis.push({
-                    patientName: document.getElementById('input_patient').value,
-                    scoreBio: document.getElementById('input_bio').value,
-                    scorePsy: document.getElementById('input_psy').value,
-                    scoreSoc: document.getElementById('input_soc').value,
-                    scoreSpi: document.getElementById('input_spi').value,
-                    change: document.getElementById('input_change').value,
-                    timestamp: now
-                });
-            }
-            else if (currentMenu === 'program') {
-                db.programs.push({
-                    patientName: document.getElementById('input_patient').value,
-                    package: document.getElementById('input_package').value,
-                    duration: document.getElementById('input_duration').value,
-                    startDate: now
-                });
-            }
-            else if (currentMenu === 'terapi') {
-                db.terapi.push({
-                    patientName: document.getElementById('input_patient').value,
-                    plan: document.getElementById('input_plan').value,
-                    notes: document.getElementById('input_notes').value
-                });
-            }
+            // Check Warning
+            const warning = document.getElementById('med_warning');
+            if((p.medicine.stock || 0) < 7) warning.classList.remove('hidden');
+            else warning.classList.add('hidden');
 
-            finalizeSave();
+            renderMedicineLog(p);
+            showModal('modalMedicine');
         }
 
-        function finalizeSave() {
-            localStorage.setItem('mmrc_db', JSON.stringify(db));
-            closeModal();
-            renderContent(currentMenu);
-            alert("Data Berhasil Disimpan!");
-        }
-
-        function deleteData(collection, index) {
-            if(confirm("Hapus data ini?")) {
-                db[collection].splice(index, 1);
-                localStorage.setItem('mmrc_db', JSON.stringify(db));
-                renderContent(currentMenu);
-            }
-        }
-
-        // --- SPECIFIC FEATURES ---
-        function consumeMedicine(index) {
-            const med = db.medicines[index];
-            const amount = prompt(`Minum ${med.drugName} untuk ${med.patientName}.\nMasukkan jumlah tablet:`, "1");
-            const note = prompt("Keterangan/Nama PJ:", "Perawat Jaga");
+        function updateStock() {
+            const id = document.getElementById('med_patient_id').value;
+            const name = document.getElementById('med_name').value;
+            const add = parseInt(document.getElementById('med_add_stock').value) || 0;
             
-            if (amount && note) {
-                const qty = parseInt(amount);
-                if (med.stockCurrent >= qty) {
-                    med.stockCurrent -= qty;
-                    med.usedTotal += qty;
-                    med.lastLog = `${new Date().toLocaleString()} - ${qty} tab (${note})`;
-                    localStorage.setItem('mmrc_db', JSON.stringify(db));
-                    renderContent('medicine');
-                } else {
-                    alert("Stok tidak cukup!");
-                }
-            }
+            const p = patients.find(x => x.id == id);
+            p.medicine.name = name;
+            p.medicine.stock = (p.medicine.stock || 0) + add; // Logic Stok Awal/Tambah
+            
+            saveToLocal();
+            openMedicineModal(id); // Refresh modal
+            document.getElementById('med_add_stock').value = '';
         }
 
-        function globalSearch() {
-            const input = document.getElementById('globalSearch').value.toLowerCase();
-            const table = document.getElementById('dataTable');
-            if(!table) return;
-            const tr = table.getElementsByTagName('tr');
+        function addMedicineUsage() {
+            const id = document.getElementById('med_patient_id').value;
+            const qty = parseInt(document.getElementById('use_qty').value) || 0;
+            const p = patients.find(x => x.id == id);
 
-            for (let i = 1; i < tr.length; i++) {
-                let found = false;
-                const td = tr[i].getElementsByTagName('td');
-                for (let j = 0; j < td.length; j++) {
-                    if (td[j].textContent.toLowerCase().indexOf(input) > -1) {
-                        found = true;
-                        break;
+            if(p.medicine.stock < qty) {
+                alert("Stok tidak cukup!");
+                return;
+            }
+
+            // Automatisasi Berkurang
+            p.medicine.stock -= qty;
+            
+            // Catatan
+            p.medicine.log.push({
+                time: document.getElementById('use_time').value,
+                ket: document.getElementById('use_ket').value,
+                qty: qty,
+                pj: document.getElementById('use_pj').value
+            });
+
+            saveToLocal();
+            openMedicineModal(id); // Refresh UI
+            // Clear inputs
+            document.getElementById('use_qty').value = '';
+        }
+
+        function renderMedicineLog(p) {
+            const tbody = document.getElementById('tbl_med_log');
+            tbody.innerHTML = '';
+            // Show last 5 logs
+            p.medicine.log.slice().reverse().forEach((log, idx) => {
+                if(idx < 5) {
+                    tbody.innerHTML += `<tr><td>${log.time}</td><td>${log.ket}</td><td>-${log.qty}</td><td>${log.pj}</td><td><i class="fas fa-check text-success"></i></td></tr>`;
+                }
+            });
+        }
+
+        // --- 6. BPSS POLYGON CHART ---
+        function renderBPSSList() {
+            const container = document.getElementById('crisis-container');
+            container.innerHTML = '';
+            patients.forEach(p => {
+                container.innerHTML += `
+                     <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body d-flex justify-content-between">
+                                <div>
+                                    <h5>${p.reg.nama}</h5>
+                                    <small>Bio: ${p.bpss?.bio}, Psy: ${p.bpss?.psy}</small>
+                                </div>
+                                <button class="btn btn-warning" onclick="openBPSSModal(${p.id})">Update Score & Grafik</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openBPSSModal(id) {
+            const p = patients.find(x => x.id == id);
+            document.getElementById('bpss_patient_id').value = id;
+            document.getElementById('score_bio').value = p.bpss?.bio || 0;
+            document.getElementById('score_psy').value = p.bpss?.psy || 0;
+            document.getElementById('score_soc').value = p.bpss?.soc || 0;
+            document.getElementById('score_spi').value = p.bpss?.spi || 0;
+            
+            showModal('modalBPSS');
+            initChart(p.bpss || {bio:0, psy:0, soc:0, spi:0});
+        }
+
+        function saveBPSS() {
+            const id = document.getElementById('bpss_patient_id').value;
+            const p = patients.find(x => x.id == id);
+            
+            p.bpss = {
+                bio: document.getElementById('score_bio').value,
+                psy: document.getElementById('score_psy').value,
+                soc: document.getElementById('score_soc').value,
+                spi: document.getElementById('score_spi').value
+            };
+            
+            saveToLocal();
+            initChart(p.bpss); // Redraw Chart
+            alert("Score Updated!");
+        }
+
+        function initChart(data) {
+            const ctx = document.getElementById('bpssChart').getContext('2d');
+            if (bpssChartInstance) bpssChartInstance.destroy();
+
+            bpssChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
+                    datasets: [{
+                        label: 'BPSS Score',
+                        data: [data.bio, data.psy, data.soc, data.spi],
+                        backgroundColor: 'rgba(44, 122, 123, 0.2)',
+                        borderColor: 'rgba(44, 122, 123, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 25
+                        }
                     }
                 }
-                tr[i].style.display = found ? "" : "none";
-            }
+            });
         }
 
-        // --- EXPORT FUNCTION ---
-        function exportData(type) {
-            const table = document.getElementById('dataTable');
-            if(!table) { alert("Tidak ada data untuk diexport"); return; }
-            
-            if (type === 'excel') {
-                const wb = XLSX.utils.table_to_book(table, {sheet: "Data MMRC"});
-                XLSX.writeFile(wb, `MMRC_Export_${currentMenu}.xlsx`);
-            } else if (type === 'word') {
-                const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML To Doc</title></head><body>`;
-                const footer = "</body></html>";
-                const sourceHTML = header + `<h1 style="text-align:center">Laporan ${currentMenu.toUpperCase()} - MMRC</h1>` + table.outerHTML + footer;
-                
-                const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-                const fileDownload = document.createElement("a");
-                document.body.appendChild(fileDownload);
-                fileDownload.href = source;
-                fileDownload.download = `MMRC_Laporan_${currentMenu}.doc`;
-                fileDownload.click();
-                document.body.removeChild(fileDownload);
-            }
+        // --- 7. EXPORT TO EXCEL ---
+        function exportToExcel(tableId, filename) {
+            const table = document.getElementById(tableId);
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Sheet1"});
+            XLSX.writeFile(wb, filename + '.xlsx');
         }
 
-        // Load dashboard on start if not logged in (handled by css hidden logic)
+        // --- 8. GENERIC LIST RENDERER (Stub for other menus) ---
+        function renderSimpleList(containerId, title) {
+            const c = document.getElementById(containerId);
+            c.innerHTML = '';
+            patients.forEach(p => {
+                c.innerHTML += `
+                    <div class="col-12 mb-2">
+                        <div class="card p-3 d-flex flex-row justify-content-between align-items-center">
+                            <strong>${p.reg.nama}</strong>
+                            <div>
+                                <input type="file" class="form-control form-control-sm d-inline w-auto" placeholder="Upload Foto">
+                                <button class="btn btn-sm btn-secondary">Input Data ${title}</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
     </script>
 </body>
 </html>
