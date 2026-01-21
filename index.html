@@ -745,6 +745,48 @@
                 app.nav('dashboard');
                 Swal.fire('Sukses', 'Data Pasien Tersimpan', 'success');
             },
+editPatient: (id) => {
+  const p = app.data.patients.find(x => x.id === id);
+
+  document.getElementById('modal-title').innerText = "Edit Data Pasien";
+  document.getElementById('modal-body').innerHTML = `
+    <form onsubmit="app.submitEditPatient(event, '${id}')" class="space-y-4">
+      <div>
+        <label class="label-text">Nama Lengkap</label>
+        <input name="name" class="input-field" value="${p.registration.name}">
+      </div>
+      <div>
+        <label class="label-text">Usia</label>
+        <input name="age" class="input-field" value="${p.registration.age}">
+      </div>
+      <div>
+        <label class="label-text">Diagnosa Masuk</label>
+        <input name="diag" class="input-field" value="${p.diagnosis.entry_diagnosis}">
+      </div>
+      <button class="w-full bg-amber-500 text-white py-2 rounded font-bold">
+        UPDATE DATA PASIEN
+      </button>
+    </form>
+  `;
+
+  document.getElementById('modal-container').classList.remove('hidden');
+  document.getElementById('modal-container').classList.add('flex');
+},
+
+submitEditPatient: (e, id) => {
+  e.preventDefault();
+  const p = app.data.patients.find(x => x.id === id);
+
+  p.registration.name = e.target.name.value;
+  p.registration.age = e.target.age.value;
+  p.diagnosis.entry_diagnosis = e.target.diag.value;
+
+  app.saveDB();
+  app.closeModal();
+  app.nav('dashboard');
+
+  Swal.fire('Berhasil', 'Data pasien diperbarui', 'success');
+},
 
             // ADD MEDICINE STOCK
             modalAddMedicine: (id) => {
@@ -765,48 +807,49 @@
                 document.getElementById('modal-container').classList.add('flex');
             },
 
-            submitMedicine: (e, id) => {
-                e.preventDefault();
-                const p = app.data.patients.find(x => x.id === id);
-                p.medicine_stock.push({
-                    name: e.target.name.value,
-                    init_stock: parseInt(e.target.qty.value),
-                    used_stock: 0,
-                    est_end_date: e.target.est_date.value
-                });
+            p.medicine_stock.push({
+            name: e.target.name.value,
+            init_stock: parseInt(e.target.qty.value),
+            used_stock: 0,
+            est_end_date: e.target.est_date.value,
+            min_alert: 5
+          });
                 app.saveDB();
                 app.closeModal();
                 app.nav('medicine');
-            },
-
             useMedicine: (pid, medIdx) => {
-                Swal.fire({
-                    title: 'Konfirmasi Penggunaan',
-                    html: '<input id="swal-input1" class="swal2-input" placeholder="Nama PJ"> <input id="swal-input2" class="swal2-input" placeholder="Keterangan (Pagi/Siang/Malam)">',
-                    focusConfirm: false,
-                    preConfirm: () => {
-                        return [document.getElementById('swal-input1').value, document.getElementById('swal-input2').value]
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const [pj, note] = result.value;
-                        if(!pj) return Swal.fire('Error', 'Nama PJ wajib diisi!', 'error');
-                        
-                        const p = app.data.patients.find(x => x.id === pid);
-                        const med = p.medicine_stock[medIdx];
-                        
-                        med.used_stock += 1;
-                        p.medicine_logs.push({
-                            date: new Date().toISOString(),
-                            medicine_name: med.name,
-                            notes: note,
-                            pic_name: pj
-                        });
-                        app.saveDB();
-                        app.nav('medicine');
-                    }
-                });
-            },
+  const p = app.data.patients.find(x => x.id === pid);
+  const med = p.medicine_stock[medIdx];
+
+  if (med.init_stock - med.used_stock <= 0) {
+    return Swal.fire('Stok Habis', 'Obat tidak bisa digunakan lagi', 'error');
+  }
+
+  Swal.fire({
+    title: 'Penggunaan Obat',
+    input: 'text',
+    inputLabel: 'Nama PJ',
+    showCancelButton: true
+  }).then(r => {
+    if (r.isConfirmed && r.value) {
+      med.used_stock += 1;
+
+      p.medicine_logs.push({
+        date: new Date().toISOString(),
+        medicine_name: med.name,
+        notes: 'Pemakaian harian',
+        pic_name: r.value
+      });
+
+      if (med.init_stock - med.used_stock <= med.min_alert) {
+        Swal.fire('Warning', `Stok ${med.name} hampir habis`, 'warning');
+      }
+
+      app.saveDB();
+      app.nav('medicine');
+    }
+  });
+},
 
             // MODAL ADD BPSS (Complex Form)
             modalAddBPSS: (id) => {
