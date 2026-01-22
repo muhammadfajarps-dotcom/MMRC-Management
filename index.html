@@ -338,9 +338,6 @@ exportExcelAll(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Pasien");
   XLSX.writeFile(wb,"MMRC_ALL.xlsx");
-
-        }
-    })
 },
 
             data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
