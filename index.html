@@ -178,17 +178,18 @@
     </div>
 
     <script>
-        // --- 1. STATE & DATABASE ---
-const DB_KEY = 'MMRC_DB_PRO_VERSION';
+         // --- 1. DATABASE CONFIG ---
+const DB_KEY = 'MMRC_DATABASE_PRO';
 const initialDB = { patients: [] };
 
 const app = {
+    // Properti State
     data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
     currentPage: 'dashboard',
     signaturePad: null,
     chartInstance: null,
 
-    // --- 2. CORE METHODS ---
+    // --- 2. CORE METHODS (WAJIB ADA KOMA DI SETIAP AKHIR KURUNG KURAWAL) ---
     saveDB() {
         localStorage.setItem(DB_KEY, JSON.stringify(this.data));
     },
@@ -203,7 +204,7 @@ const app = {
             document.getElementById('app-layer').classList.add('flex');
             this.nav('dashboard');
         } else {
-            Swal.fire('Error', 'Username atau Password Salah', 'error');
+            Swal.fire('Error', 'Akses Ditolak', 'error');
         }
     },
 
@@ -226,10 +227,11 @@ const app = {
             case 'visit': title.innerText = "Log Visit Dokter"; this.renderVisit(content); break;
             case 'crisis': title.innerText = "BPSS Score Tracking"; this.renderCrisis(content); break;
             case 'program': title.innerText = "Program & Terapi"; this.renderProgram(content); break;
+            case 'terapi': title.innerText = "Rencana Terapi"; this.renderTerapiList(content); break;
         }
     },
 
-    // --- 3. UI RENDERERS ---
+    // --- 3. RENDERERS ---
     renderDashboard(c) {
         c.innerHTML = `
         <div class="mb-6"><button onclick="app.modalAddPatient()" class="bg-mmrc-primary text-white px-5 py-2.5 rounded-lg shadow hover:bg-teal-700 font-medium"><i class="fas fa-user-plus mr-2"></i>Pasien Baru</button></div>
@@ -246,101 +248,73 @@ const app = {
                         <div><h3 class="font-bold text-gray-800 text-lg">${p.registration.name}</h3></div>
                         <span class="bg-teal-50 text-teal-700 text-xs px-2 py-1 rounded font-bold">${p.registration.age} Th</span>
                     </div>
-                    <p class="text-sm text-gray-600 mt-2"><i class="fas fa-stethoscope text-teal-500 w-5"></i> ${p.diagnosis?.entry_diagnosis || '-'}</p>
                     <div class="mt-5 pt-4 border-t grid grid-cols-3 gap-2">
-                        <button onclick="app.editPatient('${p.id}')" class="bg-amber-100 text-amber-700 py-1.5 rounded text-xs font-bold hover:bg-amber-200">EDIT</button>
-                        <button onclick="app.deletePatient('${p.id}')" class="bg-red-100 text-red-700 py-1.5 rounded text-xs font-bold hover:bg-red-200">HAPUS</button>
+                        <button onclick="app.modalEditTerapi('${p.id}')" class="bg-teal-100 text-teal-700 py-1.5 rounded text-xs font-bold hover:bg-teal-200">TERAPI</button>
                         <button onclick="app.exportWord('${p.id}')" class="bg-blue-100 text-blue-700 py-1.5 rounded text-xs font-bold hover:bg-blue-200">DOC</button>
+                        <button onclick="app.deletePatient('${p.id}')" class="bg-red-100 text-red-700 py-1.5 rounded text-xs font-bold hover:bg-red-200">HAPUS</button>
                     </div>
                 </div>
             </div>`).join('')}
         </div>`;
     },
 
-    renderTTV(c) {
-        let html = '<div class="space-y-8">';
-        this.data.patients.forEach(p => {
-            html += `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-lg text-gray-800">${p.registration.name}</h3>
-                    <button onclick="app.modalAddTTV('${p.id}')" class="bg-blue-600 text-white text-xs px-3 py-2 rounded">+ Input TTV</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="table-custom">
-                        <thead><tr><th>Waktu</th><th>TD</th><th>Nadi</th><th>Sat</th><th>RR</th><th>GDS</th><th>Aksi</th></tr></thead>
-                        <tbody>
-                            ${(p.ttv_logs||[]).length === 0 ? '<tr><td colspan="7" class="text-center py-4">Tidak ada data</td></tr>' : ''}
-                            ${(p.ttv_logs||[]).slice().reverse().map((t, idx) => `
-                            <tr>
-                                <td>${new Date(t.date).toLocaleString('id-ID')}</td>
-                                <td>${t.td}</td><td>${t.hr}</td><td>${t.sat}%</td><td>${t.rr}</td><td>${t.gds_note}</td>
-                                <td><button onclick="app.deleteItem('${p.id}','ttv_logs',${(p.ttv_logs.length-1)-idx})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-        });
-        c.innerHTML = html + '</div>';
+    // --- 4. MODALS & SUBMITS ---
+    modalEditTerapi(id) {
+        const p = this.data.patients.find(x => x.id === id);
+        document.getElementById('modal-title').innerText = "Rencana Terapi: " + p.registration.name;
+        document.getElementById('modal-body').innerHTML = `
+            <form onsubmit="app.submitTerapi(event, '${id}')" class="space-y-4">
+                <textarea name="terapi" class="input-field h-40" placeholder="Tuliskan rencana terapi di sini...">${p.therapy_plan || ''}</textarea>
+                <button class="w-full bg-teal-600 text-white py-2 rounded font-bold shadow-lg">Simpan Rencana</button>
+            </form>
+        `;
+        document.getElementById('modal-container').classList.remove('hidden');
+        document.getElementById('modal-container').classList.add('flex');
     },
 
-    // --- 4. DATA HANDLING ---
-    async submitPatient(e) {
+    submitTerapi(e, id) {
         e.preventDefault();
-        const f = e.target;
-        let photo = null;
-        const fileInput = document.getElementById('reg_photo');
-        if(fileInput.files[0]) photo = await this.toBase64(fileInput.files[0]);
-
-        const newP = {
-            id: Date.now().toString(),
-            registration: { name: f.name.value, age: f.age.value, job: f.job.value, address: f.address.value, photo },
-            diagnosis: { entry_diagnosis: f.diag.value },
-            medicine_stock: [], medicine_logs: [], ttv_logs: [], visits: [], 
-            bpss_scores: {}, program: {}, therapy_plan: ''
-        };
-        this.data.patients.push(newP);
+        const p = this.data.patients.find(x => x.id === id);
+        p.therapy_plan = e.target.terapi.value;
         this.saveDB();
         this.closeModal();
-        this.nav('dashboard');
-        Swal.fire('Berhasil', 'Data pasien telah disimpan', 'success');
+        Swal.fire('Tersimpan', 'Rencana terapi telah diupdate', 'success');
+        this.nav(this.currentPage);
     },
 
-    search() {
-        const q = document.getElementById('global-search').value.toLowerCase();
-        const cards = document.querySelectorAll('#main-content .bg-white');
-        cards.forEach(card => {
-            const text = card.innerText.toLowerCase();
-            card.style.display = text.includes(q) ? '' : 'none';
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+    },
+
+    async toBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
         });
     },
 
-    // --- 5. EXPORT METHODS (FIXED SYNTAX) ---
+    // --- 5. EXPORT SYSTEM ---
     exportWord(pid) {
         const p = this.data.patients.find(x => x.id === pid);
-        if(!p) return;
-        
-        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } = docx;
+        const { Document, Packer, Paragraph } = docx;
 
         const doc = new Document({
             sections: [{
                 children: [
-                    new Paragraph({ text: `LAPORAN MEDIS: ${p.registration.name}`, heading: docx.HeadingLevel.HEADING_1 }),
-                    new Paragraph({ text: `Tanggal: ${new Date().toLocaleDateString()}` }),
-                    new Paragraph({ text: " " }),
-                    new Paragraph({ text: `Diagnosa: ${p.diagnosis.entry_diagnosis}`, bold: true }),
-                    new Paragraph({ text: " " }),
-                    new Paragraph({ text: "Riwayat TTV:", heading: docx.HeadingLevel.HEADING_2 }),
-                    // Tambahkan baris data TTV di sini...
+                    new Paragraph({ text: "MEDICAL REPORT MMRC", heading: docx.HeadingLevel.HEADING_1 }),
+                    new Paragraph({ text: "Nama: " + p.registration.name }),
+                    new Paragraph({ text: "Terapi: " + (p.therapy_plan || 'Belum ada data') })
                 ]
             }]
         });
 
         Packer.toBlob(doc).then(blob => {
-            saveAs(blob, `Laporan_${p.registration.name}.docx`);
+            saveAs(blob, `Report_${p.registration.name}.docx`);
         });
-    },
+    }
+}; // AKHIR DARI OBJEK APP
 
     exportExcelFull() {
         const wb = XLSX.utils.book_new();
