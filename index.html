@@ -227,87 +227,14 @@
         */
 
         // --- 2. APP CONTROLLER ---
-        const app = {filterByText(list, term) {
+        const app = {
+
+  filterByText(list, term) {
     if (!term) return list;
     term = term.toLowerCase();
-    return list.filter(item => JSON.stringify(item).toLowerCase().includes(term));
-            exportWord(pid){
-    const p = app.data.patients.find(x=>x.id===pid);
-    const doc = new docx.Document({
-        sections:[{
-            children:[
-                new docx.Paragraph({text:`DATA PASIEN: ${p.registration.name}`, bold:true}),
-                new docx.Paragraph(`Usia: ${p.registration.age}`),
-                new docx.Paragraph(`Alamat: ${p.registration.address}`),
-                new docx.Paragraph(" "),
-                new docx.Paragraph("RIWAYAT"),
-                new docx.Paragraph(p.history.curr_cond),
-                new docx.Paragraph(" "),
-                new docx.Paragraph("TTV"),
-                ...p.ttv_logs.map(t=>new docx.Paragraph(`${t.date} TD:${t.td} SAT:${t.sat}`)),
-                new docx.Paragraph(" "),
-                new docx.Paragraph("VISIT"),
-                ...p.visits.map(v=>new docx.Paragraph(v.notes))
-            ]
-        }]
-    });
-    docx.Packer.toBlob(doc).then(blob=>{
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(blob);
-        a.download=`${p.registration.name}.docx`;
-        a.click();
-    });
-},
-
-editItem(pid, type, idx) {
-    const p = app.data.patients.find(x => x.id === pid);
-    const item = p[type][idx];
-    document.getElementById('modal-title').innerText = "Edit Data";
-    document.getElementById('modal-body').innerHTML = `
-        <form onsubmit="app.saveEdit(event,'${pid}','${type}',${idx})" class="space-y-3">
-            ${Object.keys(item).map(k => `
-                <div>
-                    <label class="label-text">${k}</label>
-                    <input name="${k}" value="${item[k]}" class="input-field">
-                </div>`).join('')}
-            <button class="w-full bg-amber-600 text-white py-2 rounded">Simpan</button>
-        </form>`;
-    document.getElementById('modal-container').classList.remove('hidden');
-    document.getElementById('modal-container').classList.add('flex');
-},
-
-saveEdit(e,pid,type,idx){
-    e.preventDefault();
-    const p = app.data.patients.find(x => x.id === pid);
-    const item = p[type][idx];
-    Object.keys(item).forEach(k=>{
-        if(e.target[k]) item[k]=e.target[k].value;
-    });
-    app.saveDB();
-    app.closeModal();
-    app.nav(app.currentPage);
-},
-
-deleteItem(pid,type,idx){
-    Swal.fire({
-        title:'Hapus data?',
-        icon:'warning',
-        showCancelButton:true,
-        confirmButtonColor:'#d33'
-    }).then(r=>{
-        if(r.isConfirmed){
-            const p = app.data.patients.find(x=>x.id===pid);
-            p[type].splice(idx,1);
-            app.saveDB();
-            app.nav(app.currentPage);
-        }
-    })
-},
-
-            data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
-            currentPage: 'dashboard',
-
-                     // ==== UNIVERSAL EDIT & DELETE ====
+    return list.filter(item =>
+      JSON.stringify(item).toLowerCase().includes(term)
+        // ==== UNIVERSAL EDIT & DELETE ====
 editItem(pid, key, idx){
   const p = app.data.patients.find(x=>x.id===pid);
   const item = p[key][idx];
@@ -381,7 +308,88 @@ exportExcelAll(){
   XLSX.utils.book_append_sheet(wb,ws,"Pasien");
   XLSX.writeFile(wb,"MMRC_ALL.xlsx");
 },
+    );
+  },
 
+  exportWord(pid){
+    const p = app.data.patients.find(x=>x.id===pid);
+    const doc = new docx.Document({
+      sections:[{
+        children:[
+          new docx.Paragraph({text:`DATA PASIEN: ${p.registration.name}`, bold:true}),
+          new docx.Paragraph(`Usia: ${p.registration.age}`),
+          new docx.Paragraph(`Alamat: ${p.registration.address}`),
+          new docx.Paragraph(" "),
+          new docx.Paragraph("RIWAYAT"),
+          new docx.Paragraph(p.history.curr_cond || ""),
+          new docx.Paragraph(" "),
+          new docx.Paragraph("TTV"),
+          ...p.ttv_logs.map(t=>new docx.Paragraph(`${t.date} TD:${t.td} SAT:${t.sat}`)),
+          new docx.Paragraph(" "),
+          new docx.Paragraph("VISIT"),
+          ...p.visits.map(v=>new docx.Paragraph(v.notes))
+        ]
+      }]
+    });
+
+    docx.Packer.toBlob(doc).then(blob=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`${p.registration.name}.docx`;
+      a.click();
+    });
+  },
+
+
+editItem(pid, type, idx) {
+    const p = app.data.patients.find(x => x.id === pid);
+    const item = p[type][idx];
+    document.getElementById('modal-title').innerText = "Edit Data";
+    document.getElementById('modal-body').innerHTML = `
+        <form onsubmit="app.saveEdit(event,'${pid}','${type}',${idx})" class="space-y-3">
+            ${Object.keys(item).map(k => `
+                <div>
+                    <label class="label-text">${k}</label>
+                    <input name="${k}" value="${item[k]}" class="input-field">
+                </div>`).join('')}
+            <button class="w-full bg-amber-600 text-white py-2 rounded">Simpan</button>
+        </form>`;
+    document.getElementById('modal-container').classList.remove('hidden');
+    document.getElementById('modal-container').classList.add('flex');
+},
+
+saveEdit(e,pid,type,idx){
+    e.preventDefault();
+    const p = app.data.patients.find(x => x.id === pid);
+    const item = p[type][idx];
+    Object.keys(item).forEach(k=>{
+        if(e.target[k]) item[k]=e.target[k].value;
+    });
+    app.saveDB();
+    app.closeModal();
+    app.nav(app.currentPage);
+},
+
+deleteItem(pid,type,idx){
+    Swal.fire({
+        title:'Hapus data?',
+        icon:'warning',
+        showCancelButton:true,
+        confirmButtonColor:'#d33'
+    }).then(r=>{
+        if(r.isConfirmed){
+            const p = app.data.patients.find(x=>x.id===pid);
+            p[type].splice(idx,1);
+            app.saveDB();
+            app.nav(app.currentPage);
+        }
+    })
+},
+
+            data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
+            currentPage: 'dashboard',
+
+  
             // --- AUTH ---
             login: (e) => {
                 e.preventDefault();
