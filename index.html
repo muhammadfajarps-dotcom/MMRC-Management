@@ -755,13 +755,7 @@ exportExcelAll(){
                 html += `</div></div>`;
                 container.innerHTML = html;
             },
-
-                html = `
-                <div class="flex justify-end mb-3 space-x-2">
-                  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
-                  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
-                </div>
-                ` + html;
+        
             renderTerapi: (container) => {
                  let html = `<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Terapi</h3><table class="table-custom w-full"><thead><tr><th>Pasien</th><th>Rencana Terapi Detail</th><th>Aksi</th></tr></thead><tbody>`;
                  app.data.patients.forEach(p => {
