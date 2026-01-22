@@ -12,7 +12,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -20,10 +19,10 @@
                 extend: {
                     colors: {
                         mmrc: {
-                            dark: '#0f172a', 
-                            primary: '#0d9488', 
-                            light: '#f0fdfa', 
-                            accent: '#f59e0b'
+                            dark: '#0f172a', // Slate 900
+                            primary: '#0d9488', // Teal 600
+                            light: '#f0fdfa', // Teal 50
+                            accent: '#f59e0b' // Amber 500
                         }
                     }
                 }
@@ -34,23 +33,27 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
         body { font-family: 'Poppins', sans-serif; background-color: #f1f5f9; overflow-x: hidden; }
+        
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .fade-in { animation: fadeIn 0.4s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Animation Classes */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        .modal-active { display: flex; }
         .sidebar-link.active { background-color: rgba(13, 148, 136, 0.1); color: #0d9488; border-right: 4px solid #0d9488; }
         
         /* Table Styles */
-        .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom th { background-color: #f8fafc; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; }
-        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; color: #334155; }
+        .table-custom th { background-color: #f8fafc; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding: 12px 16px; border-bottom: 2px solid #e2e8f0; }
+        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; color: #334155; }
         .table-custom tr:hover { background-color: #f0fdfa; }
 
-        .input-field { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem; transition: all 0.2s; }
+        /* Input Styles */
+        .input-field { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem; transition: all 0.3s; }
         .input-field:focus { outline: none; border-color: #0d9488; ring: 2px solid #ccfbf1; }
         .label-text { display: block; font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 0.25rem; }
     </style>
@@ -64,105 +67,247 @@
                     <i class="fas fa-brain text-4xl text-white"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-mmrc-dark">MMRC MANAGEMENT</h1>
-                <p class="text-sm text-gray-500 tracking-widest">SISTEM OPERASIONAL TERINTEGRASI</p>
+                <p class="text-sm text-gray-500 tracking-widest">MADANI MENTAL RECOVERY CENTER</p>
             </div>
             <form onsubmit="app.login(event)" class="space-y-6">
                 <div>
                     <label class="label-text">USERNAME</label>
-                    <input type="text" id="username" class="input-field" placeholder="OPERASIONAL.MMRC" value="OPERASIONAL.MMRC">
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" id="username" class="input-field pl-10" placeholder="OPERASIONAL.MMRC" value="OPERASIONAL.MMRC">
+                    </div>
                 </div>
                 <div>
                     <label class="label-text">PASSWORD</label>
-                    <input type="password" id="password" class="input-field" placeholder="MADANI1999" value="MADANI1999">
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="password" class="input-field pl-10" placeholder="MADANI1999" value="MADANI1999">
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-mmrc-primary hover:bg-teal-700 text-white font-bold py-3 rounded-xl transition shadow-lg">
+                <button type="submit" class="w-full bg-mmrc-primary hover:bg-teal-700 text-white font-bold py-3 rounded-xl transition shadow-lg transform hover:scale-[1.02]">
                     LOGIN SYSTEM
                 </button>
             </form>
-            <div class="mt-6 text-center text-xs text-gray-400">&copy; 2026 MMRC IT Division</div>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                &copy; 2026 MMRC Operational System v3.1
+            </div>
         </div>
     </div>
 
     <div id="app-layer" class="hidden flex h-screen overflow-hidden">
         
-        <aside class="w-64 bg-white shadow-xl flex flex-col z-20 border-r border-gray-200 flex-shrink-0">
+        <aside class="w-72 bg-white shadow-xl flex flex-col z-20 border-r border-gray-200">
             <div class="p-6 border-b border-gray-100 flex items-center gap-3">
-                <div class="w-8 h-8 bg-mmrc-primary rounded flex items-center justify-center text-white">
-                    <i class="fas fa-shield-alt"></i>
+                <div class="w-10 h-10 bg-mmrc-primary rounded-lg flex items-center justify-center text-white">
+                    <i class="fas fa-shield-virus"></i>
                 </div>
-                <h2 class="font-bold text-gray-800 tracking-tight">MMRC SYSTEM</h2>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-lg">MMRC</h2>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider">Recovery Center</p>
+                </div>
             </div>
             
             <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-3">
-                <button onclick="app.nav('dashboard')" id="nav-dashboard" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition active">
-                    <i class="fas fa-home w-5"></i> <span class="text-sm font-medium">Dashboard</span>
+                <button onclick="app.nav('dashboard')" id="nav-dashboard" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition active">
+                    <i class="fas fa-th-large w-5"></i> <span class="text-sm font-medium">Dashboard & Registrasi</span>
                 </button>
-                <button onclick="app.nav('medicine')" id="nav-medicine" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
-                    <i class="fas fa-capsules w-5"></i> <span class="text-sm font-medium">Obat & Stok</span>
+                <button onclick="app.nav('medicine')" id="nav-medicine" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-pills w-5"></i> <span class="text-sm font-medium">Medicine & Stok</span>
                 </button>
-                <button onclick="app.nav('ttv')" id="nav-ttv" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="app.nav('ttv')" id="nav-ttv" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
                     <i class="fas fa-heartbeat w-5"></i> <span class="text-sm font-medium">TTV & GDS</span>
                 </button>
-                <button onclick="app.nav('visit')" id="nav-visit" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="app.nav('visit')" id="nav-visit" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
                     <i class="fas fa-user-md w-5"></i> <span class="text-sm font-medium">Visit Dokter</span>
                 </button>
-                <button onclick="app.nav('crisis')" id="nav-crisis" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
-                    <i class="fas fa-chart-line w-5"></i> <span class="text-sm font-medium">BPSS & Grafik</span>
+                <button onclick="app.nav('crisis')" id="nav-crisis" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-chart-pie w-5"></i> <span class="text-sm font-medium">Pasien Crisis (BPSS)</span>
                 </button>
-                <button onclick="app.nav('program')" id="nav-program" class="sidebar-link w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
-                    <i class="fas fa-calendar-check w-5"></i> <span class="text-sm font-medium">Program & Terapi</span>
+                <button onclick="app.nav('program')" id="nav-program" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-calendar-alt w-5"></i> <span class="text-sm font-medium">Rencana Program</span>
+                </button>
+                <button onclick="app.nav('terapi')" id="nav-terapi" class="sidebar-link w-full flex items-center gap-4 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-spa w-5"></i> <span class="text-sm font-medium">Rencana Terapi</span>
                 </button>
             </nav>
 
-            <div class="p-4 bg-gray-50 border-t">
-                <button onclick="location.reload()" class="w-full bg-white border border-red-200 text-red-600 py-2 rounded text-xs font-bold hover:bg-red-50">LOGOUT</button>
+            <div class="p-4 border-t border-gray-100 bg-gray-50">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold text-xs">OP</div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-700">Admin Ops</p>
+                        <p class="text-xs text-green-600">● Online</p>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="w-full bg-white border border-red-200 text-red-600 py-2 rounded-lg text-xs font-bold hover:bg-red-50 transition">
+                    LOGOUT
+                </button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col relative overflow-hidden bg-gray-50 w-full">
-            <header class="h-16 bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-                <h2 id="page-title" class="text-lg font-bold text-gray-800">Dashboard Overview</h2>
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-gray-50">
+            <header class="h-16 bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-8">
+                <h2 id="page-title" class="text-xl font-bold text-gray-800 tracking-tight">Dashboard Overview</h2>
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-                        <input type="text" id="global-search" onkeyup="app.search()" placeholder="Cari data..." class="pl-8 pr-4 py-2 border border-gray-200 rounded-full text-xs w-48 focus:w-64 transition-all">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                        <input type="text" id="global-search" onkeyup="app.search()" placeholder="Cari Pasien / Data..." class="pl-9 pr-4 py-2 border border-gray-200 rounded-full text-sm w-64 focus:w-80 transition-all focus:ring-2 focus:ring-mmrc-primary focus:border-transparent">
                     </div>
-                    <button onclick="app.exportExcelFull()" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-2">
-                        <i class="fas fa-file-excel"></i> Export All
+                    <button onclick="app.exportCurrentData()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center gap-2 shadow-sm">
+                        <i class="fas fa-file-excel"></i> Export Excel
                     </button>
                 </div>
             </header>
 
-            <div id="main-content" class="flex-1 overflow-y-auto p-6 fade-in pb-20">
+            <div id="main-content" class="flex-1 overflow-auto p-8 fade-in">
                 </div>
         </main>
     </div>
 
-    <div id="modal-container" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+    <div id="modal-container" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 id="modal-title" class="text-lg font-bold text-mmrc-primary">Title</h3>
-                <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white text-gray-500 hover:text-red-500 flex items-center justify-center transition shadow-sm"><i class="fas fa-times"></i></button>
+                <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white text-gray-500 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition shadow-sm">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div id="modal-body" class="p-6 overflow-y-auto">
+            <div id="modal-body" class="p-8 overflow-y-auto">
                 </div>
         </div>
     </div>
 
     <script>
-        // --- 1. STATE & DATABASE ---
-        const DB_KEY = 'MMRC_DB_FINAL';
+        // --- 1. STATE MANAGEMENT & DATABASE ---
+        const DB_KEY = 'MMRC_DB_V2';
         
-        // Struktur data: bpss_scores sekarang Object { H1: {...}, H2: {...} }
-        const initialDB = { patients: [] };
+        // Initial Mock Data Structure
+        const initialDB = {
+            patients: [] 
+        };
 
-        const app = {
+        /* Structure of a Patient Object:
+         {
+            id: timestamp,
+            registration: {
+                timestamp: 'YYYY-MM-DDTHH:mm',
+                photo: 'base64...',
+                name, birthplace, dob, age, marital_status, edu, job, address, 
+                spotcheck_items: text, guardian_name
+            },
+            history: {
+                physical: text, psychological: text, prev_diagnosis: text,
+                dosage_history: text, current_condition: text
+            },
+            diagnosis: {
+                doc_name, entry_diagnosis, planning,
+                interventions: { injection: bool, urine: bool, urine_note: text, fixation: bool },
+                prescription: text
+            },
+            medicine_stock: [
+                { id, name, init_stock, used_stock, est_end_date }
+            ],
+            medicine_logs: [
+                { date, medicine_name, notes, pic_name }
+            ],
+            ttv_logs: [
+                { date, td, sat, rr, tb, bb, gds_note }
+            ],
+            visits: [
+                { date, photo, notes, signature }
+            ],
+            bpss_scores: [
+                { date, bio: 0-25, psy: 0-25, soc: 0-25, spi: 0-25, discharge_eval, change_log }
+            ],
+            program: {
+                package: 'Reguler/Eksklusif', duration: '7/14/30/60'
+            },
+            therapy_plan: text
+         }
+        */
+
+        // --- 2. APP CONTROLLER ---
+        const app = {filterByText(list, term) {
+    if (!term) return list;
+    term = term.toLowerCase();
+    return list.filter(item => JSON.stringify(item).toLowerCase().includes(term));
+            exportWord(pid){
+    const p = app.data.patients.find(x=>x.id===pid);
+    const doc = new docx.Document({
+        sections:[{
+            children:[
+                new docx.Paragraph({text:`DATA PASIEN: ${p.registration.name}`, bold:true}),
+                new docx.Paragraph(`Usia: ${p.registration.age}`),
+                new docx.Paragraph(`Alamat: ${p.registration.address}`),
+                new docx.Paragraph(" "),
+                new docx.Paragraph("RIWAYAT"),
+                new docx.Paragraph(p.history.curr_cond),
+                new docx.Paragraph(" "),
+                new docx.Paragraph("TTV"),
+                ...p.ttv_logs.map(t=>new docx.Paragraph(`${t.date} TD:${t.td} SAT:${t.sat}`)),
+                new docx.Paragraph(" "),
+                new docx.Paragraph("VISIT"),
+                ...p.visits.map(v=>new docx.Paragraph(v.notes))
+            ]
+        }]
+    });
+    docx.Packer.toBlob(doc).then(blob=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=`${p.registration.name}.docx`;
+        a.click();
+    });
+},
+
+editItem(pid, type, idx) {
+    const p = app.data.patients.find(x => x.id === pid);
+    const item = p[type][idx];
+    document.getElementById('modal-title').innerText = "Edit Data";
+    document.getElementById('modal-body').innerHTML = `
+        <form onsubmit="app.saveEdit(event,'${pid}','${type}',${idx})" class="space-y-3">
+            ${Object.keys(item).map(k => `
+                <div>
+                    <label class="label-text">${k}</label>
+                    <input name="${k}" value="${item[k]}" class="input-field">
+                </div>`).join('')}
+            <button class="w-full bg-amber-600 text-white py-2 rounded">Simpan</button>
+        </form>`;
+    document.getElementById('modal-container').classList.remove('hidden');
+    document.getElementById('modal-container').classList.add('flex');
+},
+
+saveEdit(e,pid,type,idx){
+    e.preventDefault();
+    const p = app.data.patients.find(x => x.id === pid);
+    const item = p[type][idx];
+    Object.keys(item).forEach(k=>{
+        if(e.target[k]) item[k]=e.target[k].value;
+    });
+    app.saveDB();
+    app.closeModal();
+    app.nav(app.currentPage);
+},
+
+deleteItem(pid,type,idx){
+    Swal.fire({
+        title:'Hapus data?',
+        icon:'warning',
+        showCancelButton:true,
+        confirmButtonColor:'#d33'
+    }).then(r=>{
+        if(r.isConfirmed){
+            const p = app.data.patients.find(x=>x.id===pid);
+            p[type].splice(idx,1);
+            app.saveDB();
+            app.nav(app.currentPage);
+        }
+    })
+},
+
             data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
             currentPage: 'dashboard',
-            signaturePad: null,
-            chartInstance: null,
 
-            // --- 2. AUTH & CORE ---
+            // --- AUTH ---
             login: (e) => {
                 e.preventDefault();
                 const u = document.getElementById('username').value;
@@ -172,344 +317,689 @@
                     document.getElementById('app-layer').classList.remove('hidden');
                     document.getElementById('app-layer').classList.add('flex');
                     app.nav('dashboard');
+                    Swal.fire({icon: 'success', title: 'Login Berhasil', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
                 } else {
-                    Swal.fire('Error', 'Akses Ditolak', 'error');
+                    Swal.fire('Error', 'Username/Password Salah!', 'error');
                 }
             },
 
-            saveDB: () => localStorage.setItem(DB_KEY, JSON.stringify(app.data)),
+            saveDB: () => {
+                localStorage.setItem(DB_KEY, JSON.stringify(app.data));
+            },
 
+            // --- NAVIGATION & RENDERING ---
             nav: (page) => {
                 app.currentPage = page;
+                // Update UI Sidebar
                 document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-                const navBtn = document.getElementById(`nav-${page}`);
-                if(navBtn) navBtn.classList.add('active');
+                document.getElementById(`nav-${page}`).classList.add('active');
                 
                 const content = document.getElementById('main-content');
                 const title = document.getElementById('page-title');
-                content.innerHTML = '';
-                
-                // Destroy chart instance if exists when switching pages
-                if(app.chartInstance) { app.chartInstance.destroy(); app.chartInstance = null; }
+                content.innerHTML = ''; // Clear content
 
                 switch(page) {
-                    case 'dashboard': title.innerText = "Registrasi & Pasien"; app.renderDashboard(content); break;
-                    case 'medicine': title.innerText = "Manajemen Obat"; app.renderMedicine(content); break;
-                    case 'ttv': title.innerText = "Monitoring TTV"; app.renderTTV(content); break;
-                    case 'visit': title.innerText = "Log Visit Dokter"; app.renderVisit(content); break;
-                    case 'crisis': title.innerText = "BPSS Score Tracking"; app.renderCrisis(content); break;
-                    case 'program': title.innerText = "Program & Terapi"; app.renderProgram(content); break;
+                    case 'dashboard':
+                        title.innerText = "Dashboard & Registrasi Pasien";
+                        app.renderDashboard(content);
+                        break;
+                    case 'medicine':
+                        title.innerText = "Medicine Management & Stok";
+                        app.renderMedicine(content);
+                        break;
+                    case 'ttv':
+                        title.innerText = "Monitoring TTV & GDS";
+                        app.renderTTV(content);
+                        break;
+                    case 'visit':
+                        title.innerText = "Visit Dokter & Log Harian";
+                        app.renderVisit(content);
+                        break;
+                    case 'crisis':
+                        title.innerText = "Pasien Crisis & BPSS Score";
+                        app.renderCrisis(content);
+                        break;
+                    case 'program':
+                        title.innerText = "Rencana Program & Paket";
+                        app.renderProgram(content);
+                        break;
+                    case 'terapi':
+                        title.innerText = "Rencana Terapi Detail";
+                        app.renderTerapi(content);
+                        break;
                 }
             },
 
-            // --- 3. RENDERERS ---
+            // --- HELPER: FILE TO BASE64 ---
+            toBase64: (file) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            }),
 
-            renderDashboard: (c) => {
-                c.innerHTML = `
-                <div class="mb-6"><button onclick="app.modalAddPatient()" class="bg-mmrc-primary text-white px-5 py-2.5 rounded-lg shadow hover:bg-teal-700 font-medium"><i class="fas fa-user-plus mr-2"></i>Pasien Baru</button></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    ${app.data.patients.map((p) => `
-                    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
-                        <div class="h-20 bg-gradient-to-r from-teal-600 to-emerald-600 relative">
-                            <div class="absolute -bottom-8 left-6">
-                                <img src="${p.registration.photo || 'https://via.placeholder.com/150'}" class="w-16 h-16 rounded-full border-4 border-white object-cover bg-gray-200 shadow-sm">
-                            </div>
-                        </div>
-                        <div class="pt-10 px-6 pb-6 flex-1 flex flex-col">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="font-bold text-gray-800 text-lg">${p.registration.name}</h3>
-                                    <p class="text-xs text-gray-500 font-semibold">${p.registration.job || '-'}</p>
+            // --- RENDERERS ---
+
+            // 1. DASHBOARD
+            renderDashboard: (container) => {
+                const html = `
+                    <div class="mb-6">
+                        <button onclick="app.modalAddPatient()" class="bg-mmrc-primary text-white px-6 py-3 rounded-xl shadow-lg hover:bg-teal-700 transition flex items-center gap-2">
+                            <i class="fas fa-user-plus"></i> Registrasi Masuk Pasien
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        ${app.data.patients.map((p, idx) => `
+                        <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden hover:shadow-xl transition group">
+                            <div class="h-24 bg-gradient-to-r from-teal-500 to-emerald-600 relative">
+                                <div class="absolute -bottom-10 left-6">
+                                    <img src="${p.registration.photo || 'https://via.placeholder.com/150'}" class="w-20 h-20 rounded-full border-4 border-white object-cover bg-gray-200">
                                 </div>
-                                <span class="bg-teal-50 text-teal-700 text-xs px-2 py-1 rounded font-bold">${p.registration.age} Th</span>
                             </div>
-                            <div class="flex-1 space-y-2 text-sm text-gray-600 mt-2">
-                                <p><i class="fas fa-stethoscope text-teal-500 w-5"></i> ${p.diagnosis.entry_diagnosis || 'Belum diagnosa'}</p>
-                                <p><i class="fas fa-map-marker-alt text-teal-500 w-5"></i> ${p.registration.address ? p.registration.address.substring(0,30)+'...' : '-'}</p>
-                            </div>
-                            <div class="mt-5 pt-4 border-t grid grid-cols-3 gap-2">
-                                <button onclick="app.editPatient('${p.id}')" class="bg-amber-100 text-amber-700 py-1.5 rounded text-xs font-bold hover:bg-amber-200">EDIT</button>
-                                <button onclick="app.deletePatient('${p.id}')" class="bg-red-100 text-red-700 py-1.5 rounded text-xs font-bold hover:bg-red-200">HAPUS</button>
-                                <button onclick="app.exportWord('${p.id}')" class="bg-blue-100 text-blue-700 py-1.5 rounded text-xs font-bold hover:bg-blue-200"><i class="fas fa-file-word"></i> DOC</button>
+                            <div class="pt-12 px-6 pb-6">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-800">${p.registration.name}</h3>
+                                        <p class="text-xs text-gray-500 uppercase font-semibold tracking-wider">${p.registration.job || 'Tidak bekerja'}</p>
+                                    </div>
+                                    <span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded-full font-bold">${p.registration.age} Th</span>
+                                </div>
+                                
+                                <div class="mt-4 space-y-2">
+                                    <div class="p-3 bg-gray-50 rounded-lg text-xs">
+                                        <p class="font-bold text-gray-600 mb-1">Diagnosa Masuk:</p>
+                                        <p class="text-gray-800">${p.diagnosis.entry_diagnosis || '-'}</p>
+                                    </div>
+                                    <div class="p-3 bg-gray-50 rounded-lg text-xs">
+                                        <p class="font-bold text-gray-600 mb-1">Intervensi:</p>
+                                        <div class="flex gap-2">
+                                            ${p.diagnosis.interventions.injection ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 rounded">Inj</span>' : ''}
+                                            ${p.diagnosis.interventions.fixation ? '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-600 rounded">Fix</span>' : ''}
+                                            ${p.diagnosis.interventions.urine ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-600 rounded">Urine</span>' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 grid grid-cols-3 gap-2 border-t pt-4">
+                                    <button onclick="app.editPatient('${p.id}')" class="bg-amber-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-amber-600">EDIT</button>
+                                    <button onclick="app.deletePatient('${p.id}')" class="bg-red-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-red-600">HAPUS</button>
+                                    <button onclick="app.exportWord('${p.id}')" class="bg-green-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-green-700">WORD</button>
+                                </div>
                             </div>
                         </div>
-                    </div>`).join('')}
-                </div>`;
+                        `).join('')}
+                    </div>
+                `;
+                container.innerHTML = html;
             },
 
-            renderTTV: (c) => {
+            // 2. MEDICINE
+            renderMedicine: (container) => {
+                if(app.data.patients.length === 0) return container.innerHTML = '<div class="text-center text-gray-400 mt-10">Belum ada pasien terdaftar.</div>';
+
                 let html = '<div class="space-y-8">';
+                app.data.patients.forEach(p => {
+                    html += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-teal-50 px-6 py-4 border-b border-teal-100 flex justify-between items-center">
+                            <h3 class="font-bold text-teal-800 flex items-center gap-2"><i class="fas fa-user-circle"></i> ${p.registration.name}</h3>
+                            <button onclick="app.modalAddMedicine('${p.id}')" class="bg-teal-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-teal-700 shadow">+ Tambah Obat</button>
+                        </div>
+                        <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-600 mb-3 border-l-4 border-teal-500 pl-2">STOK OBAT PASIEN</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-left border-collapse">
+                                        <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th class="px-2 py-2 border">Nama Obat</th>
+                                                <th class="px-2 py-2 border text-center">Awal</th>
+                                                <th class="px-2 py-2 border text-center">Pakai</th>
+                                                <th class="px-2 py-2 border text-center">Sisa</th>
+                                                <th class="px-2 py-2 border">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(p.medicine_stock || []).map((m, mIdx) => {
+                                                const sisa = m.init_stock - m.used_stock;
+                                                const alert = sisa < 7 ? 'bg-red-50 text-red-700' : '';
+                                                return `
+                                                <tr class="${alert} hover:bg-gray-50">
+                                                    <td class="px-2 py-2 border font-medium">${m.name}</td>
+                                                    <td class="px-2 py-2 border text-center space-x-1">
+                                                    <button onclick="app.useMedicine('${p.id}', ${mIdx})" class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Minum</button>
+                                                    <button onclick="app.editItem('${p.id}','medicine_stock',${mIdx})" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">Edit</button>
+                                                    <button onclick="app.deleteItem('${p.id}','medicine_stock',${mIdx})" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">Hapus</button>
+                                                    <td class="px-2 py-2 border text-center font-bold">
+                                                        ${sisa}
+                                                        ${sisa < 7 ? '<i class="fas fa-exclamation-triangle ml-1 animate-pulse"></i>' : ''}
+                                                    </td>
+                                                    <td class="px-2 py-2 border text-center">
+                                                        <button onclick="app.useMedicine('${p.id}', ${mIdx})" class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 border border-green-300">Minum</button>
+                                                    </td>
+                                                </tr>`;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-600 mb-3 border-l-4 border-blue-500 pl-2">CATATAN PENGGUNAAN</h4>
+                                <div class="h-64 overflow-y-auto border rounded-lg bg-gray-50 p-2 text-xs space-y-2">
+                                    ${(p.medicine_logs || []).slice().reverse().map(log => `
+                                        <div class="bg-white p-3 rounded shadow-sm border border-gray-100">
+                                            <div class="flex justify-between font-semibold text-gray-700">
+                                                <span>${log.medicine_name}</span>
+                                                <span>${new Date(log.date).toLocaleDateString()}</span>
+                                            </div>
+                                            <div class="mt-1 text-gray-500 flex justify-between">
+                                                <span>${new Date(log.date).toLocaleTimeString()} - ${log.notes}</span>
+                                                <span class="font-bold text-teal-600">PJ: ${log.pic_name}</span>
+                                            </div>
+                                        </div>
+                                    `).join('') || '<p class="text-center text-gray-400 italic py-4">Belum ada riwayat.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            },
+
+            // 3. TTV & GDS
+            renderTTV: (container) => {
+                let html = `<div class="grid grid-cols-1 gap-6">`;
                 app.data.patients.forEach(p => {
                     html += `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-lg text-gray-800 flex items-center gap-2"><i class="fas fa-heartbeat text-red-500"></i> ${p.registration.name}</h3>
-                            <button onclick="app.modalAddTTV('${p.id}')" class="bg-blue-600 text-white text-xs px-3 py-2 rounded shadow hover:bg-blue-700">+ Input Data</button>
+                            <h3 class="font-bold text-lg text-gray-800">${p.registration.name}</h3>
+                            <button onclick="app.modalAddTTV('${p.id}')" class="bg-blue-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-blue-700"><i class="fas fa-plus"></i> Input TTV/GDS</button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="table-custom">
+                            <table class="table-custom w-full">
                                 <thead>
                                     <tr>
-                                        <th>Waktu</th>
+                                        <th>Waktu Check</th>
                                         <th>TD (mmHg)</th>
-                                        <th>Nadi</th>
-                                        <th>Saturasi</th>
-                                        <th>RR</th>
+                                        <th>Saturasi (%)</th>
+                                        <th>RR (x/mnt)</th>
                                         <th>TB / BB</th>
-                                        <th>GDS / Ket</th>
-                                        <th>Aksi</th>
+                                        <th>Ket. GDS</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${(p.ttv_logs||[]).length === 0 ? '<tr><td colspan="8" class="text-center italic text-gray-400 py-4">Belum ada data TTV</td></tr>' : ''}
-                                    ${(p.ttv_logs||[]).slice().reverse().map((t, i) => `
-                                    <tr>
-                                        <td>${new Date(t.date).toLocaleString('id-ID')}</td>
-                                        <td class="font-medium">${t.td}</td>
-                                        <td>${t.hr || '-'}</td>
-                                        <td>${t.sat}%</td>
-                                        <td>${t.rr}</td>
-                                        <td>${t.tb}cm / ${t.bb}kg</td>
-                                        <td><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">${t.gds_note || '-'}</span></td>
+                                   ${(p.ttv_logs||[]).map((t,i)=>`
+                                   <tr>
+                                        <td>${new Date(t.date).toLocaleString()}</td>
+                                        <td>${t.td}</td><td>${t.sat}</td><td>${t.rr}</td>
+                                        <td>${t.tb}/${t.bb}</td>
+                                        <td>${t.gds_note}</td>
                                         <td>
-                                            <button onclick="app.deleteItem('${p.id}','ttv_logs',${(p.ttv_logs.length-1)-i})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                                          <button onclick="app.editItem('${p.id}','ttv_logs',${i})" class="text-amber-600">Edit</button>
+                                          <button onclick="app.deleteItem('${p.id}','ttv_logs',${i})" class="text-red-600">Hapus</button>
                                         </td>
                                     </tr>`).join('')}
+
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>`;
                 });
-                html += '</div>';
-                c.innerHTML = html;
+                html += `</div>`;
+                container.innerHTML = html;
             },
 
-            renderMedicine: (c) => {
-                if(app.data.patients.length === 0) return c.innerHTML = '<div class="text-center text-gray-400 mt-10">Belum ada pasien.</div>';
-                let html = '<div class="grid grid-cols-1 gap-8">';
-                app.data.patients.forEach(p => {
-                    html += `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="bg-teal-50 px-6 py-3 border-b border-teal-100 flex justify-between items-center">
-                            <h3 class="font-bold text-teal-800">${p.registration.name}</h3>
-                            <button onclick="app.modalAddMedicine('${p.id}')" class="bg-teal-600 text-white px-3 py-1 rounded text-xs hover:bg-teal-700">+ Obat</button>
-                        </div>
-                        <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div>
-                                <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Stok Obat</h4>
-                                <table class="table-custom">
-                                    <thead><tr><th>Nama</th><th class="text-center">Sisa</th><th>Aksi</th></tr></thead>
-                                    <tbody>
-                                        ${(p.medicine_stock||[]).map((m, idx) => {
-                                            const sisa = m.init_stock - m.used_stock;
-                                            return `
-                                            <tr class="${sisa<5?'bg-red-50':''}">
-                                                <td>${m.name}<div class="text-[10px] text-gray-400">Exp: ${m.est_end_date||'-'}</div></td>
-                                                <td class="text-center font-bold ${sisa<5?'text-red-600':'text-green-600'}">${sisa}</td>
-                                                <td class="space-x-1">
-                                                    <button onclick="app.useMedicine('${p.id}', ${idx})" class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200">Minum</button>
-                                                    <button onclick="app.deleteItem('${p.id}','medicine_stock',${idx})" class="text-red-400 hover:text-red-600 px-1"><i class="fas fa-trash"></i></button>
-                                                </td>
-                                            </tr>`
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div>
-                                <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Log Penggunaan</h4>
-                                <div class="bg-gray-50 rounded border h-64 overflow-y-auto p-2 space-y-2">
-                                    ${(p.medicine_logs||[]).slice().reverse().map(l => `
-                                    <div class="bg-white p-2 rounded shadow-sm border border-gray-100 text-xs">
-                                        <div class="flex justify-between font-bold text-gray-700">
-                                            <span>${l.medicine_name}</span>
-                                            <span class="text-[10px] text-gray-400">${new Date(l.date).toLocaleString()}</span>
-                                        </div>
-                                        <div class="flex justify-between mt-1 text-gray-500">
-                                            <span>Ket: ${l.notes}</span>
-                                            <span class="text-teal-600">PJ: ${l.pic_name}</span>
-                                        </div>
-                                    </div>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-                c.innerHTML = html + '</div>';
-            },
-
-            renderCrisis: (c) => {
-                let html = '<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">';
-                app.data.patients.forEach(p => {
-                    // Siapkan data Chart H1-H7
-                    const days = ['H1','H2','H3','H4','H5','H6','H7'];
-                    const scores = p.bpss_scores || {};
-                    // Data Arrays for Chart
-                    const bioData = days.map(d => scores[d]?.bio || 0);
-                    const psyData = days.map(d => scores[d]?.psy || 0);
-                    const socData = days.map(d => scores[d]?.soc || 0);
-                    const spiData = days.map(d => scores[d]?.spi || 0);
-
-                    // Ambil evaluasi terakhir yg ada isinya
-                    let lastEval = "Belum ada evaluasi.";
-                    for(let i=6; i>=0; i--) {
-                        if(scores[days[i]]?.discharge_eval) {
-                            lastEval = `[${days[i]}] ${scores[days[i]].discharge_eval}`;
-                            break;
-                        }
-                    }
-
-                    html += `
-                    <div class="bg-white rounded-xl shadow p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <div>
-                                <h3 class="font-bold text-gray-800">${p.registration.name}</h3>
-                                <p class="text-xs text-gray-500">Monitoring Progress BPSS (H1 - H7)</p>
-                            </div>
-                            <button onclick="app.modalAddBPSS('${p.id}')" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs shadow hover:bg-indigo-700">Update Score</button>
-                        </div>
-                        <div class="h-64">
-                            <canvas id="chart-${p.id}"></canvas>
-                        </div>
-                        <div class="mt-4 p-3 bg-indigo-50 rounded text-xs text-indigo-900 border border-indigo-100">
-                            <strong>Terakhir:</strong> ${lastEval}
-                        </div>
-                    </div>`;
-                    
-                    // Render Chart Async
-                    setTimeout(() => {
-                        const ctx = document.getElementById(`chart-${p.id}`);
-                        if(ctx) {
-                            new Chart(ctx, {
-                                type: 'line',
-                                data: {
-                                    labels: days,
-                                    datasets: [
-                                        { label: 'Bio', data: bioData, borderColor: '#0d9488', tension: 0.3, pointRadius: 4 },
-                                        { label: 'Psy', data: psyData, borderColor: '#9333ea', tension: 0.3, pointRadius: 4 },
-                                        { label: 'Soc', data: '#2563eb', borderColor: '#2563eb', tension: 0.3, pointRadius: 4 },
-                                        { label: 'Spi', data: '#ea580c', borderColor: '#ea580c', tension: 0.3, pointRadius: 4 }
-                                    ]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: { y: { min: 0, max: 25 } },
-                                    plugins: { legend: { position: 'bottom', labels:{boxWidth:10} } }
-                                }
-                            });
-                        }
-                    }, 200);
-                });
-                c.innerHTML = html + '</div>';
-            },
-
-            renderVisit: (c) => {
+            // 4. VISIT DOKTER
+            renderVisit: (container) => {
                 let html = '<div class="space-y-6">';
                 app.data.patients.forEach(p => {
                     html += `
                     <div class="bg-white rounded-xl shadow p-6">
                         <div class="flex justify-between border-b pb-4 mb-4">
-                             <h3 class="font-bold text-lg text-gray-800">${p.registration.name}</h3>
-                             <button onclick="app.modalAddVisit('${p.id}')" class="bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-purple-700"><i class="fas fa-pen-nib"></i> Tulis Visit</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${(p.visits || []).map((v,i) => `
-                            <div class="border border-gray-200 rounded-lg p-3 flex gap-3 bg-gray-50">
-                                <div class="w-24 flex-shrink-0">
-                                    <img src="${v.photo || 'https://via.placeholder.com/150'}" class="w-24 h-24 object-cover rounded bg-white border">
-                                </div>
-                                <div class="flex-1 flex flex-col justify-between">
-                                    <div>
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase">${new Date(v.date).toLocaleString()}</span>
-                                        <p class="text-sm text-gray-800 italic mt-1 line-clamp-3">"${v.notes}"</p>
-                                    </div>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <img src="${v.signature}" class="h-8 object-contain opacity-80">
-                                        <button onclick="app.deleteItem('${p.id}','visits',${i})" class="text-red-400 text-xs hover:text-red-600">Hapus</button>
-                                    </div>
-                                </div>
-                            </div>
-                            `).join('')}
+                             <h3 class="font-bold text-lg">${(p.visits || []).map((v,i) => `
+    <div class="border border-gray-200 rounded-lg p-4 flex gap-4 bg-gray-50 relative">
+        <div class="w-1/3">
+            <img src="${v.photo || 'https://via.placeholder.com/150'}" class="w-full h-32 object-cover rounded shadow-sm bg-white">
+        </div>
+        <div class="w-2/3 flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-bold text-gray-400 block mb-1">${new Date(v.date).toLocaleString()}</span>
+                <p class="text-sm text-gray-700 italic">"${v.notes}"</p>
+            </div>
+            <div class="mt-3">
+                <p class="text-[10px] text-gray-400 mb-1">Tanda Tangan Dokter:</p>
+                <img src="${v.signature}" class="h-10 object-contain border-b border-gray-300">
+            </div>
+            <div class="mt-2 text-right space-x-2">
+                <button onclick="app.editItem('${p.id}','visits',${i})" class="text-amber-600 text-xs">Edit</button>
+                <button onclick="app.deleteItem('${p.id}','visits',${i})" class="text-red-600 text-xs">Hapus</button>
+            </div>
+        </div>
+    </div>
+`).join('')}
+
                         </div>
                     </div>`;
                 });
-                c.innerHTML = html + '</div>';
+                html += '</div>';
+                container.innerHTML = html;
             },
 
-            renderProgram: (c) => {
-                let html = '<div class="bg-white p-6 rounded-xl shadow border border-gray-200"><h3 class="font-bold mb-4 text-gray-700">Manajemen Program & Terapi</h3><table class="table-custom">';
-                html += `<thead><tr><th>Pasien</th><th>Paket / Durasi</th><th>Rencana Terapi</th><th>Aksi</th></tr></thead><tbody>`;
-                app.data.patients.forEach(p => {
-                    html += `<tr>
-                        <td class="font-bold">${p.registration.name}</td>
-                        <td><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">${p.program?.package || '-'}</span> <span class="text-gray-500 text-xs">(${p.program?.duration||0} Hari)</span></td>
-                        <td class="text-xs truncate max-w-xs">${p.therapy_plan || '-'}</td>
-                        <td><button onclick="app.modalEditProgram('${p.id}')" class="text-teal-600 hover:underline text-xs font-bold">Edit Plan</button></td>
-                    </tr>`;
+            // 5. CRISIS & BPSS
+            renderCrisis: (container) => {
+                let html = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
+                app.data.patients.forEach((p, idx) => {
+                    // Get latest 7 days data for polygon if needed, here we use latest for simplicity
+                    const latest = (p.bpss_scores && p.bpss_scores.length > 0) ? p.bpss_scores[p.bpss_scores.length - 1] : {bio:0, psy:0, soc:0, spi:0};
+                    
+                    html += `
+                    <div class="bg-white rounded-2xl shadow-lg p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="font-bold text-gray-800">${p.registration.name}</h3>
+                                <p class="text-xs text-gray-500">Monitoring Skor BPSS</p>
+                            </div>
+                            <button onclick="app.modalAddBPSS('${p.id}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold shadow hover:bg-indigo-700">Update Score</button>
+                        </div>
+                        
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="chart-bpss-${p.id}"></canvas>
+                        </div>
+                        
+                        <div class="mt-6 border-t pt-4">
+                            <table class="w-full text-xs text-center">
+                                <thead class="text-gray-400 font-semibold">
+                                    <tr><th>Biological</th><th>Psychological</th><th>Social</th><th>Spiritual</th></tr>
+                                </thead>
+                                <tbody class="font-bold text-gray-700 text-sm">
+                                    <tr>
+                                        <td class="text-teal-600">${latest.bio}/25</td>
+                                        <td class="text-purple-600">${latest.psy}/25</td>
+                                        <td class="text-blue-600">${latest.soc}/25</td>
+                                        <td class="text-orange-600">${latest.spi}/25</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="mt-4 p-2 bg-gray-50 text-xs text-gray-600 rounded">
+                                <strong>Evaluasi:</strong> ${latest.discharge_eval || 'Belum ada evaluasi.'}
+                            </div>
+                        </div>
+                    </div>`;
+
+                    // Render Chart Async
+                    setTimeout(() => {
+                        const ctx = document.getElementById(`chart-bpss-${p.id}`);
+                        if(ctx) {
+                            new Chart(ctx, {
+                                type: 'radar',
+                                data: {
+                                    labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
+                                    datasets: [{
+                                        label: 'Skor Saat Ini',
+                                        data: [latest.bio, latest.psy, latest.soc, latest.spi],
+                                        fill: true,
+                                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                                        borderColor: '#0d9488',
+                                        pointBackgroundColor: '#0d9488',
+                                        pointBorderColor: '#fff',
+                                        pointHoverBackgroundColor: '#fff',
+                                        pointHoverBorderColor: '#0d9488'
+                                    }]
+                                },
+                                options: {
+                                    scales: { r: { min: 0, max: 25, ticks: { display: false } } },
+                                    plugins: { legend: { display: false } }
+                                }
+                            });
+                        }
+                    }, 100);
                 });
-                c.innerHTML = html + '</tbody></table></div>';
+                html += '</div>';
+                container.innerHTML = html;
             },
 
-            // --- 4. MODALS & FORMS ---
+            // 6 & 7. PROGRAM & TERAPI (Simplified for brevity but structured)
+            renderProgram: (container) => {
+                let html = `<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Program Pasien</h3>`;
+                html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+                app.data.patients.forEach(p => {
+                    html += `
+                    <div class="border rounded-xl p-4 hover:border-teal-500 transition cursor-pointer" onclick="app.modalEditProgram('${p.id}')">
+                        <div class="flex items-center gap-3 mb-3">
+                            <img src="${p.registration.photo}" class="w-10 h-10 rounded-full object-cover">
+                            <div class="font-bold">${p.registration.name}</div>
+                        </div>
+                        <div class="text-sm space-y-2">
+                            <div class="flex justify-between"><span>Paket:</span> <span class="font-bold text-teal-600">${p.program?.package || '-'}</span></div>
+                            <div class="flex justify-between"><span>Durasi:</span> <span class="font-bold text-orange-600">${p.program?.duration || '-'} Hari</span></div>
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+                container.innerHTML = html;
+            },
 
-            closeModal: () => document.getElementById('modal-container').classList.add('hidden'),
+            renderTerapi: (container) => {
+                 let html = `<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Terapi</h3><table class="table-custom w-full"><thead><tr><th>Pasien</th><th>Rencana Terapi Detail</th><th>Aksi</th></tr></thead><tbody>`;
+                 app.data.patients.forEach(p => {
+                     html += `<tr>
+                        <td class="font-bold">${p.registration.name}</td>
+                        <td>${p.therapy_plan || 'Belum diatur'}</td>
+                        <td><button onclick="app.modalEditTerapi('${p.id}')" class="text-blue-600 hover:underline">Edit</button></td>
+                     </tr>`;
+                 });
+                 html += `</tbody></table></div>`;
+                 container.innerHTML = html;
+            },
 
+            // --- MODAL GENERATORS (FORMS) ---
+
+            // 1. ADD PATIENT (Sangat Lengkap sesuai request)
             modalAddPatient: () => {
-                const b = document.getElementById('modal-body');
-                document.getElementById('modal-title').innerText = "Registrasi Pasien Baru";
-                b.innerHTML = `
-                <form onsubmit="app.submitPatient(event)" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2"><label class="label-text">Nama Lengkap</label><input required name="name" class="input-field"></div>
-                        <div><label class="label-text">Usia</label><input type="number" name="age" class="input-field"></div>
-                        <div><label class="label-text">Pekerjaan</label><input name="job" class="input-field"></div>
-                        <div class="md:col-span-2"><label class="label-text">Alamat</label><input name="address" class="input-field"></div>
-                        <div class="md:col-span-2 border-t pt-4"><label class="label-text">Diagnosa Awal</label><input name="diag" class="input-field"></div>
-                        <div class="md:col-span-2"><label class="label-text">Foto Profil (File)</label><input type="file" id="reg_photo" class="input-field"></div>
-                    </div>
-                    <button class="w-full bg-teal-600 text-white py-3 rounded font-bold hover:bg-teal-700">Simpan Pasien</button>
-                </form>`;
+                const title = document.getElementById('modal-title');
+                const body = document.getElementById('modal-body');
+                const modal = document.getElementById('modal-container');
+                
+                title.innerText = "Formulir Registrasi Pasien Baru";
+                body.innerHTML = `
+                    <form onsubmit="app.submitPatient(event)" class="space-y-6">
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">I. Biodata & Registrasi</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="md:col-span-3">
+                                    <label class="label-text">Upload Foto Pasien</label>
+                                    <input type="file" id="reg_photo" class="input-field" accept="image/*">
+                                </div>
+                                <div><label class="label-text">Tanggal Masuk</label><input type="datetime-local" name="reg_time" required class="input-field"></div>
+                                <div class="md:col-span-2"><label class="label-text">Nama Lengkap</label><input type="text" name="name" required class="input-field"></div>
+                                
+                                <div><label class="label-text">Tempat Lahir</label><input type="text" name="birthplace" class="input-field"></div>
+                                <div><label class="label-text">Usia</label><input type="number" name="age" class="input-field"></div>
+                                <div>
+                                    <label class="label-text">Status Pernikahan</label>
+                                    <select name="marital" class="input-field">
+                                        <option>Belum Menikah</option><option>Menikah</option><option>Duda/Janda</option>
+                                    </select>
+                                </div>
+                                
+                                <div><label class="label-text">Pendidikan Terakhir</label><input type="text" name="edu" class="input-field"></div>
+                                <div><label class="label-text">Pekerjaan</label><input type="text" name="job" class="input-field"></div>
+                                <div><label class="label-text">Nama Wali</label><input type="text" name="guardian" class="input-field"></div>
+                                
+                                <div class="md:col-span-3"><label class="label-text">Alamat Lengkap</label><textarea name="address" class="input-field h-20"></textarea></div>
+                                <div class="md:col-span-3"><label class="label-text">Spotcheck Barang Bawaan</label><textarea name="spotcheck" class="input-field h-20" placeholder="List barang bawaan..."></textarea></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">II. Riwayat Penyakit</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="label-text">Riwayat Fisik</label><textarea name="phys_history" class="input-field"></textarea></div>
+                                <div><label class="label-text">Riwayat Psikis</label><textarea name="psych_history" class="input-field"></textarea></div>
+                                <div><label class="label-text">Diagnosa Sebelumnya</label><input type="text" name="prev_diag" class="input-field"></div>
+                                <div><label class="label-text">Riwayat Dosis Obat</label><input type="text" name="dose_hist" class="input-field"></div>
+                                <div class="md:col-span-2"><label class="label-text">Kondisi Terkini</label><textarea name="curr_cond" class="input-field"></textarea></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">III. Diagnosa & Intervensi Dokter</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="label-text">Nama Dokter</label><input type="text" name="doc_name" class="input-field"></div>
+                                <div><label class="label-text">Diagnosa Masuk</label><input type="text" name="entry_diag" class="input-field"></div>
+                                <div class="md:col-span-2"><label class="label-text">Planning Dokter</label><textarea name="plan" class="input-field"></textarea></div>
+                                
+                                <div class="md:col-span-2 p-3 bg-white border rounded">
+                                    <label class="label-text mb-2">Tindakan Intervensi</label>
+                                    <div class="flex flex-wrap gap-4">
+                                        <label class="flex items-center gap-2"><input type="checkbox" name="int_inj"> Injeksi</label>
+                                        <label class="flex items-center gap-2"><input type="checkbox" name="int_fix"> Fiksasi</label>
+                                        <label class="flex items-center gap-2"><input type="checkbox" name="int_urine"> Urine Test</label>
+                                    </div>
+                                    <input type="text" name="urine_note" placeholder="Keterangan Urine Test..." class="input-field mt-2">
+                                </div>
+                                
+                                <div class="md:col-span-2"><label class="label-text">Resep Obat (Awal)</label><textarea name="rx" class="input-field"></textarea></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700">SIMPAN DATA PASIEN</button>
+                    </form>
+                `;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            },
+
+            // LOGIC SUBMIT PASIEN
+            submitPatient: async (e) => {
+                e.preventDefault();
+                const f = e.target;
+                
+                // Handle Photo
+                let photo = null;
+                if(document.getElementById('reg_photo').files[0]) {
+                    photo = await app.toBase64(document.getElementById('reg_photo').files[0]);
+                }
+
+                const newPatient = {
+                    id: Date.now().toString(),
+                    registration: {
+                        timestamp: f.reg_time.value,
+                        photo: photo,
+                        name: f.name.value,
+                        birthplace: f.birthplace.value,
+                        age: f.age.value,
+                        marital: f.marital.value,
+                        edu: f.edu.value,
+                        job: f.job.value,
+                        guardian: f.guardian.value,
+                        address: f.address.value,
+                        spotcheck: f.spotcheck.value
+                    },
+                    history: {
+                        physical: f.phys_history.value,
+                        psychological: f.psych_history.value,
+                        prev_diag: f.prev_diag.value,
+                        dose_hist: f.dose_hist.value,
+                        curr_cond: f.curr_cond.value
+                    },
+                    diagnosis: {
+                        doc_name: f.doc_name.value,
+                        entry_diagnosis: f.entry_diag.value,
+                        planning: f.plan.value,
+                        interventions: {
+                            injection: f.int_inj.checked,
+                            fixation: f.int_fix.checked,
+                            urine: f.int_urine.checked,
+                            urine_note: f.urine_note.value
+                        },
+                        prescription: f.rx.value
+                    },
+                    medicine_stock: [], medicine_logs: [], ttv_logs: [], visits: [], bpss_scores: { h1:[], h2:[], h3:[], h4:[], h5:[], h6:[], h7:[] }, 
+                    program: {}, therapy_plan: ''
+                };
+
+                app.data.patients.push(newPatient);
+                app.saveDB();
+                app.closeModal();
+                app.nav('dashboard');
+                Swal.fire('Sukses', 'Data Pasien Tersimpan', 'success');
+            },
+
+            // ADD MEDICINE STOCK
+            modalAddMedicine: (id) => {
+                // ... (Logic for adding medicine stock input form)
+                const p = app.data.patients.find(x => x.id === id);
+                document.getElementById('modal-title').innerText = "Tambah Stok Obat: " + p.registration.name;
+                document.getElementById('modal-body').innerHTML = `
+                    <form onsubmit="app.submitMedicine(event, '${id}')" class="space-y-4">
+                        <div><label class="label-text">Nama Obat</label><input name="name" required class="input-field"></div>
+                        <div class="flex gap-4">
+                            <div class="flex-1"><label class="label-text">Jumlah (Tablet/Pcs)</label><input type="number" name="qty" required class="input-field"></div>
+                            <div class="flex-1"><label class="label-text">Estimasi Habis</label><input type="date" name="est_date" class="input-field"></div>
+                        </div>
+                        <button class="w-full bg-teal-600 text-white py-2 rounded">Tambah Stok</button>
+                    </form>
+                `;
                 document.getElementById('modal-container').classList.remove('hidden');
                 document.getElementById('modal-container').classList.add('flex');
             },
 
-            submitPatient: async (e) => {
+            submitMedicine: (e, id) => {
                 e.preventDefault();
-                const f = e.target;
-                let photo = null;
-                const fileInput = document.getElementById('reg_photo');
-                if(fileInput.files[0]) photo = await app.toBase64(fileInput.files[0]);
-
-                const newP = {
-                    id: Date.now().toString(),
-                    registration: { 
-                        name: f.name.value, age: f.age.value, job: f.job.value, address: f.address.value, photo, 
-                        timestamp: new Date().toISOString() 
-                    },
-                    diagnosis: { entry_diagnosis: f.diag.value },
-                    medicine_stock: [], medicine_logs: [], ttv_logs: [], visits: [], 
-                    bpss_scores: {}, program: {}, therapy_plan: ''
-                };
-                app.data.patients.push(newP);
+                const p = app.data.patients.find(x => x.id === id);
+                p.medicine_stock.push({
+                    name: e.target.name.value,
+                    init_stock: parseInt(e.target.qty.value),
+                    used_stock: 0,
+                    est_end_date: e.target.est_date.value
+                });
                 app.saveDB();
                 app.closeModal();
-                app.nav('dashboard');
-                Swal.fire('Sukses', 'Pasien terdaftar', 'success');
+                app.nav('medicine');
             },
 
-            modalAddTTV: (id) => {
-                document.getElementById('modal-title').innerText = "Input TTV";
+            useMedicine: (pid, medIdx) => {
+                Swal.fire({
+                    title: 'Konfirmasi Penggunaan',
+                    html: '<input id="swal-input1" class="swal2-input" placeholder="Nama PJ"> <input id="swal-input2" class="swal2-input" placeholder="Keterangan (Pagi/Siang/Malam)">',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        return [document.getElementById('swal-input1').value, document.getElementById('swal-input2').value]
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const [pj, note] = result.value;
+                        if(!pj) return Swal.fire('Error', 'Nama PJ wajib diisi!', 'error');
+                        
+                        const p = app.data.patients.find(x => x.id === pid);
+                        const med = p.medicine_stock[medIdx];
+                        
+                        med.used_stock += 1;
+                        p.medicine_logs.push({
+                            date: new Date().toISOString(),
+                            medicine_name: med.name,
+                            notes: note,
+                            pic_name: pj
+                        });
+                        app.saveDB();
+                        app.nav('medicine');
+                    }
+                });
+            },
+
+            // MODAL ADD BPSS (Complex Form)
+            modalAddBPSS: (id) => {
+    document.getElementById('modal-title').innerText = "Input BPSS (H1–H7)";
+    document.getElementById('modal-body').innerHTML = `
+        <form onsubmit="app.submitBPSS(event, '${id}')" class="space-y-4">
+            <div>
+                <label class="label-text">Hari Ke</label>
+                <select name="day" class="input-field">
+                    <option value="h1">H1</option>
+                    <option value="h2">H2</option>
+                    <option value="h3">H3</option>
+                    <option value="h4">H4</option>
+                    <option value="h5">H5</option>
+                    <option value="h6">H6</option>
+                    <option value="h7">H7</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="label-text">Biological</label><input type="number" max="25" min="0" name="bio" required class="input-field"></div>
+                <div><label class="label-text">Psychological</label><input type="number" max="25" min="0" name="psy" required class="input-field"></div>
+                <div><label class="label-text">Social</label><input type="number" max="25" min="0" name="soc" required class="input-field"></div>
+                <div><label class="label-text">Spiritual</label><input type="number" max="25" min="0" name="spi" required class="input-field"></div>
+            </div>
+            <textarea name="eval" class="input-field" placeholder="Evaluasi..."></textarea>
+            <button class="w-full bg-indigo-600 text-white py-2 rounded">Simpan</button>
+        </form>
+    `;
+    document.getElementById('modal-container').classList.remove('hidden');
+    document.getElementById('modal-container').classList.add('flex');
+},
+
+            submitBPSS: (e, id) => {
+                e.preventDefault();
+                const p = app.data.patients.find(x => x.id === id);
+                const d = e.target.day.value;
+                p.bpss_scores[d].push({
+                    date: new Date().toISOString(),
+                    bio: parseInt(e.target.bio.value),
+                    psy: parseInt(e.target.psy.value),
+                    soc: parseInt(e.target.soc.value),
+                    spi: parseInt(e.target.spi.value),
+                    discharge_eval: e.target.eval.value
+                });
+                app.saveDB();
+                app.closeModal();
+                app.nav('crisis');
+            },
+            
+            // MODAL VISIT DENGAN SIGNATURE
+            modalAddVisit: (id) => {
+                document.getElementById('modal-title').innerText = "Input Visit Dokter";
                 document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="app.submitTTV(event, '${id}')" class="grid grid-cols-2 gap-4">
-                    <div><label class="label-text">TD (mmHg)</label><input name="td" class="input-field" placeholder="120/80"></div>
-                    <div><label class="label-text">Nadi (HR)</label><input name="hr" class="input-field"></div>
-                    <div><label class="label-text">Saturasi (%)</label><input name="sat" class="input-field"></div>
-                    <div><label class="label-text">RR (x/mnt)</label><input name="rr" class="input-field"></div>
-                    <div><label class="label-text">TB (cm)</label><input name="tb" class="input-field"></div>
-                    <div><label class="label-text">BB (kg)</label><input name="bb" class="input-field"></div>
-                    <div class="col-span-2"><label class="label-text">GDS / Keterangan</label><input name="gds" class="input-field"></div>
-                    <button class="col-span-2 bg-blue-600 text-white py-2 rounded font-bold">Simpan TTV</button>
-                </form>`;
+                     <div class="space-y-4">
+                        <input type="file" id="visit_photo" class="input-field">
+                        <textarea id="visit_note" class="input-field h-24" placeholder="Catatan hasil wawancara dokter..."></textarea>
+                        <div class="border border-gray-300 rounded">
+                            <p class="text-xs bg-gray-100 p-2 border-b">Tanda Tangan Dokter (Draw Here)</p>
+                            <canvas id="sig-pad" class="w-full h-40 touch-none"></canvas>
+                        </div>
+                        <button onclick="app.submitVisit('${id}')" class="w-full bg-purple-600 text-white py-2 rounded">Simpan Visit</button>
+                     </div>
+                `;
+                document.getElementById('modal-container').classList.remove('hidden');
+                document.getElementById('modal-container').classList.add('flex');
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('sig-pad');
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                    app.signaturePad = new SignaturePad(canvas);
+                }, 100);
+            },
+
+            submitVisit: async (id) => {
+                if(app.signaturePad.isEmpty()) return Swal.fire('Error', 'Tanda tangan diperlukan', 'error');
+                
+                const p = app.data.patients.find(x => x.id === id);
+                const photoInput = document.getElementById('visit_photo');
+                let photo = null;
+                if(photoInput.files[0]) photo = await app.toBase64(photoInput.files[0]);
+
+                p.visits.push({
+                    date: new Date().toISOString(),
+                    photo: photo,
+                    notes: document.getElementById('visit_note').value,
+                    signature: app.signaturePad.toDataURL()
+                });
+                app.saveDB();
+                app.closeModal();
+                app.nav('visit');
+            },
+            
+            // TTV Modal Logic
+            modalAddTTV: (id) => {
+                document.getElementById('modal-title').innerText = "Input TTV & GDS";
+                document.getElementById('modal-body').innerHTML = `
+                    <form onsubmit="app.submitTTV(event, '${id}')" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="label-text">TD (mmHg)</label><input name="td" class="input-field"></div>
+                            <div><label class="label-text">HR / Nadi</label><input name="hr" class="input-field"></div>
+                            <div><label class="label-text">Saturasi (%)</label><input name="sat" class="input-field"></div>
+                            <div><label class="label-text">RR (x/mnt)</label><input name="rr" class="input-field"></div>
+                            <div><label class="label-text">TB (cm)</label><input name="tb" class="input-field"></div>
+                            <div><label class="label-text">BB (kg)</label><input name="bb" class="input-field"></div>
+                            <div class="col-span-2"><label class="label-text">Keterangan GDS</label><input name="gds" class="input-field"></div>
+                        </div>
+                        <button class="w-full bg-blue-600 text-white py-2 rounded">Simpan Data</button>
+                    </form>
+                `;
                 document.getElementById('modal-container').classList.remove('hidden');
                 document.getElementById('modal-container').classList.add('flex');
             },
@@ -519,317 +1009,137 @@
                 const p = app.data.patients.find(x => x.id === id);
                 p.ttv_logs.push({
                     date: new Date().toISOString(),
-                    td: e.target.td.value, hr: e.target.hr.value, sat: e.target.sat.value, rr: e.target.rr.value,
-                    tb: e.target.tb.value, bb: e.target.bb.value, gds_note: e.target.gds.value
+                    td: e.target.td.value,
+                    sat: e.target.sat.value,
+                    rr: e.target.rr.value,
+                    tb: e.target.tb.value,
+                    bb: e.target.bb.value,
+                    gds_note: e.target.gds.value
                 });
                 app.saveDB();
                 app.closeModal();
                 app.nav('ttv');
             },
 
-            modalAddBPSS: (id) => {
-                document.getElementById('modal-title').innerText = "Input Skor BPSS Harian";
-                document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="app.submitBPSS(event, '${id}')" class="space-y-4">
-                    <div>
-                        <label class="label-text">Pilih Hari</label>
-                        <select name="day" class="input-field font-bold text-teal-700">
-                            <option value="H1">Hari Ke-1 (H1)</option>
-                            <option value="H2">Hari Ke-2 (H2)</option>
-                            <option value="H3">Hari Ke-3 (H3)</option>
-                            <option value="H4">Hari Ke-4 (H4)</option>
-                            <option value="H5">Hari Ke-5 (H5)</option>
-                            <option value="H6">Hari Ke-6 (H6)</option>
-                            <option value="H7">Hari Ke-7 (H7)</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="label-text">Biological (0-25)</label><input type="number" max="25" name="bio" class="input-field"></div>
-                        <div><label class="label-text">Psychological (0-25)</label><input type="number" max="25" name="psy" class="input-field"></div>
-                        <div><label class="label-text">Social (0-25)</label><input type="number" max="25" name="soc" class="input-field"></div>
-                        <div><label class="label-text">Spiritual (0-25)</label><input type="number" max="25" name="spi" class="input-field"></div>
-                    </div>
-                    <div><label class="label-text">Evaluasi Harian</label><textarea name="eval" class="input-field h-20"></textarea></div>
-                    <button class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Update Score</button>
-                </form>`;
-                document.getElementById('modal-container').classList.remove('hidden');
-                document.getElementById('modal-container').classList.add('flex');
+            // --- UTILS ---
+            closeModal: () => {
+                document.getElementById('modal-container').classList.add('hidden');
+                document.getElementById('modal-container').classList.remove('flex');
             },
-
-            submitBPSS: (e, id) => {
-                e.preventDefault();
-                const p = app.data.patients.find(x => x.id === id);
-                if(!p.bpss_scores) p.bpss_scores = {};
-                
-                const day = e.target.day.value;
-                p.bpss_scores[day] = {
-                    bio: parseInt(e.target.bio.value)||0,
-                    psy: parseInt(e.target.psy.value)||0,
-                    soc: parseInt(e.target.soc.value)||0,
-                    spi: parseInt(e.target.spi.value)||0,
-                    discharge_eval: e.target.eval.value
-                };
-                app.saveDB();
-                app.closeModal();
-                app.nav('crisis');
-            },
-
-            modalAddMedicine: (id) => {
-                document.getElementById('modal-title').innerText = "Tambah Stok Obat";
-                document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="app.submitMedicine(event, '${id}')" class="space-y-4">
-                    <div><label class="label-text">Nama Obat</label><input name="name" required class="input-field"></div>
-                    <div class="flex gap-4">
-                        <div><label class="label-text">Jumlah</label><input type="number" name="qty" required class="input-field"></div>
-                        <div><label class="label-text">Expired Est</label><input type="date" name="date" class="input-field"></div>
-                    </div>
-                    <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan</button>
-                </form>`;
-                document.getElementById('modal-container').classList.remove('hidden');
-                document.getElementById('modal-container').classList.add('flex');
-            },
-
-            submitMedicine: (e, id) => {
-                e.preventDefault();
-                const p = app.data.patients.find(x => x.id === id);
-                p.medicine_stock.push({
-                    name: e.target.name.value, init_stock: parseInt(e.target.qty.value), used_stock: 0, est_end_date: e.target.date.value
-                });
-                app.saveDB();
-                app.closeModal();
-                app.nav('medicine');
-            },
-
-            useMedicine: (pid, idx) => {
+            
+            deletePatient: (id) => {
                 Swal.fire({
-                    title: 'Minum Obat',
-                    html: '<input id="pj" class="swal2-input" placeholder="Nama PJ"><input id="note" class="swal2-input" placeholder="Waktu (Pagi/Siang/Malam)">',
-                    preConfirm: () => [document.getElementById('pj').value, document.getElementById('note').value]
-                }).then(res => {
-                    if(res.isConfirmed) {
-                        const p = app.data.patients.find(x=>x.id===pid);
-                        p.medicine_stock[idx].used_stock++;
-                        p.medicine_logs.push({
-                            date: new Date().toISOString(), medicine_name: p.medicine_stock[idx].name, 
-                            pic_name: res.value[0], notes: res.value[1]
-                        });
+                    title: 'Hapus Pasien?',
+                    text: "Data yang dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        app.data.patients = app.data.patients.filter(p => p.id !== id);
                         app.saveDB();
-                        app.nav('medicine');
+                        app.nav('dashboard');
+                        Swal.fire('Terhapus!', 'Data pasien telah dihapus.', 'success');
                     }
+                })
+            },
+
+            search: () => {
+                const term = document.getElementById('global-search').value.toLowerCase();
+                // Simple DOM Filtering based on the card text content
+                const items = document.querySelectorAll('#main-content > div.grid > div, #main-content .bg-white');
+                items.forEach(item => {
+                    item.style.display = item.innerText.toLowerCase().includes(term) ? 'block' : 'none';
                 });
             },
 
-            modalAddVisit: (id) => {
-                document.getElementById('modal-title').innerText = "Input Visit Dokter";
-                document.getElementById('modal-body').innerHTML = `
-                <div class="space-y-3">
-                    <label class="label-text">Foto Dokumentasi</label>
-                    <input type="file" id="v_photo" class="input-field">
-                    <label class="label-text">Catatan Dokter</label>
-                    <textarea id="v_note" class="input-field h-24"></textarea>
-                    <div class="border rounded bg-gray-50">
-                        <div class="text-xs p-2 text-gray-500 border-b">Tanda Tangan Dokter</div>
-                        <canvas id="sig-pad" class="w-full h-32 touch-none"></canvas>
-                        <button onclick="app.signaturePad.clear()" class="text-xs text-red-500 p-2">Clear Signature</button>
-                    </div>
-                    <button onclick="app.submitVisit('${id}')" class="w-full bg-purple-600 text-white py-2 rounded">Simpan Visit</button>
-                </div>`;
-                document.getElementById('modal-container').classList.remove('hidden');
-                document.getElementById('modal-container').classList.add('flex');
-                setTimeout(()=>{
-                    const c = document.getElementById('sig-pad');
-                    c.width = c.offsetWidth; c.height = c.offsetHeight;
-                    app.signaturePad = new SignaturePad(c);
-                },100);
-            },
+            exportCurrentData(){
+                const wb=XLSX.utils.book_new();
+                const pasien = app.data.patients.map(p=>({
+                    Nama:p.registration.name,
+                    Usia:p.registration.age,
+                    Alamat:p.registration.address
+                }));
+                    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pasien),"Pasien");
 
-            submitVisit: async (id) => {
-                if(app.signaturePad.isEmpty()) return Swal.fire('Tanda tangan wajib!', '', 'warning');
-                const p = app.data.patients.find(x=>x.id===id);
-                const pf = document.getElementById('v_photo').files[0];
-                let photo = null;
-                if(pf) photo = await app.toBase64(pf);
-                
-                p.visits.push({
-                    date: new Date().toISOString(), photo, 
-                    notes: document.getElementById('v_note').value,
-                    signature: app.signaturePad.toDataURL()
+                let ttv=[];
+                    app.data.patients.forEach(p=>{
+                    p.ttv_logs.forEach(t=>{
+                    ttv.push({Pasien:p.registration.name,...t});
                 });
-                app.saveDB();
-                app.closeModal();
-                app.nav('visit');
-            },
+             });
+                    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ttv),"TTV");
+
+                    XLSX.writeFile(wb,"MMRC_FULL.xlsx");
+            }
+
 
             modalEditProgram: (id) => {
-                const p = app.data.patients.find(x=>x.id===id);
-                document.getElementById('modal-title').innerText = "Program & Terapi";
+                const p = app.data.patients.find(x => x.id === id);
+                document.getElementById('modal-title').innerText = "Rencana Program: " + p.registration.name;
                 document.getElementById('modal-body').innerHTML = `
-                <form onsubmit="app.submitProgram(event, '${id}')" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="label-text">Paket</label><select name="pkg" class="input-field"><option value="Reguler">Reguler</option><option value="VIP">VIP</option></select></div>
-                        <div><label class="label-text">Durasi (Hari)</label><input type="number" name="dur" value="${p.program?.duration||0}" class="input-field"></div>
-                    </div>
-                    <div><label class="label-text">Rencana Terapi Detail</label><textarea name="plan" class="input-field h-32">${p.therapy_plan||''}</textarea></div>
-                    <button class="w-full bg-teal-600 text-white py-2 rounded">Update</button>
-                </form>`;
+                    <form onsubmit="app.submitProgram(event, '${id}')" class="space-y-4">
+                        <div>
+                            <label class="label-text">Paket Program</label>
+                            <select name="pkg" class="input-field">
+                                <option value="Reguler" ${p.program?.package === 'Reguler' ? 'selected' : ''}>Reguler</option>
+                                <option value="Eksklusif" ${p.program?.package === 'Eksklusif' ? 'selected' : ''}>Eksklusif</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label-text">Durasi</label>
+                            <select name="dur" class="input-field">
+                                <option value="7" ${p.program?.duration === '7' ? 'selected' : ''}>7 Hari (Detox)</option>
+                                <option value="14" ${p.program?.duration === '14' ? 'selected' : ''}>14 Hari</option>
+                                <option value="30" ${p.program?.duration === '30' ? 'selected' : ''}>30 Hari</option>
+                                <option value="60" ${p.program?.duration === '60' ? 'selected' : ''}>60 Hari</option>
+                            </select>
+                        </div>
+                        <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan Program</button>
+                    </form>
+                `;
                 document.getElementById('modal-container').classList.remove('hidden');
                 document.getElementById('modal-container').classList.add('flex');
             },
 
             submitProgram: (e, id) => {
                 e.preventDefault();
-                const p = app.data.patients.find(x=>x.id===id);
+                const p = app.data.patients.find(x => x.id === id);
                 p.program = { package: e.target.pkg.value, duration: e.target.dur.value };
-                p.therapy_plan = e.target.plan.value;
                 app.saveDB();
                 app.closeModal();
                 app.nav('program');
             },
 
-            // --- 5. UTILS & EXPORT ---
-
-            toBase64: (file) => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            }),
-
-            deleteItem: (pid, type, idx) => {
-                Swal.fire({title:'Hapus?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{
-                    if(r.isConfirmed){
-                        const p = app.data.patients.find(x=>x.id===pid);
-                        p[type].splice(idx,1);
-                        app.saveDB();
-                        app.nav(app.currentPage);
-                    }
-                });
+            modalEditTerapi: (id) => {
+                const p = app.data.patients.find(x => x.id === id);
+                document.getElementById('modal-title').innerText = "Rencana Terapi: " + p.registration.name;
+                document.getElementById('modal-body').innerHTML = `
+                    <form onsubmit="app.submitTerapi(event, '${id}')" class="space-y-4">
+                        <textarea name="terapi" class="input-field h-40">${p.therapy_plan || ''}</textarea>
+                        <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan Rencana</button>
+                    </form>
+                `;
+                document.getElementById('modal-container').classList.remove('hidden');
+                document.getElementById('modal-container').classList.add('flex');
             },
-
-            deletePatient: (id) => {
-                Swal.fire({title:'Hapus Pasien?',text:'Data hilang permanen',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{
-                    if(r.isConfirmed){
-                        app.data.patients = app.data.patients.filter(x=>x.id!==id);
-                        app.saveDB();
-                        app.nav('dashboard');
-                    }
-                });
-            },
-
-            search: () => {
-                const q = document.getElementById('global-search').value.toLowerCase();
-                if(app.currentPage === 'dashboard') {
-                    // Simple re-render with filter for dashboard, for others basic DOM hide
-                    const els = document.querySelectorAll('#main-content .bg-white');
-                    els.forEach(el => el.style.display = el.innerText.toLowerCase().includes(q) ? 'flex' : 'none');
-                }
-            },
-
-            // --- EXPORT WORD (SINGLE PATIENT) ---
-            exportWord: (pid) => {
-                const p = app.data.patients.find(x=>x.id===pid);
-                const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } = docx;
-
-                // Helper Table Generator
-                const createTable = (headers, rows) => {
-                    return new Table({
-                        width: { size: 100, type: WidthType.PERCENTAGE },
-                        rows: [
-                            new TableRow({ children: headers.map(h => new TableCell({ children: [new Paragraph({ text: h, bold: true })] })) }),
-                            ...rows.map(r => new TableRow({ children: r.map(c => new TableCell({ children: [new Paragraph(c)] })) }))
-                        ]
-                    });
-                };
-
-                const doc = new Document({
-                    sections: [{
-                        children: [
-                            new Paragraph({ text: `LAPORAN MEDIS: ${p.registration.name}`, heading: docx.HeadingLevel.HEADING_1 }),
-                            new Paragraph({ text: `Tanggal Cetak: ${new Date().toLocaleString()}` }),
-                            new Paragraph({ text: " " }),
-                            
-                            new Paragraph({ text: "I. BIODATA PASIEN", heading: docx.HeadingLevel.HEADING_2 }),
-                            new Paragraph(`Usia: ${p.registration.age} Tahun | Pekerjaan: ${p.registration.job}`),
-                            new Paragraph(`Alamat: ${p.registration.address}`),
-                            new Paragraph({ text: " " }),
-
-                            new Paragraph({ text: "II. DIAGNOSA & TERAPI", heading: docx.HeadingLevel.HEADING_2 }),
-                            new Paragraph(`Diagnosa Masuk: ${p.diagnosis.entry_diagnosis}`),
-                            new Paragraph(`Rencana Terapi: ${p.therapy_plan || '-'}`),
-                            new Paragraph({ text: " " }),
-
-                            new Paragraph({ text: "III. RIWAYAT TTV (Vital Signs)", heading: docx.HeadingLevel.HEADING_2 }),
-                            createTable(
-                                ["Tanggal", "TD", "Nadi", "Sat", "GDS"],
-                                (p.ttv_logs||[]).map(t => [new Date(t.date).toLocaleDateString(), t.td, t.hr||'-', t.sat, t.gds_note||'-'])
-                            ),
-                            new Paragraph({ text: " " }),
-
-                            new Paragraph({ text: "IV. CATATAN VISIT DOKTER", heading: docx.HeadingLevel.HEADING_2 }),
-                            ...(p.visits||[]).map(v => new Paragraph({
-                                text: `[${new Date(v.date).toLocaleDateString()}] ${v.notes}`,
-                                bullet: { level: 0 }
-                            }))
-                        ]
-                    }]
-                });
-
-                Packer.toBlob(doc).then(blob => {
-                    saveAs(blob, `Laporan_${p.registration.name}.docx`);
-                });
-            },
-
-            // --- EXPORT EXCEL (FULL DATABASE) ---
-            exportExcelFull: () => {
-                const wb = XLSX.utils.book_new();
-
-                // 1. Sheet Pasien
-                const dataPasien = app.data.patients.map(p => ({
-                    ID: p.id, Nama: p.registration.name, Usia: p.registration.age, 
-                    Diagnosa: p.diagnosis.entry_diagnosis, Paket: p.program?.package
-                }));
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataPasien), "Daftar Pasien");
-
-                // 2. Sheet TTV
-                let dataTTV = [];
-                app.data.patients.forEach(p => {
-                    p.ttv_logs?.forEach(t => dataTTV.push({ Nama: p.registration.name, ...t }));
-                });
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataTTV), "Log TTV");
-
-                // 3. Sheet Obat
-                let dataObat = [];
-                app.data.patients.forEach(p => {
-                    p.medicine_stock?.forEach(m => dataObat.push({ 
-                        NamaPasien: p.registration.name, NamaObat: m.name, StokAwal: m.init_stock, Terpakai: m.used_stock 
-                    }));
-                });
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataObat), "Stok Obat");
-
-                // 4. Sheet BPSS (Flattened)
-                let dataBPSS = [];
-                app.data.patients.forEach(p => {
-                    if(p.bpss_scores) {
-                        Object.keys(p.bpss_scores).forEach(day => {
-                            dataBPSS.push({
-                                Nama: p.registration.name, Hari: day,
-                                Bio: p.bpss_scores[day].bio, Psy: p.bpss_scores[day].psy,
-                                Soc: p.bpss_scores[day].soc, Spi: p.bpss_scores[day].spi,
-                                Evaluasi: p.bpss_scores[day].discharge_eval
-                            });
-                        });
-                    }
-                });
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataBPSS), "Score BPSS");
-
-                XLSX.writeFile(wb, "MMRC_Full_Database.xlsx");
+            
+            submitTerapi: (e, id) => {
+                e.preventDefault();
+                const p = app.data.patients.find(x => x.id === id);
+                p.therapy_plan = e.target.terapi.value;
+                app.saveDB();
+                app.closeModal();
+                app.nav('terapi');
             }
         };
 
-        // Init Check
+        // Initialize empty state if needed
         if(app.data.patients.length === 0) {
-            // console.log("Database kosong, siap diisi.");
+            // Optional: Insert dummy data for demo purposes? No, keep it clean.
         }
+
     </script>
 </body>
 </html>
