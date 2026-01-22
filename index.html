@@ -178,53 +178,195 @@
     </div>
 
     <script>
-        // --- 1. STATE MANAGEMENT & DATABASE ---
-        const DB_KEY = 'MMRC_DB_V2';
-        
-        // Initial Mock Data Structure
-        const initialDB = {
-            patients: [] 
-        };
+        // --- 1. STATE & DATABASE ---
+const DB_KEY = 'MMRC_DB_PRO_VERSION';
+const initialDB = { patients: [] };
 
-        /* Structure of a Patient Object:
-         {
-            id: timestamp,
-            registration: {
-                timestamp: 'YYYY-MM-DDTHH:mm',
-                photo: 'base64...',
-                name, birthplace, dob, age, marital_status, edu, job, address, 
-                spotcheck_items: text, guardian_name
-            },
-            history: {
-                physical: text, psychological: text, prev_diagnosis: text,
-                dosage_history: text, current_condition: text
-            },
-            diagnosis: {
-                doc_name, entry_diagnosis, planning,
-                interventions: { injection: bool, urine: bool, urine_note: text, fixation: bool },
-                prescription: text
-            },
-            medicine_stock: [
-                { id, name, init_stock, used_stock, est_end_date }
-            ],
-            medicine_logs: [
-                { date, medicine_name, notes, pic_name }
-            ],
-            ttv_logs: [
-                { date, td, sat, rr, tb, bb, gds_note }
-            ],
-            visits: [
-                { date, photo, notes, signature }
-            ],
-            bpss_scores: [
-                { date, bio: 0-25, psy: 0-25, soc: 0-25, spi: 0-25, discharge_eval, change_log }
-            ],
-            program: {
-                package: 'Reguler/Eksklusif', duration: '7/14/30/60'
-            },
-            therapy_plan: text
-         }
-        */
+const app = {
+    data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
+    currentPage: 'dashboard',
+    signaturePad: null,
+    chartInstance: null,
+
+    // --- 2. CORE METHODS ---
+    saveDB() {
+        localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+    },
+
+    login(e) {
+        e.preventDefault();
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+            document.getElementById('auth-layer').classList.add('hidden');
+            document.getElementById('app-layer').classList.remove('hidden');
+            document.getElementById('app-layer').classList.add('flex');
+            this.nav('dashboard');
+        } else {
+            Swal.fire('Error', 'Username atau Password Salah', 'error');
+        }
+    },
+
+    nav(page) {
+        this.currentPage = page;
+        document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+        const navBtn = document.getElementById(`nav-${page}`);
+        if(navBtn) navBtn.classList.add('active');
+        
+        const content = document.getElementById('main-content');
+        const title = document.getElementById('page-title');
+        content.innerHTML = '';
+        
+        if(this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+
+        switch(page) {
+            case 'dashboard': title.innerText = "Registrasi & Pasien"; this.renderDashboard(content); break;
+            case 'medicine': title.innerText = "Manajemen Obat"; this.renderMedicine(content); break;
+            case 'ttv': title.innerText = "Monitoring TTV"; this.renderTTV(content); break;
+            case 'visit': title.innerText = "Log Visit Dokter"; this.renderVisit(content); break;
+            case 'crisis': title.innerText = "BPSS Score Tracking"; this.renderCrisis(content); break;
+            case 'program': title.innerText = "Program & Terapi"; this.renderProgram(content); break;
+        }
+    },
+
+    // --- 3. UI RENDERERS ---
+    renderDashboard(c) {
+        c.innerHTML = `
+        <div class="mb-6"><button onclick="app.modalAddPatient()" class="bg-mmrc-primary text-white px-5 py-2.5 rounded-lg shadow hover:bg-teal-700 font-medium"><i class="fas fa-user-plus mr-2"></i>Pasien Baru</button></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            ${this.data.patients.map((p) => `
+            <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+                <div class="h-20 bg-gradient-to-r from-teal-600 to-emerald-600 relative">
+                    <div class="absolute -bottom-8 left-6">
+                        <img src="${p.registration.photo || 'https://via.placeholder.com/150'}" class="w-16 h-16 rounded-full border-4 border-white object-cover bg-gray-200 shadow-sm">
+                    </div>
+                </div>
+                <div class="pt-10 px-6 pb-6 flex-1 flex flex-col">
+                    <div class="flex justify-between items-start mb-2">
+                        <div><h3 class="font-bold text-gray-800 text-lg">${p.registration.name}</h3></div>
+                        <span class="bg-teal-50 text-teal-700 text-xs px-2 py-1 rounded font-bold">${p.registration.age} Th</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2"><i class="fas fa-stethoscope text-teal-500 w-5"></i> ${p.diagnosis?.entry_diagnosis || '-'}</p>
+                    <div class="mt-5 pt-4 border-t grid grid-cols-3 gap-2">
+                        <button onclick="app.editPatient('${p.id}')" class="bg-amber-100 text-amber-700 py-1.5 rounded text-xs font-bold hover:bg-amber-200">EDIT</button>
+                        <button onclick="app.deletePatient('${p.id}')" class="bg-red-100 text-red-700 py-1.5 rounded text-xs font-bold hover:bg-red-200">HAPUS</button>
+                        <button onclick="app.exportWord('${p.id}')" class="bg-blue-100 text-blue-700 py-1.5 rounded text-xs font-bold hover:bg-blue-200">DOC</button>
+                    </div>
+                </div>
+            </div>`).join('')}
+        </div>`;
+    },
+
+    renderTTV(c) {
+        let html = '<div class="space-y-8">';
+        this.data.patients.forEach(p => {
+            html += `
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg text-gray-800">${p.registration.name}</h3>
+                    <button onclick="app.modalAddTTV('${p.id}')" class="bg-blue-600 text-white text-xs px-3 py-2 rounded">+ Input TTV</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-custom">
+                        <thead><tr><th>Waktu</th><th>TD</th><th>Nadi</th><th>Sat</th><th>RR</th><th>GDS</th><th>Aksi</th></tr></thead>
+                        <tbody>
+                            ${(p.ttv_logs||[]).length === 0 ? '<tr><td colspan="7" class="text-center py-4">Tidak ada data</td></tr>' : ''}
+                            ${(p.ttv_logs||[]).slice().reverse().map((t, idx) => `
+                            <tr>
+                                <td>${new Date(t.date).toLocaleString('id-ID')}</td>
+                                <td>${t.td}</td><td>${t.hr}</td><td>${t.sat}%</td><td>${t.rr}</td><td>${t.gds_note}</td>
+                                <td><button onclick="app.deleteItem('${p.id}','ttv_logs',${(p.ttv_logs.length-1)-idx})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        });
+        c.innerHTML = html + '</div>';
+    },
+
+    // --- 4. DATA HANDLING ---
+    async submitPatient(e) {
+        e.preventDefault();
+        const f = e.target;
+        let photo = null;
+        const fileInput = document.getElementById('reg_photo');
+        if(fileInput.files[0]) photo = await this.toBase64(fileInput.files[0]);
+
+        const newP = {
+            id: Date.now().toString(),
+            registration: { name: f.name.value, age: f.age.value, job: f.job.value, address: f.address.value, photo },
+            diagnosis: { entry_diagnosis: f.diag.value },
+            medicine_stock: [], medicine_logs: [], ttv_logs: [], visits: [], 
+            bpss_scores: {}, program: {}, therapy_plan: ''
+        };
+        this.data.patients.push(newP);
+        this.saveDB();
+        this.closeModal();
+        this.nav('dashboard');
+        Swal.fire('Berhasil', 'Data pasien telah disimpan', 'success');
+    },
+
+    search() {
+        const q = document.getElementById('global-search').value.toLowerCase();
+        const cards = document.querySelectorAll('#main-content .bg-white');
+        cards.forEach(card => {
+            const text = card.innerText.toLowerCase();
+            card.style.display = text.includes(q) ? '' : 'none';
+        });
+    },
+
+    // --- 5. EXPORT METHODS (FIXED SYNTAX) ---
+    exportWord(pid) {
+        const p = this.data.patients.find(x => x.id === pid);
+        if(!p) return;
+        
+        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } = docx;
+
+        const doc = new Document({
+            sections: [{
+                children: [
+                    new Paragraph({ text: `LAPORAN MEDIS: ${p.registration.name}`, heading: docx.HeadingLevel.HEADING_1 }),
+                    new Paragraph({ text: `Tanggal: ${new Date().toLocaleDateString()}` }),
+                    new Paragraph({ text: " " }),
+                    new Paragraph({ text: `Diagnosa: ${p.diagnosis.entry_diagnosis}`, bold: true }),
+                    new Paragraph({ text: " " }),
+                    new Paragraph({ text: "Riwayat TTV:", heading: docx.HeadingLevel.HEADING_2 }),
+                    // Tambahkan baris data TTV di sini...
+                ]
+            }]
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            saveAs(blob, `Laporan_${p.registration.name}.docx`);
+        });
+    },
+
+    exportExcelFull() {
+        const wb = XLSX.utils.book_new();
+        const wsData = this.data.patients.map(p => ({
+            Nama: p.registration.name,
+            Usia: p.registration.age,
+            Alamat: p.registration.address,
+            Diagnosa: p.diagnosis.entry_diagnosis
+        }));
+        const ws = XLSX.utils.json_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Daftar Pasien");
+        XLSX.writeFile(wb, "Database_MMRC.xlsx");
+    },
+
+    // --- HELPERS ---
+    toBase64: (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    }),
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+    }
+};
 
         // --- 2. APP CONTROLLER ---
         const app = {
