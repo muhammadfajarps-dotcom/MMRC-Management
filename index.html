@@ -307,6 +307,81 @@ deleteItem(pid,type,idx){
             data: JSON.parse(localStorage.getItem(DB_KEY)) || initialDB,
             currentPage: 'dashboard',
 
+                     // ==== UNIVERSAL EDIT & DELETE ====
+editItem(pid, key, idx){
+  const p = app.data.patients.find(x=>x.id===pid);
+  const item = p[key][idx];
+
+  let form = '';
+  for(const k in item){
+    if(k === 'date') continue;
+    form += `<label class="block text-xs mt-2">${k}</label>
+             <input id="f_${k}" value="${item[k]}" class="input-field">`;
+  }
+
+  Swal.fire({
+    title:'Edit Data',
+    html:form,
+    preConfirm:()=>{
+      for(const k in item){
+        if(k!=='date'){
+          item[k]=document.getElementById('f_'+k).value;
+        }
+      }
+    }
+  }).then(()=>{
+    app.saveDB();
+    app.nav(app.currentPage);
+  });
+},
+
+deleteItem(pid,key,idx){
+  const p=app.data.patients.find(x=>x.id===pid);
+  Swal.fire({
+    title:'Hapus?',
+    icon:'warning',
+    showCancelButton:true
+  }).then(r=>{
+    if(r.isConfirmed){
+      p[key].splice(idx,1);
+      app.saveDB();
+      app.nav(app.currentPage);
+    }
+  });
+},
+
+// ==== EXPORT SEMUA ====
+exportWordAll(){
+  const doc = new docx.Document({
+    sections:[{
+      children: app.data.patients.flatMap(p=>[
+        new docx.Paragraph({text:p.registration.name,bold:true}),
+        new docx.Paragraph(`Usia: ${p.registration.age}`),
+        new docx.Paragraph(`Alamat: ${p.registration.address}`),
+        new docx.Paragraph(" ")
+      ])
+    }]
+  });
+  docx.Packer.toBlob(doc).then(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download="MMRC_ALL.docx";
+    a.click();
+  });
+},
+
+exportExcelAll(){
+  const data = app.data.patients.map(p=>({
+    Nama:p.registration.name,
+    Usia:p.registration.age,
+    Alamat:p.registration.address
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Pasien");
+  XLSX.writeFile(wb,"MMRC_ALL.xlsx");
+},
+
             // --- AUTH ---
             login: (e) => {
                 e.preventDefault();
@@ -437,7 +512,13 @@ deleteItem(pid,type,idx){
             renderMedicine: (container) => {
                 if(app.data.patients.length === 0) return container.innerHTML = '<div class="text-center text-gray-400 mt-10">Belum ada pasien terdaftar.</div>';
 
-                let html = '<div class="space-y-8">';
+                let html =html = `
+                    <div class="flex justify-end mb-3 space-x-2">
+                    <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+                    <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+                </div>
+                ` + html;
+               '<div class="space-y-8">';
                 app.data.patients.forEach(p => {
                     html += `
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -486,17 +567,21 @@ deleteItem(pid,type,idx){
                             <div>
                                 <h4 class="text-sm font-bold text-gray-600 mb-3 border-l-4 border-blue-500 pl-2">CATATAN PENGGUNAAN</h4>
                                 <div class="h-64 overflow-y-auto border rounded-lg bg-gray-50 p-2 text-xs space-y-2">
-                                    ${(p.medicine_logs || []).slice().reverse().map(log => `
+                                    ${(p.medicine_logs || []).slice().reverse().map((log,logIdx) => `
                                         <div class="bg-white p-3 rounded shadow-sm border border-gray-100">
-                                            <div class="flex justify-between font-semibold text-gray-700">
-                                                <span>${log.medicine_name}</span>
-                                                <span>${new Date(log.date).toLocaleDateString()}</span>
-                                            </div>
-                                            <div class="mt-1 text-gray-500 flex justify-between">
-                                                <span>${new Date(log.date).toLocaleTimeString()} - ${log.notes}</span>
-                                                <span class="font-bold text-teal-600">PJ: ${log.pic_name}</span>
-                                            </div>
+                                          <div class="flex justify-between font-semibold">
+                                            <span>${log.medicine_name}</span>
+                                            <span>${new Date(log.date).toLocaleDateString()}</span>
+                                          </div>
+                                        <div class="mt-1 flex justify-between text-xs">
+                                            <span>${log.notes}</span>
+                                            <span>PJ: ${log.pic_name}</span>
+                                         </div>
+                                        <div class="text-right space-x-2 mt-2">
+                                            <button onclick="app.editItem('${p.id}','medicine_logs',${logIdx})" class="text-amber-600">Edit</button>
+                                            <button onclick="app.deleteItem('${p.id}','medicine_logs',${logIdx})" class="text-red-600">Hapus</button>
                                         </div>
+                                      </div>
                                     `).join('') || '<p class="text-center text-gray-400 italic py-4">Belum ada riwayat.</p>'}
                                 </div>
                             </div>
@@ -508,8 +593,14 @@ deleteItem(pid,type,idx){
             },
 
             // 3. TTV & GDS
-            renderTTV: (container) => {
-                let html = `<div class="grid grid-cols-1 gap-6">`;
+          renderTTV: (container) => {
+                let html =html = `
+<div class="flex justify-end mb-3 space-x-2">
+  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+</div>
+` + html;
+ `<div class="grid grid-cols-1 gap-6">`;
                 app.data.patients.forEach(p => {
                     html += `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -553,8 +644,14 @@ deleteItem(pid,type,idx){
             },
 
             // 4. VISIT DOKTER
-            renderVisit: (container) => {
-                let html = '<div class="space-y-6">';
+        renderVisit: (container) => {
+                let html = html = `
+<div class="flex justify-end mb-3 space-x-2">
+  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+</div>
+` + html;
+'<div class="space-y-6">';
                 app.data.patients.forEach(p => {
                     html += `
                     <div class="bg-white rounded-xl shadow p-6">
@@ -589,8 +686,14 @@ deleteItem(pid,type,idx){
             },
 
             // 5. CRISIS & BPSS
-            renderCrisis: (container) => {
-                let html = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
+           enderCrisis: (container) => {
+                let html = html = `
+<div class="flex justify-end mb-3 space-x-2">
+  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+</div>
+` + html;
+'<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
                 app.data.patients.forEach((p, idx) => {
                     // Get latest 7 days data for polygon if needed, here we use latest for simplicity
                     const latest = (p.bpss_scores && p.bpss_scores.length > 0) ? p.bpss_scores[p.bpss_scores.length - 1] : {bio:0, psy:0, soc:0, spi:0};
@@ -636,12 +739,11 @@ deleteItem(pid,type,idx){
                             new Chart(ctx, {
                                 type: 'radar',
                                 data: {
-                                    labels: ['Biological', 'Psychological', 'Social', 'Spiritual'],
+                                    labels: [latest.biological, 'Psychological', 'Social', 'Spiritual'],
                                     datasets: [{
                                         label: 'Skor Saat Ini',
                                         data: [latest.bio, latest.psy, latest.soc, latest.spi],
-                                        fill: true,
-                                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                                        fill: false,
                                         borderColor: '#0d9488',
                                         pointBackgroundColor: '#0d9488',
                                         pointBorderColor: '#fff',
@@ -662,8 +764,14 @@ deleteItem(pid,type,idx){
             },
 
             // 6 & 7. PROGRAM & TERAPI (Simplified for brevity but structured)
-            renderProgram: (container) => {
-                let html = `<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Program Pasien</h3>`;
+         renderProgram: (container) => {
+                let html = html = `
+<div class="flex justify-end mb-3 space-x-2">
+  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+</div>
+` + html;
+`<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Program Pasien</h3>`;
                 html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
                 app.data.patients.forEach(p => {
                     html += `
@@ -682,6 +790,12 @@ deleteItem(pid,type,idx){
                 container.innerHTML = html;
             },
 
+                html = `
+                <div class="flex justify-end mb-3 space-x-2">
+                  <button onclick="app.exportWordAll()" class="bg-blue-600 text-white px-3 py-1 rounded">Word</button>
+                  <button onclick="app.exportExcelAll()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+                </div>
+                ` + html;
             renderTerapi: (container) => {
                  let html = `<div class="bg-white p-8 rounded-2xl shadow"><h3 class="text-lg font-bold mb-4">Rencana Terapi</h3><table class="table-custom w-full"><thead><tr><th>Pasien</th><th>Rencana Terapi Detail</th><th>Aksi</th></tr></thead><tbody>`;
                  app.data.patients.forEach(p => {
