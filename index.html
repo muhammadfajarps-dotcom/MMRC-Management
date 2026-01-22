@@ -762,7 +762,10 @@ exportExcelAll(){
                      html += `<tr>
                         <td class="font-bold">${p.registration.name}</td>
                         <td>${p.therapy_plan || 'Belum diatur'}</td>
-                        <td><button onclick="app.modalEditTerapi('${p.id}')" class="text-blue-600 hover:underline">Edit</button></td>
+                        const btn = document.createElement('button');
+                        btn.textContent = "Edit";
+                        btn.className = "text-blue-600 hover:underline";
+                        btn.addEventListener('click', () => app.modalEditTerapi(p.id));
                      </tr>`;
                  });
                  html += `</tbody></table></div>`;
