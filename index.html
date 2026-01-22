@@ -227,9 +227,7 @@
         */
 
         // --- 2. APP CONTROLLER ---
-        const app = {
-
-  filterByText(list, term) {
+        const app = {filterByText(list, term) {
     if (!term) return list;
     term = term.toLowerCase();
     return list.filter(item =>
