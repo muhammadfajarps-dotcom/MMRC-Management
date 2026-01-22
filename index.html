@@ -319,10 +319,10 @@ const app = {
     exportExcelFull(){ 
         const wb = XLSX.utils.book_new();
         const wsData = this.data.patients.map(p => {
-            Nama: p.registration.name,
-            Usia: p.registration.age,
-            Alamat: p.registration.address,
-            Diagnosa: p.diagnosis.entry_diagnosis
+            Nama p.registration.name,
+            Usia p.registration.age,
+            Alamat p.registration.address,
+            Diagnosa p.diagnosis.entry_diagnosis
         });
         const ws = XLSX.utils.json_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, "Daftar Pasien");
