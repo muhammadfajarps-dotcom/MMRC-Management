@@ -595,6 +595,12 @@ exportExcelAll(){
                                           <button onclick="app.deleteItem('${p.id}','ttv_logs',${i})" class="text-red-600">Hapus</button>
                                         </td>
                                     </tr>`).join('')}
+
+                                <tbody>
+                                    ${data.map((row,i)=>`
+                                    <tr>
+                                        <td>${row.name}</td>
+                                    </tr>`).join('')}
                                 </tbody>
                             </table>
                         </div>
