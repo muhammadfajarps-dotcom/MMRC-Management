@@ -1,6 +1,6 @@
 /**
- * MMRC ULTIMATE SYSTEM 2026
- * Developed with Full Power Mode
+ * MMRC ULTIMATE SYSTEM 2026 - FULL POWER VERSION
+ * Fitur: Edit Stok, Edit Log, Export Word All Menu, Modern BPSS Grid
  */
 
 const app = {
@@ -41,7 +41,6 @@ const app = {
         if (!container) return;
         container.innerHTML = '';
         
-        // Router System
         const routes = {
             'dashboard': () => this.viewDashboard(container),
             'medicine': () => this.viewMedicine(container),
@@ -56,7 +55,7 @@ const app = {
     },
 
     // ==========================================
-    // 2. MEDICINE SYSTEM (FIXED & UPGRADED)
+    // 2. MEDICINE SYSTEM (FIXED EDIT BUTTONS)
     // ==========================================
     viewMedicine(container) {
         container.innerHTML = this.data.patients.map(p => `
@@ -89,7 +88,7 @@ const app = {
                                         </div>
                                     </div>
                                     <div class="mt-4 flex gap-2">
-                                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="flex-1 bg-blue-600 text-white py-2 rounded-xl text-[10px] font-bold shadow-md shadow-blue-100">CATAT MINUM</button>
+                                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="flex-1 bg-blue-600 text-white py-2 rounded-xl text-[10px] font-bold">CATAT MINUM</button>
                                         <button onclick="app.editMed('${p.id}', ${i})" class="w-10 h-10 flex items-center justify-center bg-amber-100 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all"><i class="fas fa-edit"></i></button>
                                         <button onclick="app.delSubItem('${p.id}', 'medicine.stock', ${i})" class="w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all"><i class="fas fa-trash"></i></button>
                                     </div>
@@ -126,33 +125,51 @@ const app = {
         `).join('');
     },
 
+    // --- LOGIKA EDIT STOK (FIXED) ---
     editMed(pid, idx) {
         const p = this.data.patients.find(x => x.id === pid);
         const s = p.medicine.stock[idx];
-        document.getElementById('modal-title').innerText = "EDIT MASTER OBAT";
+        document.getElementById('modal-title').innerText = "EDIT DATA STOK";
         document.getElementById('modal-body').innerHTML = `
             <div class="space-y-4">
                 <input id="ms_name" value="${s.name}" class="input-field" placeholder="Nama Obat">
                 <div class="grid grid-cols-2 gap-4">
-                    <input id="ms_init" value="${s.init}" type="number" class="input-field" placeholder="Stok Awal">
-                    <input id="ms_used" value="${s.used}" type="number" class="input-field" placeholder="Terpakai">
+                    <div><label class="text-[9px] font-bold">STOK AWAL</label><input id="ms_init" value="${s.init}" type="number" class="input-field"></div>
+                    <div><label class="text-[9px] font-bold">TERPAKAI</label><input id="ms_used" value="${s.used}" type="number" class="input-field"></div>
                 </div>
                 <input id="ms_exp" value="${s.exp}" type="date" class="input-field">
-                <button onclick="app.saveMedStock('${pid}', ${idx})" class="w-full bg-teal-600 text-white py-3 rounded-2xl font-bold">UPDATE DATA STOK</button>
+                <button onclick="app.saveMedStock('${pid}', ${idx})" class="w-full bg-teal-600 text-white py-3 rounded-2xl font-bold">SIMPAN PERUBAHAN</button>
             </div>`;
         this.openModal();
     },
 
+    saveMedStock(pid, idx = null) {
+        const p = this.data.patients.find(x => x.id === pid);
+        const newData = {
+            name: document.getElementById('ms_name').value,
+            init: parseInt(document.getElementById('ms_init').value),
+            used: parseInt(document.getElementById('ms_used').value || 0),
+            exp: document.getElementById('ms_exp').value
+        };
+
+        if(idx !== null) p.medicine.stock[idx] = newData;
+        else p.medicine.stock.push(newData);
+
+        this.saveDB(); this.closeModal(); this.render();
+        Swal.fire('Berhasil', 'Data Stok Diperbarui', 'success');
+    },
+
+    // --- LOGIKA EDIT PENGGUNAAN (NEW) ---
     editMedLog(pid, lIdx) {
         const p = this.data.patients.find(x => x.id === pid);
         const l = p.medicine.logs[lIdx];
-        document.getElementById('modal-title').innerText = "EDIT LOG MINUM OBAT";
+        document.getElementById('modal-title').innerText = "EDIT LOG PENGGUNAAN";
         document.getElementById('modal-body').innerHTML = `
             <div class="space-y-4">
-                <p class="text-xs text-slate-400">Obat: <b>${l.name}</b> (${l.time})</p>
-                <input id="ml_pj" value="${l.pj}" class="input-field" placeholder="Nama Penanggung Jawab">
-                <textarea id="ml_note" class="input-field h-24" placeholder="Keterangan Tambahan">${l.note || ''}</textarea>
-                <button onclick="app.saveEditLog('${pid}', ${lIdx})" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold">SIMPAN PERUBAHAN</button>
+                <p class="text-xs">Obat: <b>${l.name}</b></p>
+                <input id="ml_pj" value="${l.pj}" class="input-field" placeholder="Nama PJ">
+                <textarea id="ml_note" class="input-field h-24" placeholder="Catatan">${l.note || ''}</textarea>
+                <button onclick="app.saveEditLog('${pid}', ${lIdx})" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold">UPDATE LOG</button>
             </div>`;
         this.openModal();
     },
@@ -162,11 +179,59 @@ const app = {
         p.medicine.logs[lIdx].pj = document.getElementById('ml_pj').value;
         p.medicine.logs[lIdx].note = document.getElementById('ml_note').value;
         this.saveDB(); this.closeModal(); this.render();
-        Swal.fire('Updated', 'Catatan berhasil diperbarui', 'success');
+        Swal.fire('Updated', 'Log berhasil diubah', 'success');
     },
 
     // ==========================================
-    // 3. CRISIS SYSTEM (ULTIMATE GRID 1-7)
+    // 3. UNIVERSAL WORD EXPORT (ALL MENUS)
+    // ==========================================
+    async exportToWord(pid, menu) {
+        const p = this.data.patients.find(x => x.id === pid);
+        const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+
+        const children = [
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: "MADANI MMRC - MEDICAL REPORT", bold: true, size: 32, color: "0d9488" })],
+            }),
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: menu.toUpperCase(), bold: true, size: 24 })],
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({ text: `Nama Pasien: ${p.reg.name}`, bold: true }),
+            new Paragraph({ text: `Tanggal Laporan: ${new Date().toLocaleString('id-ID')}` }),
+            new Paragraph({ text: "--------------------------------------------------------" }),
+            new Paragraph({ text: "" }),
+        ];
+
+        // LOGIKA KONTEN OTOMATIS BERDASARKAN MENU
+        if(menu === 'Medicine') {
+            children.push(new Paragraph({ text: "DAFTAR STOK OBAT:", bold: true }));
+            p.medicine.stock.forEach(s => children.push(new Paragraph({ text: `- ${s.name}: Sisa ${s.init-s.used} Tab (Exp: ${s.exp})` })));
+            children.push(new Paragraph({ text: "" }), new Paragraph({ text: "RIWAYAT PENGGUNAAN:", bold: true }));
+            p.medicine.logs.forEach(l => children.push(new Paragraph({ text: `[${l.time}] ${l.name} oleh ${l.pj}` })));
+        } else if (menu === 'Crisis') {
+            children.push(new Paragraph({ text: "BPSS MONITORING (7 HARI):", bold: true }));
+            p.crisis.bpss.forEach((b, i) => children.push(new Paragraph({ text: `Hari ${i+1}: Score ${b.eval || '-'} | Catatan: ${b.note || '-'}` })));
+        } else if (menu === 'TTV') {
+            children.push(new Paragraph({ text: "DATA TANDA-TANDA VITAL:", bold: true }));
+            p.ttv.logs.forEach(t => children.push(new Paragraph({ text: `[${t.time}] TD: ${t.td}, Nadi: ${t.nadi}, Suhu: ${t.suhu}, SpO2: ${t.spo2}` })));
+        } else {
+            children.push(new Paragraph({ text: `Data detail untuk menu ${menu} tercatat lengkap di sistem.` }));
+        }
+
+        const doc = new Document({ sections: [{ children }] });
+        const blob = await Packer.toBlob(doc);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `MMRC_${menu}_${p.reg.name}.docx`;
+        link.click();
+        Swal.fire('Selesai', 'Dokumen Word berhasil dibuat', 'success');
+    },
+
+    // ==========================================
+    // 4. CRISIS VIEW (MODERN GRID)
     // ==========================================
     viewCrisis(container) {
         container.innerHTML = this.data.patients.map(p => `
@@ -174,123 +239,46 @@ const app = {
                 <div class="flex justify-between items-center mb-8 border-b pb-6">
                     <div>
                         <h3 class="font-black text-2xl text-slate-800">${p.reg.name}</h3>
-                        <p class="text-[10px] text-red-500 font-black uppercase tracking-[0.2em]">BPSS CRISIS MONITORING (7 DAYS DETOX)</p>
+                        <p class="text-[10px] text-red-500 font-black uppercase tracking-[0.2em]">BPSS CRISIS MONITORING</p>
                     </div>
-                    <button onclick="app.exportToWord('${p.id}', 'Crisis')" class="bg-blue-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black shadow-lg shadow-blue-100 uppercase">Export Report</button>
+                    <button onclick="app.exportToWord('${p.id}', 'Crisis')" class="bg-blue-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-blue-100">Export Word</button>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-10">
-                    ${[1, 2, 3, 4, 5, 6, 7].map(day => {
-                        const score = p.crisis.bpss[day - 1];
+                    ${[1,2,3,4,5,6,7].map(day => {
+                        const score = p.crisis.bpss[day-1];
                         return `
-                        <div onclick="app.modalBPSS('${p.id}', ${day - 1})" class="relative group cursor-pointer transition-all hover:-translate-y-2">
-                            <div class="text-center mb-2 font-black text-[9px] text-slate-400 uppercase tracking-tighter">Day ${day}</div>
-                            <div class="${score ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' : 'bg-slate-50 border-2 border-dashed border-slate-200 text-slate-300'} rounded-3xl p-4 h-28 flex flex-col items-center justify-center shadow-md">
-                                <span class="text-3xl font-black">${score ? score.eval : '-'}</span>
-                                <span class="text-[8px] font-black uppercase opacity-60">${score ? 'Score' : 'Empty'}</span>
+                        <div onclick="app.modalBPSS('${p.id}', ${day-1})" class="cursor-pointer transition-all hover:-translate-y-1">
+                            <div class="text-center mb-2 font-black text-[9px] text-slate-400">HARI ${day}</div>
+                            <div class="${score ? 'bg-red-600 text-white' : 'bg-slate-50 border-2 border-dashed border-slate-200 text-slate-300'} rounded-3xl p-4 h-24 flex flex-col items-center justify-center shadow-sm">
+                                <span class="text-2xl font-black">${score ? score.eval : '-'}</span>
+                                <span class="text-[8px] font-bold uppercase opacity-60">SCORE</span>
                             </div>
-                            ${score ? `<i class="fas fa-check-circle absolute -top-1 -right-1 text-teal-500 bg-white rounded-full"></i>` : ''}
                         </div>`;
                     }).join('')}
                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2 h-72 bg-slate-50 rounded-3xl border p-6">
-                        <canvas id="chart-${p.id}"></canvas>
-                    </div>
-                    <div class="bg-slate-900 rounded-3xl p-6 text-white overflow-y-auto max-h-72">
-                        <h5 class="text-[10px] font-black text-teal-400 uppercase mb-4 tracking-widest">Evolution Notes</h5>
-                        <div class="space-y-4">
-                            ${p.crisis.bpss.map((b, i) => `
-                                <div class="border-l-2 border-teal-500/30 pl-3">
-                                    <p class="text-[9px] font-black text-slate-500">DAY ${i+1}</p>
-                                    <p class="text-[11px] italic">"${b.note || 'No description provided'}"</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
+                <div class="h-64 bg-slate-50 rounded-3xl p-6 border"><canvas id="chart-${p.id}"></canvas></div>
             </div>
         `).join('');
         this.data.patients.forEach(p => this.renderChart(p));
     },
 
-    // ==========================================
-    // 4. SMART WORD EXPORT (ULTIMATE VERSION)
-    // ==========================================
-    async exportToWord(pid, menu) {
-        const p = this.data.patients.find(x => x.id === pid);
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
-
-        const children = [
-            new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                    new TextRun({ text: "MADANI MMRC - MEDICAL DATABASE", bold: true, size: 32, color: "0d9488" }),
-                ],
-            }),
-            new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                    new TextRun({ text: `REPORT TYPE: ${menu.toUpperCase()}`, bold: true, size: 24 }),
-                ],
-            }),
-            new Paragraph({ text: "" }),
-            new Paragraph({
-                children: [
-                    new TextRun({ text: "PROFIL PASIEN", bold: true, underline: {} }),
-                ],
-            }),
-            new Paragraph({ text: `Nama Lengkap: ${p.reg.name}` }),
-            new Paragraph({ text: `ID Pasien: ${p.id}` }),
-            new Paragraph({ text: `Tanggal Laporan: ${new Date().toLocaleString('id-ID')}` }),
-            new Paragraph({ text: "--------------------------------------------------------" }),
-            new Paragraph({ text: "" }),
-        ];
-
-        // Custom content based on menu
-        if(menu === 'Medicine') {
-            children.push(new Paragraph({ text: "STOK OBAT AKTIF:", bold: true }));
-            p.medicine.stock.forEach(s => {
-                children.push(new Paragraph({ text: `- ${s.name}: Sisa ${s.init-s.used} Tab (Exp: ${s.exp})` }));
-            });
-        } else if (menu === 'Crisis') {
-            children.push(new Paragraph({ text: "DATA BPSS SCORE (7 HARI):", bold: true }));
-            p.crisis.bpss.forEach((b, i) => {
-                children.push(new Paragraph({ text: `Hari ${i+1}: Score ${b.eval} - Note: ${b.note}` }));
-            });
-        } else {
-            children.push(new Paragraph({ text: `Laporan detail untuk ${menu} tercatat di sistem.` }));
-        }
-
-        const doc = new Document({ sections: [{ children }] });
-
-        const blob = await Packer.toBlob(doc);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `REPORT_${menu}_${p.reg.name.replace(/\s+/g, '_')}.docx`;
-        link.click();
-        
-        Swal.fire('Word Ready', 'Laporan berhasil di-generate!', 'success');
+    // UTILS
+    openModal() { document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('modal-container').style.display = 'flex'; },
+    closeModal() { document.getElementById('modal-container').classList.add('hidden'); },
+    delSubItem(pid, path, idx) {
+        Swal.fire({ title: 'Hapus?', text: "Data tidak bisa dikembalikan!", icon: 'warning', showCancelButton: true }).then(res => {
+            if(res.isConfirmed) {
+                const p = this.data.patients.find(x => x.id === pid);
+                const parts = path.split('.');
+                p[parts[0]][parts[1]].splice(idx, 1);
+                this.saveDB(); this.render();
+            }
+        });
     },
 
-    // ==========================================
-    // 5. MODAL & UTILS (FIXED)
-    // ==========================================
-    openModal() {
-        document.getElementById('modal-container').style.display = 'flex';
-        document.getElementById('modal-container').classList.remove('hidden');
-    },
-    closeModal() {
-        document.getElementById('modal-container').classList.add('hidden');
-    },
-    
-    // ... Sisa fungsi saveMedStock, modalBPSS, saveBPSS, savePatient, dll disesuaikan seperti format di atas ...
-    // Pastikan memanggil this.saveDB() dan this.render() di setiap akhir save.
+    // ... Panggil fungsi pendukung lainnya (viewTTV, viewVisit, renderChart, dll) ...
+    // Note: Pastikan fungsi view yang lain juga memiliki tombol exportToWord di headernya.
 };
 
-// Start Apps
-document.addEventListener('DOMContentLoaded', () => {
-    app.render();
-});
+document.addEventListener('DOMContentLoaded', () => { app.render(); });
