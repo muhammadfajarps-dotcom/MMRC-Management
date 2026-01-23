@@ -7,35 +7,41 @@ const app = {
     },
 
    login() {
-    // Ambil element input
-    const userInput = document.getElementById('login-user');
-    const passInput = document.getElementById('login-pass');
+    const userEl = document.getElementById('login-user');
+    const passEl = document.getElementById('login-pass');
 
-    // Validasi apakah element ada di HTML
-    if (!userInput || !passInput) {
-        console.error("Input login tidak ditemukan di HTML!");
+    // Cek apakah elementnya ada
+    if (!userEl || !passEl) {
+        console.error("EROR: Input login tidak ditemukan di HTML. Pastikan ID-nya 'login-user' dan 'login-pass'");
+        Swal.fire('Sistem Eror', 'Komponen Login tidak ditemukan', 'error');
         return;
     }
 
-    const u = userInput.value.trim(); // .trim() untuk buang spasi liar
-    const p = passInput.value.trim();
+    // Ambil nilai dan hapus spasi liar di depan/belakang
+    const u = userEl.value.trim();
+    const p = passEl.value.trim();
+
+    console.log("Mencoba login dengan:", u); // Cek di console (F12)
 
     if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-        // Hilangkan layar login, munculkan aplikasi
-        document.getElementById('auth-layer').classList.add('hidden');
-        document.getElementById('app-layer').classList.remove('hidden');
+        // Hilangkan layar login
+        document.getElementById('auth-layer').style.display = 'none';
         
-        // Pindah ke dashboard
+        // Munculkan aplikasi (pastikan ID-nya sesuai)
+        const appLayer = document.getElementById('app-layer');
+        if(appLayer) appLayer.classList.remove('hidden');
+        
+        // Masuk ke dashboard
         this.nav('dashboard');
         
         Swal.fire({
             icon: 'success',
-            title: 'Login Berhasil',
-            timer: 1000,
+            title: 'Berhasil Masuk!',
+            timer: 1500,
             showConfirmButton: false
         });
     } else {
-        Swal.fire('Error', 'Username atau Password Salah!', 'error');
+        Swal.fire('Login Gagal', 'Username atau Password salah. Perhatikan huruf besar semua!', 'error');
     }
 },
 
