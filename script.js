@@ -1,8 +1,3 @@
-/**
- * MMRC ULTIMATE SYSTEM 2026 - FULL POWER VERSION
- * Fitur: Edit Stok, Edit Log, Export Word All Menu, Modern BPSS Grid
- */
-
 const app = {
     data: JSON.parse(localStorage.getItem('MMRC_DATABASE')) || { patients: [] },
     currentPage: 'dashboard',
