@@ -1,59 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
-body { font-family: 'Poppins', sans-serif; }
+body {
+    font-family: 'Poppins', sans-serif;
+}
 
 .input-field {
     width: 100%;
-    padding: 0.75rem 1rem;
     border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    font-size: 0.875rem;
-    transition: all 0.2s;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    outline: none;
 }
 
 .input-field:focus {
     border-color: #0d9488;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
-    outline: none;
+    ring: 2px #ccfbf1;
 }
 
 .nav-btn {
     width: 100%;
     text-align: left;
-    padding: 0.8rem 1rem;
-    border-radius: 0.75rem;
-    color: #64748b;
-    font-size: 0.9rem;
-    font-weight: 500;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    color: #475569;
     transition: all 0.2s;
-    display: flex;
-    align-items: center;
 }
 
-.nav-btn:hover { background: #f1f5f9; color: #0d9488; }
-.nav-btn.active { background: #f0fdfa; color: #0d9488; font-weight: 700; }
-
-.card-patient {
-    background: white;
-    border-radius: 1.5rem;
-    border: 1px solid #f1f5f9;
-    padding: 1.5rem;
-    transition: transform 0.2s, box-shadow 0.2s;
+.nav-btn:hover, .nav-btn.active {
+    background-color: #f0fdfa;
+    color: #0d9488;
+    font-weight: 600;
 }
 
-.card-patient:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-
-/* Custom Checkbox */
-.check-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    cursor: pointer;
+.table-mmrc {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-#signature-pad {
-    border: 2px dashed #cbd5e1;
-    border-radius: 1rem;
+.table-mmrc th {
     background: #f8fafc;
+    padding: 0.75rem;
+    text-align: left;
+    font-size: 0.75rem;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.table-mmrc td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
 }
