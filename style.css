@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+body { 
+    font-family: 'Plus Jakarta Sans', sans-serif; 
+    color: #1e293b;
+}
+
+.input-field {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid #f1f5f9;
+    border-radius: 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f8fafc;
+}
+
+.input-field:focus {
+    border-color: #0d9488;
+    background: #fff;
+    box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.1);
+    outline: none;
+}
+
+.nav-btn {
+    width: 100%;
+    text-align: left;
+    padding: 1rem 1.25rem;
+    border-radius: 1.25rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.nav-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.nav-btn.active {
+    background: #0d9488;
+    color: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
