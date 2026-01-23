@@ -1,59 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-body { font-family: 'Poppins', sans-serif; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
 .input-field {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    font-size: 0.875rem;
-    transition: all 0.2s;
+    @apply w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all text-sm;
 }
 
-.input-field:focus {
-    border-color: #0d9488;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
-    outline: none;
+.label-title {
+    @apply block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1;
 }
 
 .nav-btn {
-    width: 100%;
-    text-align: left;
-    padding: 0.8rem 1rem;
-    border-radius: 0.75rem;
-    color: #64748b;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
+    @apply w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 font-semibold transition-all hover:bg-slate-50 hover:text-teal-600;
 }
 
-.nav-btn:hover { background: #f1f5f9; color: #0d9488; }
-.nav-btn.active { background: #f0fdfa; color: #0d9488; font-weight: 700; }
+.nav-btn.active {
+    @apply bg-teal-50 text-teal-600 shadow-sm font-bold;
+}
 
 .card-patient {
-    background: white;
-    border-radius: 1.5rem;
-    border: 1px solid #f1f5f9;
-    padding: 1.5rem;
-    transition: transform 0.2s, box-shadow 0.2s;
+    @apply bg-white border border-slate-100 p-8 rounded-[2rem] shadow-sm transition-all hover:shadow-xl hover:-translate-y-1;
 }
 
-.card-patient:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-
-/* Custom Checkbox */
-.check-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    cursor: pointer;
+.btn-primary {
+    @apply bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg transition-all;
 }
 
 #signature-pad {
-    border: 2px dashed #cbd5e1;
-    border-radius: 1rem;
-    background: #f8fafc;
+    @apply bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-crosshair;
 }
