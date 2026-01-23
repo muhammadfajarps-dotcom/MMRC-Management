@@ -9,7 +9,7 @@ const app = {
     login() {
         const u = document.getElementById('login-user').value;
         const p = document.getElementById('login-pass').value;
-        if (u === 'OPERASIONAL.MMRC' && p === 'MMRC1999') {
+        if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
             document.getElementById('auth-layer').style.display = 'none';
             document.getElementById('app-layer').classList.remove('hidden');
             this.nav('dashboard');
@@ -29,6 +29,7 @@ const app = {
 
     render() {
         const container = document.getElementById('main-content');
+        if(!container) return;
         container.innerHTML = '';
         if (this.currentPage === 'dashboard') this.viewDashboard(container);
         if (this.currentPage === 'medicine') this.viewMedicine(container);
@@ -39,7 +40,7 @@ const app = {
         if (this.currentPage === 'therapy') this.viewTherapy(container);
     },
 
-    // --- 1. MEDICINE & STOCK (TAMBAH EDIT, HAPUS, CARI) ---
+    // --- 1. MEDICINE & STOCK (FIXED) ---
     viewMedicine(container) {
         container.innerHTML = `
             <div class="space-y-6">
@@ -65,7 +66,56 @@ const app = {
             </div>`;
     },
 
-    // --- 2. TTV & GDS (TAMBAH EDIT, HAPUS, CARI) ---
+    modalMedStock(patientId) {
+        document.getElementById('modal-title').innerText = "Tambah Stok Obat";
+        document.getElementById('modal-body').innerHTML = `
+            <form onsubmit="app.saveNewMed(event, '${patientId}')" class="space-y-4">
+                <input name="name" placeholder="Nama Obat" class="input-field" required>
+                <input type="number" name="init" placeholder="Jumlah Stok Awal" class="input-field" required>
+                <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan Obat</button>
+            </form>`;
+        this.openModal();
+    },
+
+    saveNewMed(e, patientId) {
+        e.preventDefault();
+        const p = this.data.patients.find(x => x.id === patientId);
+        if(!p.medicine) p.medicine = { stock: [] };
+        p.medicine.stock.push({
+            name: e.target.name.value,
+            init: parseInt(e.target.init.value),
+            used: 0
+        });
+        this.saveDB(); this.closeModal(); this.render();
+    },
+
+    editMed(patientId, index) {
+        const p = this.data.patients.find(x => x.id === patientId);
+        const m = p.medicine.stock[index];
+        Swal.fire({
+            title: 'Edit Nama Obat',
+            input: 'text',
+            inputValue: m.name,
+            showCancelButton: true
+        }).then(res => {
+            if(res.value) {
+                m.name = res.value;
+                this.saveDB(); this.render();
+            }
+        });
+    },
+
+    useMed(id, idx) {
+        const p = this.data.patients.find(x => x.id === id);
+        if(p.medicine.stock[idx].init - p.medicine.stock[idx].used > 0) {
+            p.medicine.stock[idx].used++;
+            this.saveDB(); this.render();
+        } else {
+            Swal.fire('Habis', 'Stok obat sudah 0', 'error');
+        }
+    },
+
+    // --- 2. TTV & GDS (FIXED) ---
     viewTTV(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
@@ -91,7 +141,51 @@ const app = {
             </div>`).join('');
     },
 
-    // --- 3. VISIT DOKTER (TAMBAH EDIT, HAPUS, CARI) ---
+    modalTTV(id) {
+        document.getElementById('modal-title').innerText = "Input TTV Baru";
+        document.getElementById('modal-body').innerHTML = `
+            <form onsubmit="app.saveTTV(event, '${id}')" class="space-y-4">
+                <input name="td" placeholder="Tensi Darah (TD)" class="input-field" required>
+                <input name="gds" placeholder="Gula Darah (GDS)" class="input-field" required>
+                <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan TTV</button>
+            </form>`;
+        this.openModal();
+    },
+
+    saveTTV(e, id) {
+        e.preventDefault();
+        const p = this.data.patients.find(x => x.id === id);
+        if(!p.ttv) p.ttv = [];
+        p.ttv.push({
+            time: new Date().toLocaleString('id-ID'),
+            td: e.target.td.value,
+            gds: e.target.gds.value
+        });
+        this.saveDB(); this.closeModal(); this.render();
+    },
+
+    editTTV(id, idx) {
+        const p = this.data.patients.find(x => x.id === id);
+        const t = p.ttv[idx];
+        document.getElementById('modal-title').innerText = "Edit TTV";
+        document.getElementById('modal-body').innerHTML = `
+            <form onsubmit="app.updateTTV(event, '${id}', ${idx})" class="space-y-4">
+                <input name="td" value="${t.td}" class="input-field" required>
+                <input name="gds" value="${t.gds}" class="input-field" required>
+                <button class="w-full bg-amber-600 text-white py-2 rounded">Update TTV</button>
+            </form>`;
+        this.openModal();
+    },
+
+    updateTTV(e, id, idx) {
+        e.preventDefault();
+        const p = this.data.patients.find(x => x.id === id);
+        p.ttv[idx].td = e.target.td.value;
+        p.ttv[idx].gds = e.target.gds.value;
+        this.saveDB(); this.closeModal(); this.render();
+    },
+
+    // --- 3. VISIT DOKTER (FIXED) ---
     viewVisit(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
@@ -103,7 +197,6 @@ const app = {
                     ${(p.visits || []).map((v, i) => `
                     <div class="border rounded-xl p-3 bg-slate-50 relative">
                         <div class="absolute top-2 right-2 flex gap-2">
-                            <button onclick="app.editVisit('${p.id}', ${i})" class="text-amber-600"><i class="fas fa-edit"></i></button>
                             <button onclick="app.delSubItem('${p.id}', 'visits', ${i})" class="text-red-600"><i class="fas fa-trash"></i></button>
                         </div>
                         <img src="${v.photo}" class="w-full h-32 object-cover rounded mb-2">
@@ -115,51 +208,44 @@ const app = {
             </div>`).join('');
     },
 
-    // --- 4 & 5. DOWNLOAD DOCX (LENGKAP TEKS + GAMBAR + GRAFIK) ---
-    async exportToWord(patientId) {
-        const p = this.data.patients.find(x => x.id === patientId);
-        const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
-
-        // Mengambil screenshot grafik jika ada
-        let chartImg;
-        const chartCanvas = document.getElementById(`chart-${p.id}`);
-        if(chartCanvas) chartImg = chartCanvas.toDataURL("image/png");
-
-        const doc = new Document({
-            sections: [{
-                children: [
-                    new Paragraph({ children: [new TextRun({ text: `DATA PASIEN: ${p.reg.name}`, bold: true, size: 32 })] }),
-                    new Paragraph({ text: `Usia: ${p.reg.age} | Alamat: ${p.reg.addr}` }),
-                    new Paragraph({ text: `Status: ${p.reg.status} | Wali: ${p.reg.guardian}` }),
-                    
-                    new Paragraph({ text: "\nI. RIWAYAT & DIAGNOSA", bold: true }),
-                    new Paragraph({ text: `Diagnosa Masuk: ${p.diagnosis?.entry_diag || '-'}` }),
-                    new Paragraph({ text: `Resep Obat: ${p.diagnosis?.rx || '-'}` }),
-
-                    new Paragraph({ text: "\nII. GRAFIK BPSS (7 HARI)", bold: true }),
-                    ...(chartImg ? [new Paragraph({
-                        children: [new ImageRun({ data: chartImg, transformation: { width: 400, height: 200 } })]
-                    })] : [new Paragraph("Tidak ada data grafik")]),
-
-                    new Paragraph({ text: "\nIII. DATA VISIT DOKTER", bold: true }),
-                    ...p.visits.map(v => new Paragraph({
-                        children: [
-                            new TextRun({ text: `Waktu: ${v.time}\nCatatan: ${v.note}`, break: 1 }),
-                            new ImageRun({ data: v.sign, transformation: { width: 100, height: 40 } })
-                        ]
-                    }))
-                ]
-            }]
-        });
-
-        const blob = await Packer.toBlob(doc);
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Data_MMRC_${p.reg.name}.docx`;
-        link.click();
+    modalVisit(id) {
+        document.getElementById('modal-title').innerText = "Input Visit Baru";
+        document.getElementById('modal-body').innerHTML = `
+            <div class="space-y-4">
+                <input type="file" id="v_photo" class="input-field" accept="image/*">
+                <textarea id="v_note" placeholder="Catatan Dokter..." class="input-field h-24"></textarea>
+                <div class="border rounded bg-white p-2">
+                    <p class="text-[10px] text-slate-400">Tanda Tangan:</p>
+                    <canvas id="sig-pad" class="w-full h-32 border"></canvas>
+                </div>
+                <button onclick="app.saveVisit('${id}')" class="w-full bg-teal-600 text-white py-2 rounded font-bold">SIMPAN VISIT</button>
+            </div>`;
+        this.openModal();
+        const canvas = document.getElementById('sig-pad');
+        this.signaturePad = new SignaturePad(canvas);
     },
 
-    // --- FITUR UTILS: HAPUS & CARI ---
+    async saveVisit(id) {
+        const p = this.data.patients.find(x => x.id === id);
+        const file = document.getElementById('v_photo').files[0];
+        const note = document.getElementById('v_note').value;
+        const sign = this.signaturePad.toDataURL();
+        
+        let photo = "https://via.placeholder.com/150";
+        if(file) photo = await this.toBase64(file);
+
+        if(!p.visits) p.visits = [];
+        p.visits.push({
+            time: new Date().toLocaleString('id-ID'),
+            note: note,
+            photo: photo,
+            sign: sign
+        });
+        
+        this.saveDB(); this.closeModal(); this.render();
+    },
+
+    // --- UTILS (WAJIB ADA) ---
     delSubItem(patientId, path, index) {
         Swal.fire({
             title: 'Hapus Item?',
@@ -171,12 +257,9 @@ const app = {
                 const p = this.data.patients.find(x => x.id === patientId);
                 const parts = path.split('.');
                 let target = p;
-                for(let i=0; i<parts.length; i++) {
-                    target = target[parts[i]];
-                }
+                for(let i=0; i<parts.length; i++) { target = target[parts[i]]; }
                 target.splice(index, 1);
-                this.saveDB();
-                this.render();
+                this.saveDB(); this.render();
             }
         });
     },
@@ -190,5 +273,14 @@ const app = {
 
     openModal() { document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('modal-container').classList.add('flex'); },
     closeModal() { document.getElementById('modal-container').classList.add('hidden'); },
-    toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); })
+    toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); }),
+    
+    // Fallback untuk dashboard agar tidak error saat render
+    viewDashboard(c) { c.innerHTML = `<h1 class="text-2xl font-bold">Selamat Datang di MMRC</h1><p>Gunakan menu samping untuk mengelola data.</p>`; },
+    viewCrisis(c) { c.innerHTML = `Halaman Crisis`; },
+    viewProgram(c) { c.innerHTML = `Halaman Program`; },
+    viewTherapy(c) { c.innerHTML = `Halaman Therapy`; }
 };
+
+// Auto render saat pertama buka
+app.render();
