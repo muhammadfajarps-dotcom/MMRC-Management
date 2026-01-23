@@ -6,17 +6,38 @@ const app = {
         localStorage.setItem('MMRC_DATABASE', JSON.stringify(this.data));
     },
 
-    login() {
-        const u = document.getElementById('login-user').value;
-        const p = document.getElementById('login-pass').value;
-        if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-            document.getElementById('auth-layer').style.display = 'none';
-            document.getElementById('app-layer').classList.remove('hidden');
-            this.nav('dashboard');
-        } else {
-            Swal.fire('Error', 'Login Gagal', 'error');
-        }
-    },
+   login() {
+    // Ambil element input
+    const userInput = document.getElementById('login-user');
+    const passInput = document.getElementById('login-pass');
+
+    // Validasi apakah element ada di HTML
+    if (!userInput || !passInput) {
+        console.error("Input login tidak ditemukan di HTML!");
+        return;
+    }
+
+    const u = userInput.value.trim(); // .trim() untuk buang spasi liar
+    const p = passInput.value.trim();
+
+    if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+        // Hilangkan layar login, munculkan aplikasi
+        document.getElementById('auth-layer').classList.add('hidden');
+        document.getElementById('app-layer').classList.remove('hidden');
+        
+        // Pindah ke dashboard
+        this.nav('dashboard');
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Login Berhasil',
+            timer: 1000,
+            showConfirmButton: false
+        });
+    } else {
+        Swal.fire('Error', 'Username atau Password Salah!', 'error');
+    }
+},
 
     nav(page) {
         this.currentPage = page;
