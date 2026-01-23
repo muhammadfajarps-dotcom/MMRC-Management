@@ -1,7 +1,6 @@
 const app = {
     data: JSON.parse(localStorage.getItem('MMRC_DATABASE')) || { patients: [] },
     currentPage: 'dashboard',
-    signaturePad: null,
 
     saveDB() {
         localStorage.setItem('MMRC_DATABASE', JSON.stringify(this.data));
@@ -40,42 +39,30 @@ const app = {
         if (this.currentPage === 'therapy') this.viewTherapy(container);
     },
 
-    // --- 1. MEDICINE & STOCK (UPGRADE: EDIT & HAPUS LOG) ---
+    // --- 1. MEDICINE & STOCK (FIX: EDIT & HAPUS ADA) ---
     viewMedicine(container) {
-        container.innerHTML = this.data.patients.map(p => `
-            <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-teal-700">${p.reg.name}</h3>
-                    <button onclick="app.modalMedStock('${p.id}')" class="bg-teal-600 text-white px-3 py-1 rounded-lg text-xs">+ Stok</button>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <p class="font-bold text-[10px] text-slate-400 mb-2 uppercase">Stok Obat</p>
-                        <table class="w-full text-xs text-left border">
-                            <tr class="bg-slate-50 border-b"><th class="p-2">Obat</th><th class="p-2">Sisa</th><th class="p-2">Aksi</th></tr>
-                            ${(p.medicine?.stock || []).map((m, i) => `
-                            <tr class="border-b">
-                                <td class="p-2">${m.name}</td><td class="p-2">${m.init - m.used}</td>
-                                <td class="p-2 flex gap-2">
-                                    <button onclick="app.modalMedStock('${p.id}', ${i})" class="text-amber-600"><i class="fas fa-edit"></i></button>
-                                    <button onclick="app.delSubItem('${p.id}', 'medicine.stock', ${i})" class="text-red-600"><i class="fas fa-trash"></i></button>
-                                    <button onclick="app.useMed('${p.id}', ${i})" class="bg-blue-500 text-white px-2 rounded">Pakai</button>
-                                </td>
-                            </tr>`).join('')}
-                        </table>
+        container.innerHTML = `
+            <div class="space-y-6">
+                ${this.data.patients.map(p => `
+                <div class="bg-white p-6 rounded-3xl shadow-sm border search-item">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-teal-700">${p.reg.name}</h3>
+                        <button onclick="app.modalMedStock('${p.id}')" class="bg-teal-600 text-white px-3 py-1 rounded-lg text-xs">+ Stok</button>
                     </div>
-                    <div>
-                        <p class="font-bold text-[10px] text-slate-400 mb-2 uppercase">Catatan Penggunaan</p>
-                        <div class="space-y-2 h-40 overflow-y-auto bg-slate-50 p-2 rounded">
-                            ${(p.medicine?.logs || []).map((l, i) => `
-                            <div class="p-2 bg-white border rounded text-[10px] flex justify-between items-center">
-                                <span><b>${l.time}</b>: ${l.name}</span>
-                                <button onclick="app.delSubItem('${p.id}', 'medicine.logs', ${i})" class="text-red-400"><i class="fas fa-times"></i></button>
-                            </div>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            </div>`).join('');
+                    <table class="w-full text-xs text-left border">
+                        <tr class="bg-slate-50 border-b"><th class="p-2">Obat</th><th class="p-2">Sisa</th><th class="p-2">Aksi</th></tr>
+                        ${(p.medicine?.stock || []).map((m, i) => `
+                        <tr class="border-b">
+                            <td class="p-2">${m.name}</td><td class="p-2">${m.init - m.used}</td>
+                            <td class="p-2 flex gap-2">
+                                <button onclick="app.modalMedStock('${p.id}', ${i})" class="text-amber-600"><i class="fas fa-edit"></i></button>
+                                <button onclick="app.delSubItem('${p.id}', 'medicine.stock', ${i})" class="text-red-600"><i class="fas fa-trash"></i></button>
+                                <button onclick="app.useMed('${p.id}', ${i})" class="bg-blue-500 text-white px-2 rounded">Pakai</button>
+                            </td>
+                        </tr>`).join('')}
+                    </table>
+                </div>`).join('')}
+            </div>`;
     },
 
     modalMedStock(id, idx = null) {
@@ -85,8 +72,8 @@ const app = {
         document.getElementById('modal-body').innerHTML = `
             <form onsubmit="app.saveMedStock(event, '${id}', ${idx})" class="space-y-4">
                 <input name="name" value="${m ? m.name : ''}" placeholder="Nama Obat" class="input-field" required>
-                <input type="number" name="init" value="${m ? m.init : ''}" placeholder="Jumlah Stok" class="input-field" required>
-                <button class="w-full bg-teal-600 text-white py-2 rounded font-bold">SIMPAN</button>
+                <input type="number" name="init" value="${m ? m.init : ''}" placeholder="Total Stok" class="input-field" required>
+                <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan</button>
             </form>`;
         this.openModal();
     },
@@ -94,14 +81,18 @@ const app = {
     saveMedStock(e, id, idx) {
         e.preventDefault();
         const p = this.data.patients.find(x => x.id === id);
-        if(!p.medicine) p.medicine = {stock:[], logs:[]};
-        const data = { name: e.target.name.value, init: parseInt(e.target.init.value), used: idx !== null ? p.medicine.stock[idx].used : 0 };
+        if(!p.medicine) p.medicine = { stock: [], logs: [] };
+        const data = { 
+            name: e.target.name.value, 
+            init: parseInt(e.target.init.value), 
+            used: idx !== null ? p.medicine.stock[idx].used : 0 
+        };
         if(idx !== null) p.medicine.stock[idx] = data;
         else p.medicine.stock.push(data);
         this.saveDB(); this.closeModal(); this.render();
     },
 
-    // --- 2. TTV & GDS (UPGRADE: EDIT AKTIF) ---
+    // --- 2. TTV & GDS (FIX: EDIT AKTIF) ---
     viewTTV(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
@@ -109,17 +100,21 @@ const app = {
                     <h3 class="font-bold">${p.reg.name}</h3>
                     <button onclick="app.modalTTV('${p.id}')" class="bg-teal-600 text-white px-3 py-1 rounded text-xs">+ Input TTV</button>
                 </div>
-                <table class="w-full text-xs text-left border">
-                    <tr class="bg-slate-50 border-b"><th class="p-2">Waktu</th><th class="p-2">TD</th><th class="p-2">GDS</th><th class="p-2">Aksi</th></tr>
-                    ${(p.ttv || []).map((t, i) => `
-                    <tr class="border-b">
-                        <td class="p-2">${t.time}</td><td class="p-2">${t.td}</td><td class="p-2">${t.gds}</td>
-                        <td class="p-2 flex gap-2">
-                            <button onclick="app.modalTTV('${p.id}', ${i})" class="text-amber-600"><i class="fas fa-edit"></i></button>
-                            <button onclick="app.delSubItem('${p.id}', 'ttv', ${i})" class="text-red-600"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`).join('')}
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border">
+                        <tr class="bg-slate-50 border-b">
+                            <th class="p-2">Waktu</th><th class="p-2">TD</th><th class="p-2">GDS</th><th class="p-2">Aksi</th>
+                        </tr>
+                        ${(p.ttv || []).map((t, i) => `
+                        <tr class="border-b">
+                            <td class="p-2">${t.time}</td><td class="p-2">${t.td}</td><td class="p-2">${t.gds}</td>
+                            <td class="p-2 flex gap-2">
+                                <button onclick="app.modalTTV('${p.id}', ${i})" class="text-amber-600"><i class="fas fa-edit"></i></button>
+                                <button onclick="app.delSubItem('${p.id}', 'ttv', ${i})" class="text-red-600"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`).join('')}
+                    </table>
+                </div>
             </div>`).join('');
     },
 
@@ -128,11 +123,11 @@ const app = {
         const t = idx !== null ? p.ttv[idx] : null;
         document.getElementById('modal-title').innerText = idx !== null ? 'Edit TTV' : 'Input TTV';
         document.getElementById('modal-body').innerHTML = `
-            <form onsubmit="app.saveTTV(event, '${id}', ${idx})" class="grid grid-cols-2 gap-4">
-                <input name="time" value="${t ? t.time : new Date().toLocaleString()}" class="input-field col-span-2">
-                <input name="td" value="${t ? t.td : ''}" placeholder="TD" class="input-field">
+            <form onsubmit="app.saveTTV(event, '${id}', ${idx})" class="space-y-4">
+                <input name="time" value="${t ? t.time : new Date().toLocaleString()}" class="input-field">
+                <input name="td" value="${t ? t.td : ''}" placeholder="Tensi Darah" class="input-field">
                 <input name="gds" value="${t ? t.gds : ''}" placeholder="GDS" class="input-field">
-                <button class="col-span-2 bg-teal-600 text-white py-2 rounded font-bold">SIMPAN</button>
+                <button class="w-full bg-teal-600 text-white py-2 rounded">Simpan</button>
             </form>`;
         this.openModal();
     },
@@ -146,7 +141,7 @@ const app = {
         this.saveDB(); this.closeModal(); this.render();
     },
 
-    // --- 3. VISIT DOKTER (UPGRADE: FIX SIMPAN, EDIT & HAPUS) ---
+    // --- 3. VISIT DOKTER (FIX: SIMPAN, EDIT, HAPUS BERFUNGSI) ---
     viewVisit(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
@@ -173,44 +168,41 @@ const app = {
     modalVisit(id, idx = null) {
         const p = this.data.patients.find(x => x.id === id);
         const v = idx !== null ? p.visits[idx] : null;
-        document.getElementById('modal-title').innerText = idx !== null ? 'Edit Visit' : 'Input Visit Baru';
+        document.getElementById('modal-title').innerText = 'Input Visit Dokter';
         document.getElementById('modal-body').innerHTML = `
-            <div class="space-y-4">
-                <input type="file" id="v_photo" class="input-field">
-                <textarea id="v_note" placeholder="Catatan Dokter" class="input-field h-24">${v ? v.note : ''}</textarea>
-                <div class="border p-2 bg-white rounded"><canvas id="sig-pad" class="w-full h-32"></canvas></div>
-                <button onclick="app.saveVisit('${id}', ${idx})" class="w-full bg-teal-600 text-white py-2 rounded font-bold">SIMPAN VISIT</button>
-            </div>`;
+            <input type="file" id="v_photo" class="input-field mb-2">
+            <textarea id="v_note" placeholder="Catatan" class="input-field h-24 mb-2">${v ? v.note : ''}</textarea>
+            <div class="border rounded bg-white"><canvas id="sig-pad" class="w-full h-32"></canvas></div>
+            <button onclick="app.saveVisit('${id}', ${idx})" class="w-full bg-teal-600 text-white py-3 mt-4 rounded-xl font-bold">SIMPAN VISIT</button>`;
         this.openModal();
         setTimeout(() => {
             const canvas = document.getElementById('sig-pad');
-            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
             this.signaturePad = new SignaturePad(canvas);
             if(v) this.signaturePad.fromDataURL(v.sign);
-        }, 100);
+        }, 200);
     },
 
     async saveVisit(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
-        const photoFile = document.getElementById('v_photo').files[0];
-        let photoBase64 = idx !== null ? p.visits[idx].photo : 'https://via.placeholder.com/150';
-        
-        if(photoFile) photoBase64 = await this.toBase64(photoFile);
-        
+        const file = document.getElementById('v_photo').files[0];
+        let photo = idx !== null ? p.visits[idx].photo : 'https://via.placeholder.com/150';
+        if(file) photo = await this.toBase64(file);
+
         const data = {
             time: idx !== null ? p.visits[idx].time : new Date().toLocaleString(),
-            photo: photoBase64,
             note: document.getElementById('v_note').value,
+            photo: photo,
             sign: this.signaturePad.toDataURL()
         };
 
+        if(!p.visits) p.visits = [];
         if(idx !== null) p.visits[idx] = data;
         else p.visits.push(data);
 
         this.saveDB(); this.closeModal(); this.render();
     },
 
-    // --- 4. RENCANA TERAPI (UPGRADE: SIMPAN, EDIT, HAPUS) ---
+    // --- 4. RENCANA TERAPI (FIX: SIMPAN, EDIT, HAPUS) ---
     viewTherapy(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 search-item">
@@ -243,30 +235,36 @@ const app = {
     },
 
     delTherapy(id) {
-        if(confirm('Hapus rencana terapi?')) {
-            this.data.patients.find(x => x.id === id).therapy = '';
+        if(confirm('Hapus rencana terapi ini?')) {
+            const p = this.data.patients.find(x => x.id === id);
+            p.therapy = '';
             this.saveDB(); this.render();
         }
     },
 
-    // --- FITUR UTILS (TETAP SAMA) ---
+    // --- UTILS & CORE ---
     useMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         p.medicine.stock[idx].used++;
-        if(!p.medicine.logs) p.medicine.logs = [];
-        p.medicine.logs.unshift({ name: p.medicine.stock[idx].name, time: new Date().toLocaleString() });
         this.saveDB(); this.render();
     },
 
     delSubItem(patientId, path, index) {
-        if(confirm('Hapus item ini?')) {
-            const p = this.data.patients.find(x => x.id === patientId);
-            const parts = path.split('.');
-            let target = p;
-            for(let i=0; i<parts.length; i++) target = target[parts[i]];
-            target.splice(index, 1);
-            this.saveDB(); this.render();
-        }
+        Swal.fire({
+            title: 'Hapus Item?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Hapus'
+        }).then(res => {
+            if(res.isConfirmed) {
+                const p = this.data.patients.find(x => x.id === patientId);
+                const parts = path.split('.');
+                let target = p;
+                for(let i=0; i<parts.length; i++) target = target[parts[i]];
+                target.splice(index, 1);
+                this.saveDB(); this.render();
+            }
+        });
     },
 
     search() {
@@ -276,7 +274,13 @@ const app = {
         });
     },
 
-    openModal() { document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('modal-container').classList.add('flex'); },
-    closeModal() { document.getElementById('modal-container').classList.add('hidden'); },
+    openModal() { 
+        document.getElementById('modal-container').classList.remove('hidden'); 
+        document.getElementById('modal-container').classList.add('flex'); 
+    },
+    closeModal() { 
+        document.getElementById('modal-container').classList.add('hidden'); 
+        document.getElementById('modal-container').classList.remove('flex');
+    },
     toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); })
 };
