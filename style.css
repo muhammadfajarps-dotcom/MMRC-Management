@@ -1,45 +1,59 @@
-/* Styling agar kolom terlihat jelas dan rapi */
-body { font-family: 'Segoe UI', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body { font-family: 'Poppins', sans-serif; }
+
+.input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.input-field:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    outline: none;
+}
 
 .nav-btn {
-    width: 100%; text-align: left; padding: 10px 15px;
-    border-radius: 8px; color: #555; transition: 0.2s;
-    display: flex; align-items: center; gap: 10px;
-}
-.nav-btn:hover { background-color: #f0fdfa; color: #0d9488; }
-.nav-btn.active { background-color: #e6fffa; color: #0f766e; font-weight: bold; border-right: 4px solid #0f766e; }
-
-/* Tampilan Kolom Dashboard */
-.dashboard-card {
-    background: white; border: 1px solid #e5e7eb;
-    border-radius: 12px; margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    overflow: hidden;
+    width: 100%;
+    text-align: left;
+    padding: 0.8rem 1rem;
+    border-radius: 0.75rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
 }
 
-.column-header {
-    background: #f8fafc; padding: 10px 20px;
-    font-weight: bold; font-size: 0.85rem; color: #64748b;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    border-bottom: 1px solid #e2e8f0;
+.nav-btn:hover { background: #f1f5f9; color: #0d9488; }
+.nav-btn.active { background: #f0fdfa; color: #0d9488; font-weight: 700; }
+
+.card-patient {
+    background: white;
+    border-radius: 1.5rem;
+    border: 1px solid #f1f5f9;
+    padding: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.column-body { padding: 20px; }
+.card-patient:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
 
-.info-label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 4px; }
-.info-value { font-size: 0.9rem; color: #334155; font-weight: 500; margin-bottom: 12px; }
-
-.table-custom { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.table-custom th { text-align: left; padding: 10px; background: #f1f5f9; border-bottom: 2px solid #cbd5e1; }
-.table-custom td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-
-.input-field { width: 100%; border: 1px solid #cbd5e1; padding: 8px; rounded: 6px; font-size: 0.9rem; }
-.btn-action { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
-
-/* Intervensi Checkbox Display */
-.check-display {
-    display: inline-flex; align-items: center; gap: 5px; 
-    padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;
+/* Custom Checkbox */
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
 }
-.check-yes { background: #dcfce7; color: #166534; }
-.check-no { background: #f1f5f9; color: #94a3b8; text-decoration: line-through; }
+
+#signature-pad {
+    border: 2px dashed #cbd5e1;
+    border-radius: 1rem;
+    background: #f8fafc;
+}
