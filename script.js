@@ -9,7 +9,7 @@ const app = {
     login() {
         const u = document.getElementById('login-user').value;
         const p = document.getElementById('login-pass').value;
-        if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+        if (u === 'OPERASIONAL.MMRC' && p === 'MMRC1999') {
             document.getElementById('auth-layer').style.display = 'none';
             document.getElementById('app-layer').classList.remove('hidden');
             this.nav('dashboard');
