@@ -1,7 +1,11 @@
-// 1. KONFIGURASI FIREBASE
+// 1. KONFIGURASI FIREBASE ANDA
 const firebaseConfig = {
     apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
     authDomain: "mmrc-stock.firebaseapp.com",
+    
+    // INI YANG SEBELUMNYA HILANG, MAKANYA STUCK:
+    databaseURL: "https://mmrc-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
+    
     projectId: "mmrc-stock",
     storageBucket: "mmrc-stock.firebasestorage.app",
     messagingSenderId: "722563453659",
