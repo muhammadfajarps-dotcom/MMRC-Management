@@ -54,17 +54,36 @@ const app = {
     },
 
     loadDB() {
-        if (this.isInitialLoad) {
-            Swal.fire({ title: 'MMRC System', text: 'Sinkronisasi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-        }
+    // Tampilkan loading
+    Swal.fire({ 
+        title: 'MMRC System', 
+        text: 'Menghubungkan ke Cloud...', 
+        allowOutsideClick: false, 
+        didOpen: () => { Swal.showLoading(); }
+    });
 
-        // Listener Real-time (Auto update antar device)
+    // SAFETY TIMEOUT: Jika 5 detik gagal konek ke cloud, paksa buka aplikasi
+    const backupTimeout = setTimeout(() => {
+        if (this.isInitialLoad) {
+            console.warn("Cloud slow/offline. Loading local data...");
+            const local = localStorage.getItem('MMRC_DATABASE');
+            if (local) this.data = this.fixDataStructure(JSON.parse(local));
+            this.render();
+            this.isInitialLoad = false;
+            Swal.close();
+        }
+    }, 5000); 
+
+    try {
         db.ref('mmrc_data').on('value', (snapshot) => {
+            clearTimeout(backupTimeout); // Batalkan timeout karena cloud respon
             const cloudData = snapshot.val();
+            
             if (cloudData) {
                 this.data = this.fixDataStructure(cloudData);
                 localStorage.setItem('MMRC_DATABASE', JSON.stringify(this.data));
             } else {
+                // Jika database cloud benar-benar kosong (awal setup)
                 const local = localStorage.getItem('MMRC_DATABASE');
                 if (local) this.data = this.fixDataStructure(JSON.parse(local));
             }
@@ -75,8 +94,20 @@ const app = {
                 Swal.close();
                 this.isInitialLoad = false;
             }
+        }, (error) => {
+            console.error("Firebase Error:", error);
+            // Jika error (misal permission denied), tetap buka aplikasi
+            if (this.isInitialLoad) {
+                Swal.close();
+                this.isInitialLoad = false;
+                this.render();
+            }
         });
-    },
+    } catch (e) {
+        console.error("Initialization Error:", e);
+        Swal.close();
+    }
+},
 
     // --- NAVIGASI & AUTH ---
     login() {
