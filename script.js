@@ -1,4 +1,6 @@
-// 1. KONFIGURASI FIREBASE BARU (CLAUDE FLARE)
+// ============================================================
+// 1. KONFIGURASI FIREBASE (CLAUDE FLARE - SESUAI PERMINTAAN)
+// ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
   authDomain: "mmrc-stock1999.firebaseapp.com",
@@ -9,44 +11,45 @@ const firebaseConfig = {
   measurementId: "G-WJJQRYDYPF"
 };
 
-// 2. INITIALIZE FIREBASE
+// INITIALIZE FIREBASE
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
 
+// ============================================================
+// 2. APLIKASI UTAMA (LOGIC)
+// ============================================================
 const app = {
     data: { patients: [] }, 
     currentPage: 'dashboard',
     signaturePad: null,
-    saveTimer: null, // Timer untuk debouncing save
+    saveTimer: null,
     isRendering: false,
 
-    // --- SISTEM PENYIMPANAN ANTI-LAG (ASYNCHRONOUS) ---
+    // --- SISTEM SIMPAN ANTI-LAG (OPTIMISTIC UI UPDATE) ---
     saveDB() {
-        // BATALKAN penyimpanan sebelumnya jika ada request baru dalam waktu dekat
-        // Ini mencegah browser 'hang' karena keseringan simpan data berat
+        // Debounce: Cegah simpan beruntun yang bikin berat
         if (this.saveTimer) clearTimeout(this.saveTimer);
 
         this.saveTimer = setTimeout(() => {
-            // Proses berat (JSON.stringify) dilakukan setelah UI selesai animasi
             try {
-                // 1. Simpan Local (Backup)
+                // 1. Simpan Local Storage (Backup Instan)
                 const jsonStr = JSON.stringify(this.data);
                 localStorage.setItem('MMRC_DATABASE', jsonStr);
                 
-                // 2. Simpan Cloud (Firebase)
+                // 2. Simpan Firebase (Background Process)
                 db.ref('mmrc_data').set(this.data).catch(e => {
-                    console.warn("Internet slow, saved local only:", e);
+                    console.warn("Internet lambat, data tersimpan di HP:", e);
                 });
             } catch (err) {
-                console.error("Storage Full / Error:", err);
+                console.error("Storage Error:", err);
             }
-        }, 800); // Delay 0.8 detik (User tidak akan sadar, tapi bikin HP adem)
+        }, 800); // Delay 0.8 detik di background, user tidak akan merasakan lag
     },
 
     loadDB() {
-        // STEP 1: Load Local Instan (Biar langsung kebuka)
+        // STEP 1: Load Local Instan
         const local = localStorage.getItem('MMRC_DATABASE');
         if (local) {
             try {
@@ -55,20 +58,19 @@ const app = {
             } catch (e) { console.error(e); }
         }
 
-        // STEP 2: Realtime Sync (Dioptimalkan agar tidak bentrok dengan save lokal)
+        // STEP 2: Realtime Sync dari Cloud
         db.ref('mmrc_data').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
-                // Cek apakah data benar-benar beda? (Untuk hindari render ulang yg tidak perlu)
-                // Kita gunakan JSON.stringify hanya jika data cloud ada isinya
-                if (!this.data.patients || JSON.stringify(this.data) !== JSON.stringify(cloudData)) {
-                    // Cek jika kita sedang mengetik/edit (hindari timpa data saat ngetik)
-                    if(!document.getElementById('modal-container').classList.contains('flex')) {
-                        this.data = cloudData;
-                        localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
-                        if (!document.getElementById('app-layer').classList.contains('hidden')) {
-                            this.render();
-                        }
+                // Hanya update jika data cloud beda dengan data sekarang (Cegah flicker)
+                // Dan jangan update jika sedang ada modal terbuka (sedang ngetik)
+                const isModalOpen = !document.getElementById('modal-container').classList.contains('hidden');
+                
+                if (!this.data.patients || (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen)) {
+                    this.data = cloudData;
+                    localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
+                    if (!document.getElementById('app-layer').classList.contains('hidden')) {
+                        this.render();
                     }
                 }
             }
@@ -96,16 +98,14 @@ const app = {
         if(btn) btn.classList.add('active');
         document.getElementById('page-title').innerText = page.toUpperCase();
         
-        // Render dengan sedikit delay agar animasi klik menu mulus
+        // Render smooth
         setTimeout(() => this.render(), 50);
     },
 
     render() {
-        // Mencegah render tumpuk (Flickering)
         if(this.isRendering) return;
         this.isRendering = true;
 
-        // RequestAnimationFrame membuat browser menggambar di waktu yang tepat (Smooth)
         requestAnimationFrame(() => {
             const container = document.getElementById('main-content');
             if (container) {
@@ -123,7 +123,7 @@ const app = {
         });
     },
 
-    // --- VIEW DASHBOARD ---
+    // --- DASHBOARD ---
     viewDashboard(container) {
         container.innerHTML = `
             <div class="mb-6 flex justify-between items-center">
@@ -244,8 +244,6 @@ const app = {
         
         // UX TRICK: Close Modal DULUAN biar terasa INSTAN
         this.closeModal(); 
-        
-        // Loading kecil biar user tau ada proses
         const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
         toast.fire({ icon: 'success', title: 'Data disimpan...' });
 
@@ -381,7 +379,6 @@ const app = {
     },
 
     async saveMedStock(pid, idx) {
-        // FAST UX: Tutup Modal -> Render -> Save Background
         const p = this.data.patients.find(x => x.id === pid);
         const name = document.getElementById('ms_name').value;
         const init = parseInt(document.getElementById('ms_init').value);
@@ -480,7 +477,8 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW TTV ---
+    // --- VIEW TTV (TANDA TANDA VITAL) ---
+    // EVALUASI: KOLOM TENSI DARAH DIPERJELAS
     viewTTV(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -490,13 +488,24 @@ const app = {
                 </div>
                 <div class="overflow-x-auto rounded-xl border">
                     <table class="w-full text-[11px] text-left">
-                        <thead class="bg-slate-100 font-bold">
-                            <tr><th class="p-3">Waktu</th><th class="p-3">TD</th><th class="p-3">Sat/RR</th><th class="p-3">TB/BB</th><th class="p-3">GDS</th><th class="p-3 text-right">Aksi</th></tr>
+                        <thead class="bg-slate-100 font-bold text-slate-700">
+                            <tr>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3 bg-teal-50 text-teal-900 border-x border-teal-100 w-32 text-center">Tensi Darah (TD)</th>
+                                <th class="p-3">Sat/RR</th>
+                                <th class="p-3">TB/BB</th>
+                                <th class="p-3">GDS</th>
+                                <th class="p-3 text-right">Aksi</th>
+                            </tr>
                         </thead>
                         <tbody class="divide-y">
                             ${(p.ttv || []).map((t, i) => `
                                 <tr class="hover:bg-slate-50">
-                                    <td class="p-3">${t.time}</td><td class="p-3">${t.td}</td><td class="p-3">${t.sat}% / ${t.rr}</td><td class="p-3">${t.tb}/${t.bb}</td><td class="p-3 font-bold">${t.gds}</td>
+                                    <td class="p-3">${t.time}</td>
+                                    <td class="p-3 font-bold text-center bg-teal-50/50 text-teal-800 border-x border-teal-100">${t.td || '-'}</td>
+                                    <td class="p-3">${t.sat}% / ${t.rr}</td>
+                                    <td class="p-3">${t.tb}/${t.bb}</td>
+                                    <td class="p-3 font-bold">${t.gds}</td>
                                     <td class="p-3 flex gap-2 justify-end">
                                         <button onclick="app.modalTTV('${p.id}', ${i})" class="text-amber-500"><i class="fas fa-edit"></i></button>
                                         <button onclick="app.delSubItem('${p.id}', 'ttv', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
@@ -515,7 +524,10 @@ const app = {
         document.getElementById('modal-title').innerText = t ? "EDIT DATA TTV" : "INPUT DATA TTV";
         document.getElementById('modal-body').innerHTML = `
             <div class="grid grid-cols-2 gap-4">
-                <input id="t_td" value="${t?.td||''}" placeholder="Tensi (ex: 120/80)" class="input-field">
+                <div class="col-span-2 bg-teal-50 p-3 rounded-xl border border-teal-100">
+                    <label class="text-xs font-bold text-teal-800">Tekanan Darah (TD):</label>
+                    <input id="t_td" value="${t?.td||''}" placeholder="Contoh: 120/80" class="input-field mt-1 font-bold text-lg text-center">
+                </div>
                 <input id="t_sat" value="${t?.sat||''}" placeholder="Saturasi (%)" class="input-field">
                 <input id="t_rr" value="${t?.rr||''}" placeholder="Resp Rate (RR)" class="input-field">
                 <input id="t_tb" value="${t?.tb||''}" placeholder="Tinggi (cm)" class="input-field">
@@ -612,7 +624,7 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- VIEW CRISIS ---
+    // --- VIEW CRISIS (EVALUASI: GRAFIK DIPERBAGUS) ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm border-l-4 border-l-red-500">
@@ -653,10 +665,31 @@ const app = {
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: p.crisis.bpss.map((_, i) => `Day ${i+1}`),
-                datasets: [{ label: 'BPSS', data: p.crisis.bpss.map(b => b.eval), borderColor: '#dc2626', fill: true, tension: 0.4 }]
+                labels: p.crisis.bpss.map((_, i) => `Hari ${i+1}`),
+                datasets: [{ 
+                    label: 'Skor BPSS (Tingkat Keparahan)', 
+                    data: p.crisis.bpss.map(b => b.eval), 
+                    borderColor: '#dc2626', 
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    fill: true, 
+                    tension: 0.3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#fff',
+                    pointBorderWidth: 2
+                }]
             },
-            options: { maintainAspectRatio: false }
+            options: { 
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 40, // Max score 40 agar skala jelas
+                        grid: { color: '#f1f5f9' },
+                        title: { display: true, text: 'Total Score (0-40)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
         });
     },
 
@@ -776,43 +809,133 @@ const app = {
         XLSX.writeFile(wb, "MMRC_Database.xlsx");
     },
 
+    // ============================================================
+    // EVALUASI: EXPORT WORD SUPER LENGKAP (FOTO & TANDA TANGAN)
+    // ============================================================
     async exportToWord() {
         if (!this.data.patients || this.data.patients.length === 0) return Swal.fire('Info', 'Data kosong.', 'info');
-        const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType } = docx;
-        const tableRows = [
-            new TableRow({
-                children: [
-                    new TableCell({ children: [new Paragraph({ text: "NAMA", opts: { bold: true } })], width: { size: 25, type: WidthType.PERCENTAGE } }),
-                    new TableCell({ children: [new Paragraph({ text: "DIAGNOSA", opts: { bold: true } })], width: { size: 35, type: WidthType.PERCENTAGE } }),
-                    new TableCell({ children: [new Paragraph({ text: "PROGRAM", opts: { bold: true } })], width: { size: 20, type: WidthType.PERCENTAGE } }),
-                    new TableCell({ children: [new Paragraph({ text: "STATUS", opts: { bold: true } })], width: { size: 20, type: WidthType.PERCENTAGE } }),
-                ],
-            }),
-        ];
-        this.data.patients.forEach(p => {
-            tableRows.push(new TableRow({
-                children: [
-                    new TableCell({ children: [new Paragraph(p.reg.name || "-")] }),
-                    new TableCell({ children: [new Paragraph(p.diagnosis.plan || "-")] }),
-                    new TableCell({ children: [new Paragraph(p.program.type || "-")] }),
-                    new TableCell({ children: [new Paragraph(p.history.current || "-")] }),
-                ],
+        
+        const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, ImageRun, TextRun } = docx;
+
+        // Helper: Convert Base64 to Uint8Array for docx images
+        const b64toBlob = (b64) => {
+            if(!b64 || !b64.includes('base64,')) return null;
+            try {
+                const bin = atob(b64.split(',')[1]);
+                const len = bin.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+                return bytes;
+            } catch(e) { return null; }
+        };
+
+        const children = [];
+        
+        // TITLE
+        children.push(new Paragraph({ text: "LAPORAN LENGKAP MMRC", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
+        children.push(new Paragraph({ text: `Dicetak: ${new Date().toLocaleString('id-ID')}`, alignment: AlignmentType.CENTER }));
+        children.push(new Paragraph({ text: "" })); // Spacer
+
+        // LOOP TIAP PASIEN
+        for (const p of this.data.patients) {
+            // 1. HEADER PASIEN
+            const profileImg = b64toBlob(p.reg.photo);
+            
+            children.push(new Paragraph({ text: `PASIEN: ${p.reg.name} (ID: ${p.id})`, heading: HeadingLevel.HEADING_2, pageBreakBefore: true }));
+            
+            // Tampilkan Foto Profil jika ada
+            if(profileImg) {
+                children.push(new Paragraph({
+                    children: [new ImageRun({ data: profileImg, transformation: { width: 100, height: 100 } })],
+                    alignment: AlignmentType.CENTER
+                }));
+            }
+
+            // 2. BIODATA TABEL
+            children.push(new Paragraph({ text: "BIODATA & DIAGNOSA", heading: HeadingLevel.HEADING_4 }));
+            children.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Diagnosa")] }), new TableCell({ children: [new Paragraph(p.diagnosis.plan || "-")] }) ] }),
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Dokter")] }), new TableCell({ children: [new Paragraph(p.diagnosis.dr_name || "-")] }) ] }),
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Kondisi Terkini")] }), new TableCell({ children: [new Paragraph(p.history.current || "-")] }) ] }),
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Program")] }), new TableCell({ children: [new Paragraph(`${p.program.type} (${p.program.duration})]`)] }) ] }),
+                ]
             }));
-        });
-        const doc = new Document({
-            sections: [{
-                children: [
-                    new Paragraph({ text: "LAPORAN MMRC", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-                    new Paragraph({ text: `Tgl: ${new Date().toLocaleDateString()}`, alignment: AlignmentType.CENTER }),
-                    new Paragraph({ text: "" }),
-                    new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } }),
-                ],
-            }],
-        });
+            children.push(new Paragraph({ text: "" }));
+
+            // 3. VISIT DOKTER (DENGAN TTD & FOTO)
+            children.push(new Paragraph({ text: "RIWAYAT VISIT DOKTER", heading: HeadingLevel.HEADING_4 }));
+            
+            if(p.visits && p.visits.length > 0) {
+                for(const v of p.visits) {
+                    const visitImg = b64toBlob(v.photo);
+                    const signImg = b64toBlob(v.sign);
+                    
+                    const visitCells = [
+                        new TableCell({ children: [new Paragraph({ text: v.time, bold: true }), new Paragraph(v.note)] }),
+                    ];
+
+                    // Kolom TTD
+                    if(signImg) {
+                        visitCells.push(new TableCell({ 
+                            children: [
+                                new Paragraph("TTD Dokter:"),
+                                new Paragraph({ children: [new ImageRun({ data: signImg, transformation: { width: 80, height: 40 } })] })
+                            ] 
+                        }));
+                    } else {
+                         visitCells.push(new TableCell({ children: [new Paragraph("-")] }));
+                    }
+
+                    children.push(new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [new TableRow({ children: visitCells })]
+                    }));
+                    
+                    // Foto Visit (jika ada)
+                    if(visitImg) {
+                        children.push(new Paragraph({
+                            children: [new ImageRun({ data: visitImg, transformation: { width: 150, height: 100 } })],
+                            alignment: AlignmentType.CENTER
+                        }));
+                    }
+                    children.push(new Paragraph({ text: "" })); // spacer
+                }
+            } else {
+                children.push(new Paragraph({ text: "Belum ada data visit.", italic: true }));
+            }
+            
+            // 4. LOG OBAT
+            children.push(new Paragraph({ text: "RIWAYAT OBAT", heading: HeadingLevel.HEADING_4 }));
+            const medRows = [
+                new TableRow({ 
+                    children: [
+                        new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
+                        new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }),
+                        new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })
+                    ] 
+                })
+            ];
+            (p.medicine?.logs || []).forEach(l => {
+                medRows.push(new TableRow({
+                    children: [
+                         new TableCell({ children: [new Paragraph(l.time)] }),
+                         new TableCell({ children: [new Paragraph(l.name)] }),
+                         new TableCell({ children: [new Paragraph(l.pj)] }),
+                    ]
+                }));
+            });
+            children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+            children.push(new Paragraph({ text: "__________________________________________________________________________________" }));
+        }
+
+        // GENERATE
+        const doc = new Document({ sections: [{ children: children }] });
         const blob = await Packer.toBlob(doc);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        document.body.appendChild(a); a.style="display:none"; a.href=url; a.download="Laporan.docx"; a.click();
+        document.body.appendChild(a); a.style="display:none"; a.href=url; a.download="Laporan_MMRC_Lengkap.docx"; a.click();
         window.URL.revokeObjectURL(url);
     }
 };
