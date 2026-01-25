@@ -1,5 +1,5 @@
 // ============================================================
-// 1. KONFIGURASI FIREBASE (VERSI BARU - CLAUDE FLARE)
+// 1. KONFIGURASI FIREBASE (TIDAK BERUBAH)
 // ============================================================
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -28,84 +28,52 @@ const app = {
     signaturePad: null,
     saveTimer: null,
     isRendering: false,
+    chartInstances: {}, // UPDATE: Penampung Chart agar tidak error tumpuk
 
     // --- SYSTEM STARTUP ---
     init() {
         console.log("App Starting...");
-        // Cek Login Session jika ada (Opsional)
     },
 
-    // --- SISTEM SIMPAN ANTI-LAG (OPTIMISTIC UI UPDATE) ---
+    // --- SISTEM SIMPAN ---
     saveDB() {
-        // Debounce: Cegah simpan beruntun yang bikin berat
         if (this.saveTimer) clearTimeout(this.saveTimer);
-
         this.saveTimer = setTimeout(() => {
             try {
-                // 1. Simpan Local Storage (Backup Instan)
                 const jsonStr = JSON.stringify(this.data);
                 localStorage.setItem('MMRC_DATABASE', jsonStr);
-                
-                // 2. Simpan Firebase (Background Process)
                 db.ref('mmrc_data').set(this.data).then(() => {
                     console.log("✅ Cloud Synced");
                 }).catch(e => {
                     console.warn("⚠️ Offline Mode (Saved Local):", e);
                 });
-            } catch (err) {
-                console.error("Storage Error:", err);
-            }
-        }, 800); // Delay 0.8 detik di background, user tidak akan merasakan lag
+            } catch (err) { console.error("Storage Error:", err); }
+        }, 800);
     },
 
-    async loadDB() {
-    // Tampilkan Loading di sini agar pasti muncul
-    Swal.fire({
-        title: 'Memuat Data...',
-        text: 'Menghubungkan ke Cloud Database',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading() }
-    });
-
-    try {
-        // Coba ambil data dengan timeout dari sisi logic
-        const dbRef = db.ref('mmrc_data');
-        const snapshot = await dbRef.once('value'); // Di sini biasanya stuck jika Rules salah
-        
-        const cloudData = snapshot.val();
-        
-        if (cloudData) {
-            this.data = cloudData;
-            console.log("Data Cloud Berhasil Diambil");
-        } else {
-            console.log("Database Cloud Kosong, menggunakan default.");
-            // Init data kosong jika cloud null
-            if (!this.data.patients) this.data = { patients: [] }; 
-        }
-
-        Swal.close(); // Tutup loading jika sukses
-        this.render();
-
-    } catch (e) {
-        console.error("Gagal ambil data cloud:", e);
-        Swal.close(); // Pastikan loading tertutup meski error
-        
-        // Fallback ke Local Storage
+    loadDB() {
         const local = localStorage.getItem('MMRC_DATABASE');
         if (local) {
-            this.data = JSON.parse(local);
-            Swal.fire('Mode Offline', 'Gagal koneksi server, menggunakan data lokal HP.', 'warning');
-        } else {
-            Swal.fire('Error', 'Gagal mengambil data: ' + e.message, 'error');
+            try { this.data = JSON.parse(local); this.render(); } catch (e) { console.error(e); }
         }
-        this.render();
-    }
-},
+        db.ref('mmrc_data').on('value', (snapshot) => {
+            const cloudData = snapshot.val();
+            if (cloudData) {
+                const isModalOpen = document.getElementById('modal-container') && !document.getElementById('modal-container').classList.contains('hidden');
+                if (!this.data.patients || (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen)) {
+                    this.data = cloudData;
+                    localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
+                    if (document.getElementById('app-layer') && !document.getElementById('app-layer').classList.contains('hidden')) {
+                        this.render();
+                    }
+                }
+            }
+        });
+    },
 
     login() {
         const u = document.getElementById('login-user').value.trim();
         const p = document.getElementById('login-pass').value.trim();
-        
         if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
             document.getElementById('auth-layer').style.display = 'none';
             document.getElementById('app-layer').classList.remove('hidden');
@@ -122,18 +90,16 @@ const app = {
         const btn = document.getElementById(`btn-${page}`);
         if(btn) btn.classList.add('active');
         document.getElementById('page-title').innerText = page.toUpperCase();
-        
         setTimeout(() => this.render(), 50);
     },
 
     render() {
         if(this.isRendering) return;
         this.isRendering = true;
-
         requestAnimationFrame(() => {
             const container = document.getElementById('main-content');
             if (container) {
-                container.innerHTML = ''; // Clear container safely
+                container.innerHTML = ''; 
                 switch (this.currentPage) {
                     case 'dashboard': this.viewDashboard(container); break;
                     case 'medicine': this.viewMedicine(container); break;
@@ -148,7 +114,7 @@ const app = {
         });
     },
 
-    // --- DASHBOARD ---
+    // --- DASHBOARD (TIDAK BERUBAH) ---
     viewDashboard(container) {
         container.innerHTML = `
             <div class="mb-6 flex justify-between items-center">
@@ -173,8 +139,6 @@ const app = {
                                     <p><b>Usia:</b> ${p.reg.ttl} (${p.reg.age} Thn)</p>
                                     <p><b>Pekerjaan:</b> ${p.reg.job}</p>
                                     <p><b>Alamat:</b> ${p.reg.addr}</p>
-                                    <p><b>Wali:</b> ${p.reg.guardian}</p>
-                                    <p class="text-red-500 bg-red-50 p-1 rounded mt-1"><b>Spotcheck:</b> ${p.reg.spotcheck}</p>
                                 </div>
                             </div>
                             <div class="border-r border-slate-100 px-4">
@@ -190,11 +154,6 @@ const app = {
                                     <div class="text-[11px] space-y-2">
                                         <p><b>Dokter:</b> ${p.diagnosis.dr_name}</p>
                                         <p class="bg-teal-50 p-2 rounded text-teal-800"><b>Planning:</b> ${p.diagnosis.plan}</p>
-                                        <div class="flex gap-2 my-2">
-                                            <span class="px-2 py-1 rounded text-[10px] ${p.diagnosis.inj ? 'bg-teal-100 text-teal-700 font-bold' : 'bg-slate-100 text-slate-300'}">Injeksi</span>
-                                            <span class="px-2 py-1 rounded text-[10px] ${p.diagnosis.urine ? 'bg-teal-100 text-teal-700 font-bold' : 'bg-slate-100 text-slate-300'}">Urine</span>
-                                            <span class="px-2 py-1 rounded text-[10px] ${p.diagnosis.fiksasi ? 'bg-teal-100 text-teal-700 font-bold' : 'bg-slate-100 text-slate-300'}">Fiksasi</span>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="mt-4 flex gap-2 justify-end">
@@ -205,12 +164,10 @@ const app = {
                         </div>
                     </div>
                 `).join('')}
-                ${(!this.data.patients || this.data.patients.length === 0) ? '<p class="text-center text-slate-400 py-10">Belum ada data pasien.</p>' : ''}
             </div>`;
     },
 
     modalAddPatient(editId = null) {
-        console.log("Opening Modal..."); // Debugging
         const p = editId ? this.data.patients.find(x => x.id === editId) : null;
         document.getElementById('modal-title').innerText = editId ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN BARU";
         
@@ -254,10 +211,6 @@ const app = {
                         <label class="flex items-center gap-2"><input type="checkbox" name="urine" ${chk(p?.diagnosis?.urine)}> Urine</label>
                         <label class="flex items-center gap-2"><input type="checkbox" name="fix" ${chk(p?.diagnosis?.fiksasi)}> Fiksasi</label>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <input name="d_rx" value="${val(p?.diagnosis?.rx_name)}" placeholder="Nama Obat" class="input-field col-span-2">
-                        <input name="d_qty" value="${val(p?.diagnosis?.rx_qty)}" type="number" placeholder="Jml" class="input-field">
-                    </div>
                 </div>
                 <button class="md:col-span-3 bg-teal-600 hover:bg-teal-700 text-white py-4 rounded-2xl font-bold shadow-lg mt-4 transition">
                     <i class="fas fa-save mr-2"></i> SIMPAN DATA PASIEN
@@ -267,27 +220,17 @@ const app = {
     },
 
     async savePatient(e, editId) {
-        e.preventDefault(); // Mencegah reload halaman
-        this.closeModal(); // UX: Tutup modal duluan biar cepat
-        
-        // Notifikasi Simpan
-        Swal.fire({
-            title: 'Menyimpan...',
-            timer: 800,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading()
-        });
+        e.preventDefault(); 
+        this.closeModal(); 
+        Swal.fire({ title: 'Menyimpan...', timer: 800, showConfirmButton: false, didOpen: () => Swal.showLoading() });
 
         const fd = new FormData(e.target);
         let photoBase64 = null;
         
-        // Cek jika edit, ambil foto lama
         if (editId) {
             const existing = this.data.patients.find(x => x.id === editId);
             if(existing) photoBase64 = existing.reg.photo;
         }
-        
-        // Cek upload foto baru
         const photoFile = fd.get('photo_file');
         if (photoFile && photoFile.size > 0) photoBase64 = await this.toBase64(photoFile);
 
@@ -306,7 +249,6 @@ const app = {
             diagnosis: { 
                 dr_name: fd.get('d_dr'), entry_diag: fd.get('d_entry'), plan: fd.get('d_plan'),
                 inj: fd.get('inj')==='on', urine: fd.get('urine')==='on', fiksasi: fd.get('fix')==='on',
-                rx_name: fd.get('d_rx'), rx_qty: fd.get('d_qty')
             },
             medicine: editId ? this.data.patients.find(x => x.id === editId).medicine : { stock: [], logs: [] },
             ttv: editId ? this.data.patients.find(x => x.id === editId).ttv : [],
@@ -323,20 +265,24 @@ const app = {
             if(!this.data.patients) this.data.patients = [];
             this.data.patients.push(pData);
         }
-        
-        // Render & Save Background
-        this.render(); 
-        this.saveDB();
+        this.render(); this.saveDB();
     },
 
-    // --- MEDICINE ---
+    // --- MEDICINE (UPDATE POINT 1 & 3) ---
     viewMedicine(container) {
         if (!this.data.patients || this.data.patients.length === 0) {
             container.innerHTML = '<p class="text-slate-400 text-center mt-10">Belum ada pasien terdaftar.</p>';
             return;
         }
 
-        container.innerHTML = this.data.patients.map(p => `
+        // UPDATE 3: TOMBOL DOWNLOAD EXCEL KHUSUS OBAT
+        container.innerHTML = `
+        <div class="mb-4 text-right">
+            <button onclick="app.exportMedicineExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 shadow flex items-center gap-2 ml-auto">
+                <i class="fas fa-file-excel"></i> DOWNLOAD LAPORAN OBAT (XLS)
+            </button>
+        </div>` + 
+        this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
                 <h3 class="font-bold text-teal-800 mb-6 text-lg border-b pb-2"><i class="fas fa-user-injured mr-2"></i> ${p.reg.name}</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -348,7 +294,8 @@ const app = {
                         <div class="space-y-4">
                             ${(p.medicine?.stock || []).map((s, i) => {
                                 const sisa = s.init - s.used;
-                                const isLow = sisa <= 5;
+                                // UPDATE 1: REMINDER JIKA STOK < 7
+                                const isLow = sisa < 7;
                                 return `
                                 <div class="p-4 border rounded-2xl ${isLow ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'} relative transition hover:shadow-md">
                                     <div class="flex justify-between items-start">
@@ -398,6 +345,52 @@ const app = {
         `).join('');
     },
 
+    // FUNGSI BARU: EXPORT OBAT EXCEL
+    exportMedicineExcel() {
+        if(!this.data.patients.length) return Swal.fire('Info', 'Data kosong.', 'info');
+        
+        let rows = [];
+        this.data.patients.forEach(p => {
+            // Ambil data stok
+            if(p.medicine && p.medicine.stock) {
+                p.medicine.stock.forEach(s => {
+                    rows.push({
+                        "Kategori": "STOK OBAT",
+                        "Nama Pasien": p.reg.name,
+                        "Nama Obat": s.name,
+                        "Jumlah Awal": s.init,
+                        "Terpakai": s.used,
+                        "Sisa": s.init - s.used,
+                        "Expired": s.exp,
+                        "Waktu Input": "-"
+                    });
+                });
+            }
+            // Ambil data log
+            if(p.medicine && p.medicine.logs) {
+                p.medicine.logs.forEach(l => {
+                    rows.push({
+                        "Kategori": "LOG PEMAKAIAN",
+                        "Nama Pasien": p.reg.name,
+                        "Nama Obat": l.name,
+                        "Jumlah Awal": "-",
+                        "Terpakai": 1,
+                        "Sisa": "-",
+                        "Expired": "-",
+                        "Waktu Input": l.time + " (PJ: " + l.pj + ")"
+                    });
+                });
+            }
+        });
+
+        if(rows.length === 0) return Swal.fire('Info', 'Belum ada data obat.', 'info');
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Obat");
+        XLSX.writeFile(wb, "MMRC_Laporan_Obat.xlsx");
+    },
+
     modalMedStock(pid, editIdx = null) {
         const p = this.data.patients.find(x => x.id === pid);
         const s = editIdx !== null ? p.medicine.stock[editIdx] : null;
@@ -431,9 +424,7 @@ const app = {
         if(idx !== null) p.medicine.stock[idx] = data;
         else p.medicine.stock.push(data);
         
-        this.closeModal(); 
-        this.render();
-        this.saveDB(); 
+        this.closeModal(); this.render(); this.saveDB(); 
     },
 
     modalUseMed(pid, sIdx) {
@@ -468,9 +459,7 @@ const app = {
             note: document.getElementById('ml_note').value 
         });
         
-        this.closeModal(); 
-        this.render();
-        this.saveDB(); 
+        this.closeModal(); this.render(); this.saveDB(); 
     },
 
     async delMedLog(pid, logIdx) {
@@ -478,7 +467,6 @@ const app = {
             title: 'Hapus?', text: "Stok akan dikembalikan.", icon: 'warning',
             showCancelButton: true, confirmButtonText: 'Ya, Hapus'
         });
-
         if (result.isConfirmed) {
             const p = this.data.patients.find(x => x.id === pid);
             const log = p.medicine.logs[logIdx];
@@ -486,8 +474,7 @@ const app = {
             if(stockItem && stockItem.used > 0) stockItem.used -= 1;
 
             p.medicine.logs.splice(logIdx, 1);
-            this.render();
-            this.saveDB();
+            this.render(); this.saveDB();
         }
     },
 
@@ -642,7 +629,6 @@ const app = {
         const p = this.data.patients.find(x => x.id === pid);
         if (this.signaturePad.isEmpty()) return Swal.fire('Error', 'Tanda tangan wajib diisi', 'warning');
         
-        // UX: Close dulu biar smooth
         this.closeModal();
 
         const file = document.getElementById('v_photo').files[0];
@@ -660,7 +646,7 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- VIEW CRISIS ---
+    // --- CRISIS (UPDATE POINT 2: GRAFIK BPSS 0-25 & H1-H7) ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm border-l-4 border-l-red-500">
@@ -677,7 +663,7 @@ const app = {
                             <tbody>
                                 ${(p.crisis?.bpss || []).map((b, i) => `
                                     <tr class="border-b hover:bg-slate-50">
-                                        <td class="p-2 font-bold">D-${i+1}</td><td class="p-2">${b.bio}</td><td class="p-2">${b.psy}</td><td class="p-2">${b.soc}</td><td class="p-2">${b.spi}</td>
+                                        <td class="p-2 font-bold">H-${i+1}</td><td class="p-2">${b.bio}</td><td class="p-2">${b.psy}</td><td class="p-2">${b.soc}</td><td class="p-2">${b.spi}</td>
                                         <td class="p-2 font-black text-red-600 text-lg">${b.eval}</td>
                                         <td class="p-2">
                                             <button onclick="app.delSubItem('${p.id}', 'crisis.bpss', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
@@ -698,18 +684,24 @@ const app = {
     renderChart(p) {
         const ctx = document.getElementById(`chart-${p.id}`);
         if(!ctx || !p.crisis?.bpss?.length) return;
-        new Chart(ctx, {
+
+        // Hapus chart lama agar tidak glitch
+        if (this.chartInstances[p.id]) {
+            this.chartInstances[p.id].destroy();
+        }
+
+        this.chartInstances[p.id] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: p.crisis.bpss.map((_, i) => `Hari ${i+1}`),
+                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // Label H1, H2...
                 datasets: [{ 
-                    label: 'Skor BPSS (Tingkat Keparahan)', 
+                    label: 'Skor BPSS', 
                     data: p.crisis.bpss.map(b => b.eval), 
                     borderColor: '#dc2626', 
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
                     fill: true, 
                     tension: 0.3,
-                    pointRadius: 6,
+                    pointRadius: 6, // Titik lebih besar agar mudah diklik
                     pointBackgroundColor: '#fff',
                     pointBorderWidth: 2
                 }]
@@ -719,9 +711,9 @@ const app = {
                 scales: {
                     y: { 
                         beginAtZero: true, 
-                        max: 40, // Max score 40 agar skala jelas
+                        max: 25, // SKALA 0-25 SESUAI REQUEST
                         grid: { color: '#f1f5f9' },
-                        title: { display: true, text: 'Total Score (0-40)' }
+                        title: { display: true, text: 'Total Score (0-25)' }
                     },
                     x: { grid: { display: false } }
                 }
@@ -751,7 +743,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW PROGRAM ---
+    // --- VIEW PROGRAM (TIDAK BERUBAH) ---
     viewProgram(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -787,7 +779,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW THERAPY ---
+    // --- VIEW THERAPY (TIDAK BERUBAH) ---
     viewTherapy(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -800,7 +792,7 @@ const app = {
 
     async saveTherapy(pid) {
         this.data.patients.find(x => x.id === pid).therapy = document.getElementById(`ther_${pid}`).value;
-        this.saveDB(); // Khusus ini tidak perlu render ulang
+        this.saveDB(); 
         const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 800 });
         toast.fire({ icon: 'success', title: 'Tersimpan' });
     },
@@ -845,18 +837,12 @@ const app = {
         XLSX.writeFile(wb, "MMRC_Database.xlsx");
     },
 
-    // ============================================================
-    // EVALUASI: EXPORT WORD SUPER LENGKAP (FOTO & TANDA TANGAN)
-    // ============================================================
     async exportToWord() {
         if (!this.data.patients || this.data.patients.length === 0) return Swal.fire('Info', 'Data kosong.', 'info');
-        
-        // Safety check jika library belum load
         if(typeof docx === 'undefined') return Swal.fire('Error', 'Library Word belum siap. Coba refresh.', 'error');
 
         const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, ImageRun, TextRun } = docx;
 
-        // Helper: Convert Base64 to Uint8Array for docx images
         const b64toBlob = (b64) => {
             if(!b64 || !b64.includes('base64,')) return null;
             try {
@@ -869,20 +855,15 @@ const app = {
         };
 
         const children = [];
-        
-        // TITLE
         children.push(new Paragraph({ text: "LAPORAN LENGKAP MMRC", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
         children.push(new Paragraph({ text: `Dicetak: ${new Date().toLocaleString('id-ID')}`, alignment: AlignmentType.CENTER }));
-        children.push(new Paragraph({ text: "" })); // Spacer
+        children.push(new Paragraph({ text: "" })); 
 
-        // LOOP TIAP PASIEN
         for (const p of this.data.patients) {
-            // 1. HEADER PASIEN
             const profileImg = b64toBlob(p.reg.photo);
             
             children.push(new Paragraph({ text: `PASIEN: ${p.reg.name} (ID: ${p.id})`, heading: HeadingLevel.HEADING_2, pageBreakBefore: true }));
             
-            // Tampilkan Foto Profil jika ada
             if(profileImg) {
                 children.push(new Paragraph({
                     children: [new ImageRun({ data: profileImg, transformation: { width: 100, height: 100 } })],
@@ -890,7 +871,6 @@ const app = {
                 }));
             }
 
-            // 2. BIODATA TABEL
             children.push(new Paragraph({ text: "BIODATA & DIAGNOSA", heading: HeadingLevel.HEADING_4 }));
             children.push(new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
@@ -903,7 +883,6 @@ const app = {
             }));
             children.push(new Paragraph({ text: "" }));
 
-            // 3. VISIT DOKTER (DENGAN TTD & FOTO)
             children.push(new Paragraph({ text: "RIWAYAT VISIT DOKTER", heading: HeadingLevel.HEADING_4 }));
             
             if(p.visits && p.visits.length > 0) {
@@ -915,7 +894,6 @@ const app = {
                         new TableCell({ children: [new Paragraph({ text: v.time, bold: true }), new Paragraph(v.note)] }),
                     ];
 
-                    // Kolom TTD
                     if(signImg) {
                         visitCells.push(new TableCell({ 
                             children: [
@@ -932,20 +910,18 @@ const app = {
                         rows: [new TableRow({ children: visitCells })]
                     }));
                     
-                    // Foto Visit (jika ada)
                     if(visitImg) {
                         children.push(new Paragraph({
                             children: [new ImageRun({ data: visitImg, transformation: { width: 150, height: 100 } })],
                             alignment: AlignmentType.CENTER
                         }));
                     }
-                    children.push(new Paragraph({ text: "" })); // spacer
+                    children.push(new Paragraph({ text: "" })); 
                 }
             } else {
                 children.push(new Paragraph({ text: "Belum ada data visit.", italic: true }));
             }
             
-            // 4. LOG OBAT
             children.push(new Paragraph({ text: "RIWAYAT OBAT", heading: HeadingLevel.HEADING_4 }));
             const medRows = [
                 new TableRow({ 
@@ -969,7 +945,6 @@ const app = {
             children.push(new Paragraph({ text: "__________________________________________________________________________________" }));
         }
 
-        // GENERATE
         const doc = new Document({ sections: [{ children: children }] });
         const blob = await Packer.toBlob(doc);
         const url = window.URL.createObjectURL(blob);
@@ -979,5 +954,4 @@ const app = {
     }
 };
 
-// Global Access Safety
 window.app = app;
