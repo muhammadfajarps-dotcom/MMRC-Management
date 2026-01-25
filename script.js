@@ -186,7 +186,7 @@ const app = {
     },
 
     // --- 2. MEDICINE (STOK & CATATAN MINUM OTOMATIS) ---
-    // [UPDATE] Penambahan tombol Edit di Logs dan memastikan tombol Edit Stock berfungsi
+    // [UPDATE: Fungsi Edit & Hapus Diperbaiki]
     viewMedicine(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item">
@@ -209,7 +209,7 @@ const app = {
                                     </div>
                                     <div class="mt-3 flex gap-2">
                                         <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px]">Catat Minum</button>
-                                        <button onclick="app.editMed('${p.id}', ${i})" class="text-amber-500"><i class="fas fa-edit"></i></button>
+                                        <button onclick="app.modalMedStock('${p.id}', ${i})" class="text-amber-500"><i class="fas fa-edit"></i></button>
                                         <button onclick="app.delSubItem('${p.id}', 'medicine.stock', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button>
                                     </div>
                                 </div>
@@ -238,11 +238,6 @@ const app = {
         `).join('');
     },
 
-    // Alias untuk memastikan tombol edit stock berfungsi
-    editMed(pid, idx) {
-        this.modalMedStock(pid, idx);
-    },
-
     modalMedStock(pid, editIdx = null) {
         const p = this.data.patients.find(x => x.id === pid);
         const s = editIdx !== null ? p.medicine.stock[editIdx] : null;
@@ -259,7 +254,12 @@ const app = {
 
     saveMedStock(pid, idx) {
         const p = this.data.patients.find(x => x.id === pid);
-        const data = { name: document.getElementById('ms_name').value, init: parseInt(document.getElementById('ms_init').value), used: idx !== null ? p.medicine.stock[idx].used : 0, exp: document.getElementById('ms_exp').value };
+        const data = { 
+            name: document.getElementById('ms_name').value, 
+            init: parseInt(document.getElementById('ms_init').value), 
+            used: idx !== null ? p.medicine.stock[idx].used : 0, 
+            exp: document.getElementById('ms_exp').value 
+        };
         if(idx !== null) p.medicine.stock[idx] = data;
         else p.medicine.stock.push(data);
         this.saveDB(); this.closeModal(); this.render();
@@ -291,14 +291,14 @@ const app = {
         if(stock.init - stock.used <= 7) Swal.fire('Reminder', 'Stok tersisa 7!', 'warning');
     },
 
-    // [NEW] Modal Edit Log
+    // [NEW: Fungsi Edit Log]
     modalEditLog(pid, logIdx) {
         const p = this.data.patients.find(x => x.id === pid);
         const log = p.medicine.logs[logIdx];
         document.getElementById('modal-title').innerText = "EDIT CATATAN OBAT";
         document.getElementById('modal-body').innerHTML = `
             <div class="space-y-4">
-                <p class="text-xs text-slate-500">Mengedit log tidak mengubah stok obat, hanya teks catatan.</p>
+                <p class="text-xs text-slate-500 mb-2">Mengedit tidak mengubah jumlah stok.</p>
                 <input id="el_time" value="${log.time}" placeholder="Waktu" class="input-field">
                 <input id="el_name" value="${log.name}" placeholder="Nama Obat" class="input-field" readonly>
                 <input id="el_pj" value="${log.pj}" placeholder="Nama PJ" class="input-field">
@@ -308,7 +308,6 @@ const app = {
         this.openModal();
     },
 
-    // [NEW] Simpan Edit Log
     saveEditLog(pid, logIdx) {
         const p = this.data.patients.find(x => x.id === pid);
         p.medicine.logs[logIdx].time = document.getElementById('el_time').value;
@@ -597,7 +596,7 @@ const app = {
     closeModal() { document.getElementById('modal-container').classList.replace('flex', 'hidden'); },
     toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); }),
 
-    // [NEW] Fungsi Export ke Word (DOCX)
+    // [EXPORT WORD FITUR]
     exportToWord() {
         if (!this.data.patients.length) return Swal.fire('Info', 'Belum ada data pasien', 'info');
         
@@ -655,7 +654,6 @@ const app = {
         });
     },
 
-    // Placeholder untuk Export Excel (Sesuai existing HTML)
     exportAllExcel() {
         if (!this.data.patients.length) return Swal.fire('Info', 'Belum ada data pasien', 'info');
         
