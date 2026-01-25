@@ -31,24 +31,36 @@ const app = {
         }
     },
 
-    async loadDB() {
-        Swal.fire({ title: 'Menyambungkan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-        
+   async loadDB() {
+        // Tampilkan loading sebentar saja
+        const loadingTimeout = setTimeout(() => {
+            if (Swal.isVisible()) {
+                Swal.close();
+                Swal.fire('Koneksi Lambat', 'Mengambil data dari memori lokal...', 'info');
+            }
+        }, 5000); // Batas 5 detik
+
         try {
             const snapshot = await db.ref('mmrc_data').once('value');
             const cloudData = snapshot.val();
             if (cloudData) {
                 this.data = cloudData;
+                console.log("Data Cloud Berhasil Diambil");
             }
+            clearTimeout(loadingTimeout);
             Swal.close();
             this.render();
         } catch (e) {
-            Swal.fire('Offline', 'Menggunakan data lokal sementara', 'info');
+            console.error("Gagal ambil data cloud:", e);
+            clearTimeout(loadingTimeout);
+            Swal.close();
+            
+            // Jika gagal, pakai data lama yang ada di HP
             const local = localStorage.getItem('MMRC_DATABASE');
             if (local) this.data = JSON.parse(local);
             this.render();
         }
-    },
+    }, 
 
     login() {
         const u = document.getElementById('login-user').value.trim();
