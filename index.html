@@ -7,15 +7,16 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
-    <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-50">
 
@@ -92,10 +93,10 @@
                         class="pl-10 pr-4 py-2 border rounded-full text-sm focus:ring-2 focus:ring-teal-500 outline-none w-64 bg-slate-50 transition-all">
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="app.exportToWord()" class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-black hover:bg-blue-700 shadow-md flex items-center gap-2">
+                        <button onclick="app.exportToWord()" class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-black hover:bg-blue-700 shadow-md flex items-center gap-2 transition active:scale-95">
                             <i class="fas fa-file-word"></i> WORD
                         </button>
-                        <button onclick="app.exportAllExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-full text-xs font-black hover:bg-emerald-700 shadow-md flex items-center gap-2">
+                        <button onclick="app.exportAllExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-full text-xs font-black hover:bg-emerald-700 shadow-md flex items-center gap-2 transition active:scale-95">
                             <i class="fas fa-file-excel"></i> EXCEL
                         </button>
                     </div>
@@ -111,7 +112,7 @@
         <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border border-white/20">
             <div class="px-8 py-5 border-b flex justify-between items-center bg-teal-50">
                 <h3 id="modal-title" class="font-black text-teal-800 tracking-tight">FORM INPUT</h3>
-                <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors">
+                <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
