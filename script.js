@@ -1,23 +1,14 @@
 /**
- * MMRC SYSTEM - FINAL PRODUCTION FIX
- * Mode: Diagnostic & High Performance
+ * MMRC SYSTEM - ULTIMATE FIX
+ * Version: 5.0 (Fail-Safe Global Scope)
  */
 
 // ============================================
-// 1. GLOBAL ERROR CATCHER (Supaya ketahuan kalau ada error)
+// 1. ERROR TRAP (Agar kita tahu jika ada error)
 // ============================================
-window.onerror = function(msg, url, line, col, error) {
-    // Abaikan error resize observer Chrome yang tidak berbahaya
-    if (msg.includes("ResizeObserver")) return;
-    
-    // Tampilkan Alert Merah jika ada error fatal supaya user tau
-    Swal.fire({
-        icon: 'error',
-        title: 'SYSTEM CRASH',
-        text: msg + " (Line: " + line + ")",
-        footer: 'Screenshot ini dan kirim ke developer'
-    });
-    return false;
+window.onerror = function(msg, url, line) {
+    if (msg.includes("ResizeObserver")) return; // Abaikan error sepele
+    alert("SYSTEM ERROR:\n" + msg + "\nLine: " + line);
 };
 
 // ============================================
@@ -26,7 +17,6 @@ window.onerror = function(msg, url, line, col, error) {
 const firebaseConfig = {
     apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
     authDomain: "mmrc-stock.firebaseapp.com",
-    // DATABASE URL ASIA (FIXED)
     databaseURL: "https://mmrc-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "mmrc-stock",
     storageBucket: "mmrc-stock.firebasestorage.app",
@@ -34,99 +24,44 @@ const firebaseConfig = {
     appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
 };
 
-// ============================================
-// 3. CORE APPLICATION
-// ============================================
+// Variabel Global
 let db;
-let app = {
-    data: { patients: [] },
-    user: null,
-    currentPage: 'dashboard',
-    chartInstance: null,
-    signaturePad: null,
-    currentEditId: null
-};
-
-// JALANKAN SAAT DOM SIAP
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        console.log("System Booting...");
-
-        // 1. Cek Ketersediaan Library
-        if (typeof firebase === 'undefined') throw new Error("Firebase Library belum terload!");
-        if (typeof Swal === 'undefined') throw new Error("SweetAlert Library belum terload!");
-
-        // 2. Init Firebase
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-
-        // 3. Cek Elemen HTML Kunci (Diagnosa ID)
-        const btnLogin = document.getElementById('login-btn') || document.getElementById('btn-login'); // Coba cari tombol login
-        // Jika pakai onclick di HTML, kita pastikan function terekspos ke window
-        
-        // 4. Cek Session Login
-        const session = localStorage.getItem('mmrc_session');
-        if (session) {
-            toggleInterface('app');
-            loadDataFromCloud();
-        } else {
-            // Pastikan Auth Layer muncul
-            toggleInterface('login');
-        }
-
-        // 5. DIAGNOSTIC SUCCESS (Tanda file baru sudah masuk)
-        // Hapus baris di bawah ini nanti kalau sudah fix
-        // Swal.fire({ icon: 'info', title: 'SYSTEM READY', text: 'Script baru berhasil dimuat!', timer: 1000, showConfirmButton: false });
-
-    } catch (err) {
-        alert("GAGAL MEMUAT SYSTEM: " + err.message);
-    }
-});
+let currentEditId = null;
+let signaturePad = null;
+let chartInstance = null;
+let appData = { patients: [] };
 
 // ============================================
-// 4. AUTHENTICATION MODULE
+// 3. CORE APPLICATION (Exposed to Window)
 // ============================================
-// Expose function ke Global Window agar bisa dipanggil HTML onclick="..."
+// Kita pasang 'app' langsung ke window agar HTML bisa baca
 window.app = {
+    
+    // --- AUTHENTICATION ---
     login: function() {
-        // Ambil ID sesuai HTML Anda: login-user & login-pass
-        const uField = document.getElementById('login-user');
-        const pField = document.getElementById('login-pass');
-
-        if(!uField || !pField) {
-            Swal.fire('Error HTML', 'Element Input ID login-user/login-pass tidak ditemukan!', 'error');
-            return;
-        }
-
-        const u = uField.value.trim();
-        const p = pField.value.trim();
+        const u = document.getElementById('login-user').value;
+        const p = document.getElementById('login-pass').value;
 
         if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
             localStorage.setItem('mmrc_session', u);
-            
-            let timerInterval;
             Swal.fire({
-                title: 'AUTHENTICATING',
-                html: 'Menghubungkan Database...',
-                timer: 1000,
-                timerProgressBar: true,
-                didOpen: () => Swal.showLoading(),
-                willClose: () => clearInterval(timerInterval)
+                title: 'LOGIN SUKSES',
+                timer: 800,
+                showConfirmButton: false,
+                icon: 'success'
             }).then(() => {
-                toggleInterface('app');
-                loadDataFromCloud();
+                toggleScreen('app');
+                loadData();
             });
         } else {
-            Swal.fire('Akses Ditolak', 'Username/Password Salah', 'error');
+            Swal.fire('ERROR', 'Username/Password Salah', 'error');
         }
     },
 
     logout: function() {
         Swal.fire({
-            title: 'Logout?',
-            icon: 'warning',
+            title: 'Keluar?',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
             confirmButtonText: 'Ya'
         }).then((res) => {
             if (res.isConfirmed) {
@@ -138,54 +73,157 @@ window.app = {
 
     // --- NAVIGATION ---
     nav: function(page) {
-        app.currentPage = page;
-        
-        // Update Sidebar
+        // 1. Update Tombol Sidebar
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.getElementById(`btn-${page}`);
+        const activeBtn = document.getElementById('btn-' + page);
         if(activeBtn) activeBtn.classList.add('active');
 
-        // Update Header
+        // 2. Update Judul Header
         const titleEl = document.getElementById('page-title');
         if(titleEl) titleEl.innerText = page.toUpperCase().replace('-', ' ');
 
-        renderView(page);
+        // 3. Render Halaman
+        renderPage(page);
     },
 
-    // --- MODAL FUNCTIONS ---
+    // --- MODAL SYSTEM ---
+    openModalInput: function(id = null) {
+        currentEditId = id;
+        const modal = document.getElementById('modal-container');
+        const body = document.getElementById('modal-body');
+        const title = document.getElementById('modal-title');
+
+        title.innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI BARU";
+        
+        // Ambil data jika edit
+        let d = {};
+        if(id) d = appData.patients.find(p => p.id === id) || {};
+        const safe = (val) => val || '';
+
+        body.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label class="block text-xs font-bold text-gray-400">NAMA LENGKAP</label>
+                <input id="in_name" value="${safe(d.reg?.name)}" class="input-field" placeholder="Nama Pasien"></div>
+                
+                <div><label class="block text-xs font-bold text-gray-400">NO. REKAM MEDIS</label>
+                <input id="in_rm" value="${safe(d.reg?.rm)}" class="input-field" placeholder="Nomor RM"></div>
+                
+                <div><label class="block text-xs font-bold text-gray-400">TANGGAL LAHIR</label>
+                <input type="date" id="in_dob" value="${safe(d.reg?.dob)}" class="input-field"></div>
+                
+                <div><label class="block text-xs font-bold text-gray-400">PROGRAM</label>
+                <select id="in_prog" class="input-field bg-white">
+                    <option ${safe(d.program?.type) === 'Rawat Jalan' ? 'selected' : ''}>Rawat Jalan</option>
+                    <option ${safe(d.program?.type) === 'Rawat Inap' ? 'selected' : ''}>Rawat Inap</option>
+                    <option ${safe(d.program?.type) === 'Konseling' ? 'selected' : ''}>Konseling</option>
+                </select></div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t">
+                <label class="block text-xs font-bold text-gray-400">DIAGNOSA & TANDA TANGAN</label>
+                <textarea id="in_diag" class="input-field h-24 mb-4" placeholder="Catatan medis...">${safe(d.diagnosis?.text)}</textarea>
+                
+                <div class="border rounded h-32 relative bg-gray-50">
+                    <canvas id="sig-canvas" class="absolute inset-0 w-full h-full"></canvas>
+                    ${d.diagnosis?.signature ? `<img src="${d.diagnosis.signature}" class="absolute bottom-1 right-1 h-10 border bg-white z-20">` : ''}
+                    <div class="absolute bottom-1 left-2 text-[10px] text-gray-400">Area Tanda Tangan</div>
+                </div>
+                <button onclick="clearSig()" class="text-xs text-red-500 mt-1">Hapus Tanda Tangan</button>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="saveProcess()" class="bg-teal-600 text-white py-3 px-8 rounded-xl font-bold hover:bg-teal-700">SIMPAN DATA</button>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // Paksa flex agar muncul
+
+        // Init Signature
+        setTimeout(() => {
+            const cvs = document.getElementById('sig-canvas');
+            if(cvs) {
+                cvs.width = cvs.offsetWidth;
+                cvs.height = cvs.offsetHeight;
+                signaturePad = new SignaturePad(cvs);
+            }
+        }, 300);
+    },
+
     closeModal: function() {
         const modal = document.getElementById('modal-container');
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     },
 
-    openModalInput: function(editId = null) {
-        openInputForm(editId);
-    },
-
     // --- CRUD ACTIONS ---
-    saveData: function() {
-        processSaveData();
-    },
-
     deletePatient: function(id) {
-        processDelete(id);
+        Swal.fire({
+            title: 'Hapus Data?',
+            text: "Data hilang permanen!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Hapus'
+        }).then((res) => {
+            if(res.isConfirmed) {
+                appData.patients = appData.patients.filter(p => p.id !== id);
+                saveToFirebase();
+                renderPage('data');
+                Swal.fire('Terhapus', '', 'success');
+            }
+        });
     },
 
-    // --- EXPORT ---
     exportAllExcel: function() {
-        if(app.data.patients.length === 0) return Swal.fire('Info', 'Data kosong', 'info');
-        const d = app.data.patients.map((p, i) => ({
-            NO: i+1, NAMA: p.reg.name, RM: p.reg.rm, PROGRAM: p.program.type, DOB: p.reg.dob
+        if(appData.patients.length === 0) return Swal.fire('Kosong', 'Tidak ada data', 'info');
+        
+        const exportData = appData.patients.map(p => ({
+            NAMA: p.reg.name,
+            RM: p.reg.rm,
+            PROGRAM: p.program.type,
+            DIAGNOSA: p.diagnosis.text
         }));
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d), "DATA");
-        XLSX.writeFile(wb, "MMRC_Data.xlsx");
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Database MMRC");
+        XLSX.writeFile(wb, "Data_Pasien.xlsx");
     }
 };
 
-// Helper: Toggle Layar Login vs App
-function toggleInterface(mode) {
+// ============================================
+// 4. INTERNAL FUNCTIONS (Logic Behind Scenes)
+// ============================================
+
+window.onload = function() {
+    try {
+        console.log("System Booting...");
+        
+        // 1. Init Firebase
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+
+        // 2. Cek Login
+        const session = localStorage.getItem('mmrc_session');
+        if (session) {
+            toggleScreen('app');
+            loadData();
+        } else {
+            toggleScreen('login');
+        }
+
+        // 3. Listener Enter di Login
+        document.getElementById('login-pass')?.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') window.app.login();
+        });
+
+    } catch (e) {
+        alert("Boot Error: " + e.message);
+    }
+};
+
+function toggleScreen(mode) {
     const auth = document.getElementById('auth-layer');
     const main = document.getElementById('app-layer');
     
@@ -193,6 +231,7 @@ function toggleInterface(mode) {
         auth.style.display = 'none';
         main.classList.remove('hidden');
         main.style.display = 'flex';
+        renderPage('dashboard');
     } else {
         auth.style.display = 'flex';
         main.classList.add('hidden');
@@ -200,226 +239,171 @@ function toggleInterface(mode) {
     }
 }
 
-// ============================================
-// 5. DATABASE LOGIC
-// ============================================
-async function loadDataFromCloud() {
+async function loadData() {
     try {
         const snap = await db.ref('mmrc_data').once('value');
         const val = snap.val();
         
-        // Sanitasi Data
-        app.data = val || { patients: [] };
-        if(!app.data.patients) app.data.patients = [];
-        
-        // Deep Sanitization
-        app.data.patients = app.data.patients.map(p => ({
+        // Sanitasi Data (Penting!)
+        appData = val ? val : { patients: [] };
+        if(!appData.patients) appData.patients = [];
+
+        // Normalisasi Struktur Array
+        appData.patients = appData.patients.map(p => ({
             id: p.id || Date.now().toString(),
-            reg: p.reg || { name: '-', rm: '-', dob: '' },
-            program: p.program || { type: 'Umum' },
-            diagnosis: p.diagnosis || { text: '', signature: '' },
-            medicine: p.medicine || { stock: [] },
-            files: p.files || []
+            reg: p.reg || { name: '-', rm: '-' },
+            program: p.program || { type: '-' },
+            diagnosis: p.diagnosis || { text: '' },
+            medicine: p.medicine || { stock: [] }
         }));
 
-        renderView('dashboard');
-        checkStock();
+        window.app.nav('dashboard'); // Refresh Dashboard
 
     } catch (e) {
-        console.error(e);
-        Swal.fire('Koneksi Error', 'Gagal ambil data: ' + e.message, 'error');
+        Swal.fire('Koneksi Gagal', 'Gagal ambil data: ' + e.message, 'error');
     }
 }
 
-async function saveToCloud() {
-    try {
-        await db.ref('mmrc_data').set(app.data);
-    } catch (e) {
-        Swal.fire('Error', 'Gagal simpan: ' + e.message, 'error');
-    }
+async function saveToFirebase() {
+    await db.ref('mmrc_data').set(appData);
 }
 
-// ============================================
-// 6. RENDER ENGINE
-// ============================================
-function renderView(page) {
-    const container = document.getElementById('main-content');
-    container.innerHTML = '';
+// --- FUNGSI SAVE FORM ---
+window.saveProcess = async function() {
+    const name = document.getElementById('in_name').value;
+    const rm = document.getElementById('in_rm').value;
 
-    switch(page) {
-        case 'dashboard': renderDashboard(container); break;
-        case 'data': renderDataList(container); break;
-        case 'input': window.app.openModalInput(); window.app.nav('dashboard'); break;
-        default: renderDashboard(container);
-    }
-}
+    if(!name || !rm) return Swal.fire('Error', 'Nama & RM Wajib Diisi', 'warning');
 
-function renderDashboard(c) {
-    const p = app.data.patients;
-    const stats = {
-        total: p.length,
-        rj: p.filter(x => x.program.type === 'Rawat Jalan').length,
-        ri: p.filter(x => x.program.type === 'Rawat Inap').length,
-        meds: p.reduce((a, b) => a + (b.medicine?.stock?.length || 0), 0)
+    let p = currentEditId 
+        ? appData.patients.find(x => x.id === currentEditId)
+        : { id: Date.now().toString(), medicine: {stock:[]} };
+
+    p.reg = { 
+        name: name, 
+        rm: rm, 
+        dob: document.getElementById('in_dob').value 
     };
-
-    c.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            ${uiCard('TOTAL PASIEN', stats.total, 'text-slate-800')}
-            ${uiCard('RAWAT JALAN', stats.rj, 'text-emerald-600')}
-            ${uiCard('RAWAT INAP', stats.ri, 'text-blue-600')}
-            ${uiCard('ITEM OBAT', stats.meds, 'text-orange-600')}
-        </div>
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 h-96">
-            <h3 class="font-bold text-slate-700 mb-4">Analitik Kunjungan</h3>
-            <div class="h-full pb-10"><canvas id="mainChart"></canvas></div>
-        </div>
-    `;
-
-    setTimeout(() => {
-        const ctx = document.getElementById('mainChart');
-        if(ctx) {
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
-                    datasets: [{
-                        label: 'Pasien',
-                        data: [10, 15, 8, 20, 25, stats.total],
-                        borderColor: '#0d9488',
-                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
-    }, 100);
-}
-
-function renderDataList(c) {
-    const rows = app.data.patients.map((p, i) => `
-        <tr class="border-b hover:bg-slate-50">
-            <td class="p-4 font-bold text-slate-400">#${i+1}</td>
-            <td class="p-4 font-bold text-slate-700">${p.reg.name}</td>
-            <td class="p-4 text-xs font-mono">${p.reg.rm}</td>
-            <td class="p-4"><span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${p.program.type==='Rawat Inap'?'bg-blue-100 text-blue-600':'bg-emerald-100 text-emerald-600'}">${p.program.type}</span></td>
-            <td class="p-4 text-right">
-                <button onclick="window.app.openModalInput('${p.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded mr-2"><i class="fas fa-edit"></i></button>
-                <button onclick="window.app.deletePatient('${p.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
-
-    c.innerHTML = `
-        <div class="bg-white rounded-[2rem] shadow-sm border overflow-hidden flex flex-col h-full">
-            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
-                <h3 class="font-bold text-slate-700">DATABASE</h3>
-                <input type="text" onkeyup="searchLocal(this.value)" placeholder="Cari..." class="border rounded-xl px-4 py-2 text-sm outline-none">
-            </div>
-            <div class="overflow-auto flex-1">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] sticky top-0">
-                        <tr><th class="p-4">No</th><th class="p-4">Nama</th><th class="p-4">RM</th><th class="p-4">Program</th><th class="p-4 text-right">Aksi</th></tr>
-                    </thead>
-                    <tbody id="table-body">${rows || '<tr><td colspan="5" class="p-8 text-center text-slate-300">Kosong</td></tr>'}</tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
-
-function uiCard(t, v, c) {
-    return `<div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100"><div class="text-slate-400 text-[10px] font-bold tracking-widest mb-2">${t}</div><div class="text-4xl font-black ${c}">${v}</div></div>`;
-}
-
-// ============================================
-// 7. FORM HANDLER
-// ============================================
-function openInputForm(editId) {
-    app.currentEditId = editId;
-    const modal = document.getElementById('modal-container');
-    const title = document.getElementById('modal-title');
-    const body = document.getElementById('modal-body');
-
-    // Data Setup
-    let d = {};
-    if(editId) d = app.data.patients.find(p => p.id === editId) || {};
-    const safe = (v) => v || '';
-
-    title.innerText = editId ? "EDIT DATA" : "REGISTRASI BARU";
     
-    body.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label class="label-text">NAMA LENGKAP</label><input id="f_name" value="${safe(d.reg?.name)}" class="input-field"></div>
-            <div><label class="label-text">NO. RM</label><input id="f_rm" value="${safe(d.reg?.rm)}" class="input-field"></div>
-            <div><label class="label-text">TGL LAHIR</label><input type="date" id="f_dob" value="${safe(d.reg?.dob)}" class="input-field"></div>
-            <div><label class="label-text">PROGRAM</label>
-                <select id="f_prog" class="input-field bg-white">
-                    <option ${safe(d.program?.type)==='Rawat Jalan'?'selected':''}>Rawat Jalan</option>
-                    <option ${safe(d.program?.type)==='Rawat Inap'?'selected':''}>Rawat Inap</option>
-                    <option ${safe(d.program?.type)==='Konseling'?'selected':''}>Konseling</option>
-                </select>
-            </div>
-        </div>
-        <div class="mt-6 pt-6 border-t">
-            <label class="label-text">CATATAN MEDIS / DIAGNOSA</label>
-            <textarea id="f_diag" class="input-field h-24">${safe(d.diagnosis?.text)}</textarea>
-        </div>
-        <div class="mt-6 flex justify-end">
-            <button onclick="window.app.saveData()" class="bg-teal-600 text-white font-bold py-3 px-10 rounded-xl shadow-lg hover:bg-teal-700">SIMPAN</button>
-        </div>
-    `;
+    p.program = { type: document.getElementById('in_prog').value };
+    
+    // Simpan Diagnosa & TTD
+    p.diagnosis = { text: document.getElementById('in_diag').value };
+    if(signaturePad && !signaturePad.isEmpty()) {
+        p.diagnosis.signature = signaturePad.toDataURL();
+    } else if (p.diagnosis.signature) {
+        // Keep existing signature if not changed
+        p.diagnosis.signature = p.diagnosis.signature; 
+    }
 
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
+    if(!currentEditId) appData.patients.push(p);
 
-async function processSaveData() {
-    const name = document.getElementById('f_name').value;
-    const rm = document.getElementById('f_rm').value;
-
-    if(!name || !rm) return Swal.fire('Error', 'Nama & RM Wajib diisi', 'warning');
-
-    let p = app.currentEditId 
-        ? app.data.patients.find(x => x.id === app.currentEditId)
-        : { id: Date.now().toString(), medicine: {stock:[]}, files:[] };
-
-    p.reg = { name, rm, dob: document.getElementById('f_dob').value };
-    p.program = { type: document.getElementById('f_prog').value };
-    p.diagnosis = { text: document.getElementById('f_diag').value, signature: p.diagnosis?.signature || '' };
-
-    if(!app.currentEditId) app.data.patients.push(p);
-
-    await saveToCloud();
+    await saveToFirebase();
     window.app.closeModal();
-    Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1500, showConfirmButton: false });
-    window.app.nav('dashboard');
-}
+    Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 1000, showConfirmButton: false });
+    window.app.nav('data');
+};
 
-async function processDelete(id) {
-    if(confirm("Hapus data ini permanen?")) {
-        app.data.patients = app.data.patients.filter(p => p.id !== id);
-        await saveToCloud();
-        window.app.nav('data');
+window.clearSig = function() {
+    if(signaturePad) signaturePad.clear();
+};
+
+// --- RENDER HALAMAN ---
+function renderPage(page) {
+    const container = document.getElementById('main-content');
+    container.innerHTML = ''; // Reset Isi
+
+    if(page === 'dashboard') {
+        const p = appData.patients;
+        const total = p.length;
+        const rj = p.filter(x => x.program.type === 'Rawat Jalan').length;
+        const ri = p.filter(x => x.program.type === 'Rawat Inap').length;
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                ${cardBox('TOTAL PASIEN', total, 'text-slate-800')}
+                ${cardBox('RAWAT JALAN', rj, 'text-emerald-600')}
+                ${cardBox('RAWAT INAP', ri, 'text-blue-600')}
+                ${cardBox('DATABASE', 'ONLINE', 'text-green-500')}
+            </div>
+            <div class="bg-white p-6 rounded-[2rem] shadow h-96">
+                <h3 class="font-bold text-gray-700 mb-4">Grafik Kunjungan</h3>
+                <canvas id="chartDash"></canvas>
+            </div>
+        `;
+        
+        setTimeout(() => initChart([10, 15, 8, 20, 25, total]), 100);
+        
+    } else if (page === 'data') {
+        const rows = appData.patients.map((p, i) => `
+            <tr class="border-b hover:bg-slate-50 search-item">
+                <td class="p-4 text-gray-400 font-bold">#${i+1}</td>
+                <td class="p-4 font-bold text-gray-700">${p.reg.name}</td>
+                <td class="p-4 font-mono text-xs">${p.reg.rm}</td>
+                <td class="p-4"><span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100">${p.program.type}</span></td>
+                <td class="p-4 text-right">
+                    <button onclick="window.app.openModalInput('${p.id}')" class="text-blue-600 hover:bg-blue-100 p-2 rounded mr-2"><i class="fas fa-edit"></i></button>
+                    <button onclick="window.app.deletePatient('${p.id}')" class="text-red-600 hover:bg-red-100 p-2 rounded"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="bg-white rounded-[2rem] shadow border flex flex-col h-full overflow-hidden">
+                <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-700">DATA PASIEN</h3>
+                    <input onkeyup="searchLocal(this.value)" placeholder="Cari..." class="border rounded-xl px-4 py-2 text-sm outline-none">
+                </div>
+                <div class="overflow-auto flex-1">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-500 font-bold uppercase text-[10px]">
+                            <tr><th class="p-4">No</th><th class="p-4">Nama</th><th class="p-4">RM</th><th class="p-4">Program</th><th class="p-4 text-right">Aksi</th></tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="5" class="p-8 text-center text-gray-400">Data Kosong</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+    } else if (page === 'input') {
+        window.app.openModalInput();
+        window.app.nav('dashboard'); // Balik ke dashboard di background
     }
 }
 
-// Utils
-function checkStock() {
-    const low = [];
-    app.data.patients.forEach(p => {
-        p.medicine?.stock?.forEach(m => {
-            if(m.qty < 7) low.push(`${m.name} (${p.reg.name})`);
-        });
+function cardBox(title, val, color) {
+    return `<div class="bg-white p-6 rounded-[2rem] shadow border hover:shadow-md transition">
+        <div class="text-gray-400 text-[10px] font-bold tracking-widest mb-2">${title}</div>
+        <div class="text-3xl font-black ${color}">${val}</div>
+    </div>`;
+}
+
+function initChart(data) {
+    const ctx = document.getElementById('chartDash');
+    if(!ctx) return;
+    if(chartInstance) chartInstance.destroy();
+    
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'],
+            datasets: [{
+                label: 'Pasien',
+                data: data,
+                borderColor: '#0d9488',
+                backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
-    if(low.length > 0) {
-        Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: 'Stok Menipis', html: low.join('<br>'), showConfirmButton: false, timer: 5000 });
-    }
 }
 
+// Global Search Helper
 window.searchLocal = function(q) {
-    const rows = document.querySelectorAll('#table-body tr');
-    rows.forEach(r => r.style.display = r.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none');
+    const rows = document.querySelectorAll('.search-item');
+    rows.forEach(r => {
+        r.style.display = r.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
 };
