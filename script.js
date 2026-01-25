@@ -1,5 +1,5 @@
 // ============================================================
-// 1. KONFIGURASI FIREBASE (TIDAK BERUBAH)
+// 1. KONFIGURASI FIREBASE (TETAP SAMA)
 // ============================================================
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -28,14 +28,14 @@ const app = {
     signaturePad: null,
     saveTimer: null,
     isRendering: false,
-    chartInstances: {}, // UPDATE: Penampung Chart agar tidak error tumpuk
+    chartInstances: {}, // Penampung Chart agar tidak error tumpuk (Solusi Klik Ikutan)
 
     // --- SYSTEM STARTUP ---
     init() {
         console.log("App Starting...");
     },
 
-    // --- SISTEM SIMPAN ---
+    // --- SISTEM SIMPAN (ANTI-LAG) ---
     saveDB() {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => {
@@ -114,7 +114,7 @@ const app = {
         });
     },
 
-    // --- DASHBOARD (TIDAK BERUBAH) ---
+    // --- DASHBOARD (TETAP SAMA) ---
     viewDashboard(container) {
         container.innerHTML = `
             <div class="mb-6 flex justify-between items-center">
@@ -268,14 +268,14 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- MEDICINE (UPDATE POINT 1 & 3) ---
+    // --- MEDICINE (EVALUASI POINT 1 & 3) ---
     viewMedicine(container) {
         if (!this.data.patients || this.data.patients.length === 0) {
             container.innerHTML = '<p class="text-slate-400 text-center mt-10">Belum ada pasien terdaftar.</p>';
             return;
         }
 
-        // UPDATE 3: TOMBOL DOWNLOAD EXCEL KHUSUS OBAT
+        // EVALUASI 3: TAMBAH TOMBOL DOWNLOAD EXCEL
         container.innerHTML = `
         <div class="mb-4 text-right">
             <button onclick="app.exportMedicineExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 shadow flex items-center gap-2 ml-auto">
@@ -294,7 +294,7 @@ const app = {
                         <div class="space-y-4">
                             ${(p.medicine?.stock || []).map((s, i) => {
                                 const sisa = s.init - s.used;
-                                // UPDATE 1: REMINDER JIKA STOK < 7
+                                // EVALUASI 1: REMINDER JIKA STOK < 7
                                 const isLow = sisa < 7;
                                 return `
                                 <div class="p-4 border rounded-2xl ${isLow ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'} relative transition hover:shadow-md">
@@ -345,39 +345,39 @@ const app = {
         `).join('');
     },
 
-    // FUNGSI BARU: EXPORT OBAT EXCEL
+    // FUNGSI BARU: DOWNLOAD EXCEL OBAT
     exportMedicineExcel() {
         if(!this.data.patients.length) return Swal.fire('Info', 'Data kosong.', 'info');
         
         let rows = [];
         this.data.patients.forEach(p => {
-            // Ambil data stok
+            // Data Stok
             if(p.medicine && p.medicine.stock) {
                 p.medicine.stock.forEach(s => {
                     rows.push({
-                        "Kategori": "STOK OBAT",
+                        "Jenis Data": "STOK OBAT",
                         "Nama Pasien": p.reg.name,
                         "Nama Obat": s.name,
                         "Jumlah Awal": s.init,
                         "Terpakai": s.used,
                         "Sisa": s.init - s.used,
                         "Expired": s.exp,
-                        "Waktu Input": "-"
+                        "Waktu Log": "-"
                     });
                 });
             }
-            // Ambil data log
+            // Data Log
             if(p.medicine && p.medicine.logs) {
                 p.medicine.logs.forEach(l => {
                     rows.push({
-                        "Kategori": "LOG PEMAKAIAN",
+                        "Jenis Data": "LOG MINUM",
                         "Nama Pasien": p.reg.name,
                         "Nama Obat": l.name,
                         "Jumlah Awal": "-",
                         "Terpakai": 1,
                         "Sisa": "-",
                         "Expired": "-",
-                        "Waktu Input": l.time + " (PJ: " + l.pj + ")"
+                        "Waktu Log": l.time + " (PJ: " + l.pj + ")"
                     });
                 });
             }
@@ -424,7 +424,9 @@ const app = {
         if(idx !== null) p.medicine.stock[idx] = data;
         else p.medicine.stock.push(data);
         
-        this.closeModal(); this.render(); this.saveDB(); 
+        this.closeModal(); 
+        this.render();
+        this.saveDB(); 
     },
 
     modalUseMed(pid, sIdx) {
@@ -501,7 +503,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW TTV (TANDA TANDA VITAL) ---
+    // --- TTV (TETAP SAMA) ---
     viewTTV(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -574,7 +576,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW VISIT ---
+    // --- VISIT (TETAP SAMA) ---
     viewVisit(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -646,7 +648,7 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- CRISIS (UPDATE POINT 2: GRAFIK BPSS 0-25 & H1-H7) ---
+    // --- CRISIS (EVALUASI POINT 2: CHART 0-25 & CLEANUP) ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm border-l-4 border-l-red-500">
@@ -685,7 +687,7 @@ const app = {
         const ctx = document.getElementById(`chart-${p.id}`);
         if(!ctx || !p.crisis?.bpss?.length) return;
 
-        // Hapus chart lama agar tidak glitch
+        // FIX "KLIK IKUTAN": Hapus chart lama agar tidak glitch/flicker
         if (this.chartInstances[p.id]) {
             this.chartInstances[p.id].destroy();
         }
@@ -693,7 +695,7 @@ const app = {
         this.chartInstances[p.id] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // Label H1, H2...
+                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // Label H-1, H-2...
                 datasets: [{ 
                     label: 'Skor BPSS', 
                     data: p.crisis.bpss.map(b => b.eval), 
@@ -701,7 +703,7 @@ const app = {
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
                     fill: true, 
                     tension: 0.3,
-                    pointRadius: 6, // Titik lebih besar agar mudah diklik
+                    pointRadius: 6,
                     pointBackgroundColor: '#fff',
                     pointBorderWidth: 2
                 }]
@@ -743,7 +745,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW PROGRAM (TIDAK BERUBAH) ---
+    // --- PROGRAM (TETAP SAMA) ---
     viewProgram(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -779,7 +781,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VIEW THERAPY (TIDAK BERUBAH) ---
+    // --- THERAPY (TETAP SAMA) ---
     viewTherapy(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -797,7 +799,7 @@ const app = {
         toast.fire({ icon: 'success', title: 'Tersimpan' });
     },
 
-    // --- UTILS ---
+    // --- UTILS & GLOBAL EXPORTS ---
     async delPatient(pid) {
         const res = await Swal.fire({ title: 'Hapus Pasien?', text: "Data hilang permanen!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus' });
         if(res.isConfirmed) {
