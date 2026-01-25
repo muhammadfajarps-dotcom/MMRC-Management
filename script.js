@@ -186,6 +186,7 @@ const app = {
     },
 
     // --- 2. MEDICINE (STOK & CATATAN MINUM OTOMATIS) ---
+    // [UPDATE] Penambahan tombol Edit di Logs dan memastikan tombol Edit Stock berfungsi
     viewMedicine(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item">
@@ -224,6 +225,7 @@ const app = {
                                     <tr class="border-b">
                                         <td class="p-2">${l.time}</td><td class="p-2 font-bold">${l.name}</td><td class="p-2">${l.pj}</td>
                                         <td class="p-2 flex gap-2">
+                                            <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-amber-500"><i class="fas fa-edit"></i></button>
                                             <button onclick="app.delSubItem('${p.id}', 'medicine.logs', ${i})" class="text-red-400"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
@@ -234,6 +236,11 @@ const app = {
                 </div>
             </div>
         `).join('');
+    },
+
+    // Alias untuk memastikan tombol edit stock berfungsi
+    editMed(pid, idx) {
+        this.modalMedStock(pid, idx);
     },
 
     modalMedStock(pid, editIdx = null) {
@@ -282,6 +289,33 @@ const app = {
         p.medicine.logs.unshift({ time: new Date().toLocaleString('id-ID'), name: stock.name, pj: pj, note: document.getElementById('ml_note').value });
         this.saveDB(); this.closeModal(); this.render();
         if(stock.init - stock.used <= 7) Swal.fire('Reminder', 'Stok tersisa 7!', 'warning');
+    },
+
+    // [NEW] Modal Edit Log
+    modalEditLog(pid, logIdx) {
+        const p = this.data.patients.find(x => x.id === pid);
+        const log = p.medicine.logs[logIdx];
+        document.getElementById('modal-title').innerText = "EDIT CATATAN OBAT";
+        document.getElementById('modal-body').innerHTML = `
+            <div class="space-y-4">
+                <p class="text-xs text-slate-500">Mengedit log tidak mengubah stok obat, hanya teks catatan.</p>
+                <input id="el_time" value="${log.time}" placeholder="Waktu" class="input-field">
+                <input id="el_name" value="${log.name}" placeholder="Nama Obat" class="input-field" readonly>
+                <input id="el_pj" value="${log.pj}" placeholder="Nama PJ" class="input-field">
+                <textarea id="el_note" placeholder="Keterangan..." class="input-field">${log.note || ''}</textarea>
+                <button onclick="app.saveEditLog('${pid}', ${logIdx})" class="w-full bg-teal-600 text-white py-3 rounded-2xl font-bold">SIMPAN PERUBAHAN</button>
+            </div>`;
+        this.openModal();
+    },
+
+    // [NEW] Simpan Edit Log
+    saveEditLog(pid, logIdx) {
+        const p = this.data.patients.find(x => x.id === pid);
+        p.medicine.logs[logIdx].time = document.getElementById('el_time').value;
+        p.medicine.logs[logIdx].pj = document.getElementById('el_pj').value;
+        p.medicine.logs[logIdx].note = document.getElementById('el_note').value;
+        this.saveDB(); this.closeModal(); this.render();
+        Swal.fire('Sukses', 'Catatan diperbarui', 'success');
     },
 
     // --- 3. TTV & GDS ---
@@ -561,7 +595,84 @@ const app = {
 
     openModal() { document.getElementById('modal-container').classList.replace('hidden', 'flex'); },
     closeModal() { document.getElementById('modal-container').classList.replace('flex', 'hidden'); },
-    toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); })
+    toBase64: f => new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload = () => r(rd.result); }),
+
+    // [NEW] Fungsi Export ke Word (DOCX)
+    exportToWord() {
+        if (!this.data.patients.length) return Swal.fire('Info', 'Belum ada data pasien', 'info');
+        
+        const { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel } = docx;
+
+        const children = [];
+        
+        // Judul Dokumen
+        children.push(new Paragraph({
+            text: "DATA PASIEN MMRC MADANI",
+            heading: HeadingLevel.HEADING_1,
+            alignment: "center",
+            spacing: { after: 300 }
+        }));
+
+        this.data.patients.forEach(p => {
+            // Nama Pasien
+            children.push(new Paragraph({
+                children: [new TextRun({ text: p.reg.name, bold: true, size: 28 })],
+                spacing: { before: 400, after: 200 }
+            }));
+
+            // Tabel Biodata Simple
+            children.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("TTL/Usia")] }), new TableCell({ children: [new Paragraph(`${p.reg.ttl} (${p.reg.age} Thn)`)] }) ] }),
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Diagnosa")] }), new TableCell({ children: [new Paragraph(p.diagnosis.entry_diag || '-')] }) ] }),
+                    new TableRow({ children: [ new TableCell({ children: [new Paragraph("Resep")] }), new TableCell({ children: [new Paragraph(`${p.diagnosis.rx_name} (${p.diagnosis.rx_qty})`)] }) ] }),
+                ]
+            }));
+
+            // Judul Sub Section
+            children.push(new Paragraph({ text: "Catatan Obat & TTV:", bold: true, spacing: { before: 200 } }));
+
+            // List Singkat Obat
+            const logText = p.medicine.logs.length ? p.medicine.logs.map(l => `${l.time}: ${l.name} (${l.pj})`).join('\n') : "Belum ada catatan minum obat.";
+            children.push(new Paragraph({ text: logText, spacing: { after: 200 } }));
+
+            // Garis Pembatas
+            children.push(new Paragraph({ text: "--------------------------------------------------", alignment: "center" }));
+        });
+
+        const doc = new Document({ sections: [{ properties: {}, children: children }] });
+
+        Packer.toBlob(doc).then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "MMRC_Data_Pasien.docx";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        });
+    },
+
+    // Placeholder untuk Export Excel (Sesuai existing HTML)
+    exportAllExcel() {
+        if (!this.data.patients.length) return Swal.fire('Info', 'Belum ada data pasien', 'info');
+        
+        const rows = this.data.patients.map(p => ({
+            Nama: p.reg.name,
+            Usia: p.reg.age,
+            Diagnosa: p.diagnosis.entry_diag,
+            Dokter: p.diagnosis.dr_name,
+            Resep: p.diagnosis.rx_name,
+            Program: p.program.type
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Pasien");
+        XLSX.writeFile(wb, "MMRC_Data.xlsx");
+    }
 };
 
 app.render();
