@@ -27,8 +27,11 @@ const app = {
         const cvs = document.getElementById('signature-pad');
         if (cvs) this.sigPad = new SignaturePad(cvs, { backgroundColor: 'rgb(255, 255, 255)' });
 
-        document.getElementById('btn-login').onclick = () => this.login();
-        document.getElementById('btn-logout').onclick = () => this.logout();
+        const btnLogin = document.getElementById('btn-login');
+        if (btnLogin) btnLogin.onclick = () => this.login();
+        
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) btnLogout.onclick = () => this.logout();
     },
 
     login() {
@@ -76,8 +79,9 @@ const app = {
             const val = snap.val();
             this.data = this.sanitize(val);
             this.render();
+            this.checkLowStock();
         } catch (e) {
-            Swal.fire('Connection Error', 'Failed to synchronize with cloud database.', 'error');
+            Swal.fire('Connection Error', 'Failed to synchronize with cloud database. Check internet.', 'error');
         }
     },
 
@@ -108,6 +112,28 @@ const app = {
             return p;
         });
         return data;
+    },
+
+    checkLowStock() {
+        const low = [];
+        this.data.patients.forEach(p => {
+            p.medicine.stock.forEach(m => {
+                if(m.qty < 7) low.push(`${m.name} (${p.reg.name}): ${m.qty}`);
+            });
+        });
+
+        if(low.length > 0) {
+            Swal.fire({
+                title: 'LOW STOCK ALERT (<7)',
+                html: `<div class="text-left text-sm space-y-1">${low.map(x => `<div class="text-red-600 font-bold">• ${x}</div>`).join('')}</div>`,
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true
+            });
+        }
     },
 
     nav(page) {
@@ -174,6 +200,9 @@ const app = {
                 });
             }
         }, 50);
+        
+        // Re-check stock whenever dashboard loads
+        this.checkLowStock();
     },
 
     card(title, val, color) {
@@ -188,10 +217,10 @@ const app = {
             <div class="bg-white p-8 rounded-[2rem] shadow-lg border border-slate-100 max-w-4xl mx-auto animate-fade-in">
                 <h2 class="text-2xl font-black text-slate-800 mb-8 tracking-tight">NEW REGISTRATION</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label class="label-text">FULL NAME</label><input id="i_name" class="input-field" placeholder="Patient Name"></div>
-                    <div><label class="label-text">DATE OF BIRTH</label><input type="date" id="i_dob" class="input-field"></div>
-                    <div><label class="label-text">MEDICAL RECORD (RM)</label><input id="i_rm" class="input-field" placeholder="RM Number"></div>
-                    <div><label class="label-text">PROGRAM TYPE</label>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">FULL NAME</label><input id="i_name" class="input-field" placeholder="Patient Name"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">DATE OF BIRTH</label><input type="date" id="i_dob" class="input-field"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">MEDICAL RECORD (RM)</label><input id="i_rm" class="input-field" placeholder="RM Number"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">PROGRAM TYPE</label>
                         <select id="i_prog" class="input-field">
                             <option>Rawat Jalan</option><option>Rawat Inap</option><option>Konseling</option>
                         </select>
@@ -290,10 +319,10 @@ const app = {
         if (t === 'identity') {
             content = `
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="label-text">NAME</label><input id="e_name" value="${p.reg.name}" class="input-field"></div>
-                    <div><label class="label-text">RM</label><input id="e_rm" value="${p.reg.rm}" class="input-field"></div>
-                    <div><label class="label-text">DOB</label><input id="e_dob" type="date" value="${p.reg.dob}" class="input-field"></div>
-                    <div><label class="label-text">PROGRAM</label><select id="e_prog" class="input-field"><option ${p.program.type==='Rawat Jalan'?'selected':''}>Rawat Jalan</option><option ${p.program.type==='Rawat Inap'?'selected':''}>Rawat Inap</option></select></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">NAME</label><input id="e_name" value="${p.reg.name}" class="input-field"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">RM</label><input id="e_rm" value="${p.reg.rm}" class="input-field"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">DOB</label><input id="e_dob" type="date" value="${p.reg.dob}" class="input-field"></div>
+                    <div><label class="label-text block text-xs font-bold text-slate-400 mb-1">PROGRAM</label><select id="e_prog" class="input-field"><option ${p.program.type==='Rawat Jalan'?'selected':''}>Rawat Jalan</option><option ${p.program.type==='Rawat Inap'?'selected':''}>Rawat Inap</option></select></div>
                 </div>
                 <button onclick="app.updIdentity()" class="mt-4 w-full bg-teal-600 text-white py-3 rounded-xl font-bold">UPDATE IDENTITY</button>`;
         } else if (t === 'diagnosis') {
@@ -325,7 +354,7 @@ const app = {
                 <div class="space-y-2 h-64 overflow-y-auto custom-scroll">
                     ${p.medicine.stock.map((m, i) => `
                         <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <div><div class="font-bold text-slate-700">${m.name}</div><div class="text-[10px] text-slate-400">STOCK: ${m.qty}</div></div>
+                            <div><div class="font-bold text-slate-700">${m.name}</div><div class="text-[10px] ${m.qty < 7 ? 'text-red-500 font-bold' : 'text-slate-400'}">STOCK: ${m.qty}</div></div>
                             <div class="flex gap-1">
                                 <button onclick="app.modMed(${i}, -1)" class="w-8 h-8 rounded-lg bg-red-100 text-red-600 font-bold">-</button>
                                 <button onclick="app.modMed(${i}, 1)" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 font-bold">+</button>
@@ -366,6 +395,7 @@ const app = {
             this.data.patients[this.currIdx].medicine.stock.push({ name: n, qty: q });
             await this.saveDB();
             this.tab('medicine');
+            this.checkLowStock();
         }
     },
 
@@ -375,6 +405,7 @@ const app = {
         if (m.qty < 0) m.qty = 0;
         await this.saveDB();
         this.tab('medicine');
+        this.checkLowStock();
     },
 
     exportAllExcel() {
@@ -385,4 +416,5 @@ const app = {
     }
 };
 
+window.app = app;
 document.addEventListener('DOMContentLoaded', () => app.init());
