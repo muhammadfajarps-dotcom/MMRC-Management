@@ -1,5 +1,5 @@
 // ============================================================
-// 1. KONFIGURASI FIREBASE (CLAUDE FLARE - SESUAI PERMINTAAN)
+// 1. KONFIGURASI FIREBASE (VERSI BARU - CLAUDE FLARE)
 // ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
@@ -27,6 +27,12 @@ const app = {
     saveTimer: null,
     isRendering: false,
 
+    // --- SYSTEM STARTUP ---
+    init() {
+        console.log("App Starting...");
+        // Cek Login Session jika ada (Opsional)
+    },
+
     // --- SISTEM SIMPAN ANTI-LAG (OPTIMISTIC UI UPDATE) ---
     saveDB() {
         // Debounce: Cegah simpan beruntun yang bikin berat
@@ -39,8 +45,10 @@ const app = {
                 localStorage.setItem('MMRC_DATABASE', jsonStr);
                 
                 // 2. Simpan Firebase (Background Process)
-                db.ref('mmrc_data').set(this.data).catch(e => {
-                    console.warn("Internet lambat, data tersimpan di HP:", e);
+                db.ref('mmrc_data').set(this.data).then(() => {
+                    console.log("✅ Cloud Synced");
+                }).catch(e => {
+                    console.warn("⚠️ Offline Mode (Saved Local):", e);
                 });
             } catch (err) {
                 console.error("Storage Error:", err);
@@ -62,14 +70,13 @@ const app = {
         db.ref('mmrc_data').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
-                // Hanya update jika data cloud beda dengan data sekarang (Cegah flicker)
-                // Dan jangan update jika sedang ada modal terbuka (sedang ngetik)
-                const isModalOpen = !document.getElementById('modal-container').classList.contains('hidden');
+                const isModalOpen = document.getElementById('modal-container') && !document.getElementById('modal-container').classList.contains('hidden');
                 
+                // Hanya update jika data cloud beda dan user TIDAK sedang mengetik di modal
                 if (!this.data.patients || (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen)) {
                     this.data = cloudData;
                     localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
-                    if (!document.getElementById('app-layer').classList.contains('hidden')) {
+                    if (document.getElementById('app-layer') && !document.getElementById('app-layer').classList.contains('hidden')) {
                         this.render();
                     }
                 }
@@ -98,7 +105,6 @@ const app = {
         if(btn) btn.classList.add('active');
         document.getElementById('page-title').innerText = page.toUpperCase();
         
-        // Render smooth
         setTimeout(() => this.render(), 50);
     },
 
@@ -109,6 +115,7 @@ const app = {
         requestAnimationFrame(() => {
             const container = document.getElementById('main-content');
             if (container) {
+                container.innerHTML = ''; // Clear container safely
                 switch (this.currentPage) {
                     case 'dashboard': this.viewDashboard(container); break;
                     case 'medicine': this.viewMedicine(container); break;
@@ -185,8 +192,10 @@ const app = {
     },
 
     modalAddPatient(editId = null) {
+        console.log("Opening Modal..."); // Debugging
         const p = editId ? this.data.patients.find(x => x.id === editId) : null;
         document.getElementById('modal-title').innerText = editId ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN BARU";
+        
         const val = (v) => v || '';
         const chk = (v) => v ? 'checked' : '';
 
@@ -240,17 +249,27 @@ const app = {
     },
 
     async savePatient(e, editId) {
-        e.preventDefault();
+        e.preventDefault(); // Mencegah reload halaman
+        this.closeModal(); // UX: Tutup modal duluan biar cepat
         
-        // UX TRICK: Close Modal DULUAN biar terasa INSTAN
-        this.closeModal(); 
-        const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
-        toast.fire({ icon: 'success', title: 'Data disimpan...' });
+        // Notifikasi Simpan
+        Swal.fire({
+            title: 'Menyimpan...',
+            timer: 800,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
 
         const fd = new FormData(e.target);
         let photoBase64 = null;
-        if (editId) photoBase64 = this.data.patients.find(x => x.id === editId).reg.photo;
         
+        // Cek jika edit, ambil foto lama
+        if (editId) {
+            const existing = this.data.patients.find(x => x.id === editId);
+            if(existing) photoBase64 = existing.reg.photo;
+        }
+        
+        // Cek upload foto baru
         const photoFile = fd.get('photo_file');
         if (photoFile && photoFile.size > 0) photoBase64 = await this.toBase64(photoFile);
 
@@ -281,7 +300,7 @@ const app = {
 
         if(editId) {
             const idx = this.data.patients.findIndex(x => x.id === editId);
-            this.data.patients[idx] = pData;
+            if(idx !== -1) this.data.patients[idx] = pData;
         } else {
             if(!this.data.patients) this.data.patients = [];
             this.data.patients.push(pData);
@@ -478,7 +497,6 @@ const app = {
     },
 
     // --- VIEW TTV (TANDA TANDA VITAL) ---
-    // EVALUASI: KOLOM TENSI DARAH DIPERJELAS
     viewTTV(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -624,7 +642,7 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- VIEW CRISIS (EVALUASI: GRAFIK DIPERBAGUS) ---
+    // --- VIEW CRISIS ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm border-l-4 border-l-red-500">
@@ -815,6 +833,9 @@ const app = {
     async exportToWord() {
         if (!this.data.patients || this.data.patients.length === 0) return Swal.fire('Info', 'Data kosong.', 'info');
         
+        // Safety check jika library belum load
+        if(typeof docx === 'undefined') return Swal.fire('Error', 'Library Word belum siap. Coba refresh.', 'error');
+
         const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, ImageRun, TextRun } = docx;
 
         // Helper: Convert Base64 to Uint8Array for docx images
@@ -939,3 +960,6 @@ const app = {
         window.URL.revokeObjectURL(url);
     }
 };
+
+// Global Access Safety
+window.app = app;
