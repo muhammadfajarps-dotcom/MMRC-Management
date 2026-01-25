@@ -186,7 +186,7 @@ const app = {
     },
 
     // --- 2. MEDICINE (STOK & CATATAN MINUM OTOMATIS) ---
-    // [UPDATE: Fungsi Edit & Hapus Diperbaiki]
+    // [UPDATE: Sinkronisasi Hapus Log dengan Stok]
     viewMedicine(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item">
@@ -226,7 +226,7 @@ const app = {
                                         <td class="p-2">${l.time}</td><td class="p-2 font-bold">${l.name}</td><td class="p-2">${l.pj}</td>
                                         <td class="p-2 flex gap-2">
                                             <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-amber-500"><i class="fas fa-edit"></i></button>
-                                            <button onclick="app.delSubItem('${p.id}', 'medicine.logs', ${i})" class="text-red-400"><i class="fas fa-trash"></i></button>
+                                            <button onclick="app.delMedLog('${p.id}', ${i})" class="text-red-400"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -291,7 +291,27 @@ const app = {
         if(stock.init - stock.used <= 7) Swal.fire('Reminder', 'Stok tersisa 7!', 'warning');
     },
 
-    // [NEW: Fungsi Edit Log]
+    // [NEW: Fungsi Hapus Log + Sync Stok]
+    delMedLog(pid, logIdx) {
+        if(!confirm('Hapus catatan ini? Stok akan dikembalikan (+1).')) return;
+        
+        const p = this.data.patients.find(x => x.id === pid);
+        const log = p.medicine.logs[logIdx];
+        
+        // Cari stok yang namanya sama dengan log
+        const stockItem = p.medicine.stock.find(s => s.name === log.name);
+        
+        // Jika ketemu dan used > 0, kurangi used (stok fisik bertambah)
+        if(stockItem && stockItem.used > 0) {
+            stockItem.used -= 1;
+        }
+
+        // Hapus log
+        p.medicine.logs.splice(logIdx, 1);
+        this.saveDB();
+        this.render();
+    },
+
     modalEditLog(pid, logIdx) {
         const p = this.data.patients.find(x => x.id === pid);
         const log = p.medicine.logs[logIdx];
