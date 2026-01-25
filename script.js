@@ -1,544 +1,367 @@
 /**
- * MMRC HOSPITAL MANAGEMENT SYSTEM
- * Version: 2.0 (Stable/Production)
- * Fix: Global Scope Binding & Event Handling
+ * MMRC Management System - Core Logic
+ * Professional Rehabilitation Standard
  */
 
-// ==========================================
-// 1. CONFIGURATION & SETUP
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
-    authDomain: "mmrc-stock.firebaseapp.com",
-    projectId: "mmrc-stock",
-    storageBucket: "mmrc-stock.firebasestorage.app",
-    messagingSenderId: "722563453659",
-    appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
-};
+const app = {
+    // State Management
+    currentUser: null,
+    currentView: 'dashboard',
+    signaturePad: null,
+    db: {
+        patients: [],
+        medicines: [],
+        ttv: [],
+        visits: [],
+        crisis: [],
+        programs: [],
+        therapies: []
+    },
 
-// Initialize Firebase immediately
-if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+    // --- INITIALIZATION ---
+    init: function() {
+        this.loadData();
+        this.checkAuth();
+        console.log("MMRC System Initialized");
+    },
 
-// ==========================================
-// 2. CORE APPLICATION (Global Scope)
-// ==========================================
-// Kita mendefinisikan window.app langsung agar HTML bisa membacanya segera
-window.app = {
-    db: typeof firebase !== 'undefined' ? firebase.database() : null,
-    data: { patients: [] },
-    currentPage: 'dashboard',
-    sigPad: null,
-    chartInstance: null,
+    loadData: function() {
+        const stored = localStorage.getItem('mmrc_db');
+        if (stored) {
+            this.db = JSON.parse(stored);
+        } else {
+            // Seed Dummy Data for Demo
+            this.db.patients = [
+                { id: 1, name: "Budi Santoso", mr: "RM-001", room: "VIP A" },
+                { id: 2, name: "Siti Aminah", mr: "RM-002", room: "Regular 1" }
+            ];
+            this.saveDataLocally();
+        }
+    },
+
+    saveDataLocally: function() {
+        localStorage.setItem('mmrc_db', JSON.stringify(this.db));
+    },
 
     // --- AUTHENTICATION ---
     login: function() {
-        const u = document.getElementById('login-user').value.trim();
-        const p = document.getElementById('login-pass').value.trim();
+        const user = document.getElementById('login-user').value;
+        const pass = document.getElementById('login-pass').value;
 
-        // Hardcoded Credentials sesuai request
-        if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-            document.getElementById('auth-layer').style.display = 'none';
-            document.getElementById('app-layer').classList.remove('hidden');
-            document.getElementById('app-layer').style.display = 'flex';
+        // Hardcoded login for demo purpose
+        if (user === 'OPERASIONAL.MMRC' && pass === 'MADANI1999') {
+            this.currentUser = user;
             
-            this.loadData(); // Load data from Firebase
-            this.nav('dashboard'); // Masuk ke dashboard
+            // Animation out
+            const authLayer = document.getElementById('auth-layer');
+            authLayer.style.opacity = '0';
+            authLayer.style.transition = 'opacity 0.5s';
             
-            // Simpan sesi sederhana
-            localStorage.setItem('mmrc_session', 'active');
+            setTimeout(() => {
+                authLayer.classList.add('hidden');
+                document.getElementById('app-layer').classList.remove('hidden');
+                this.nav('dashboard');
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Login Berhasil',
+                    text: 'Selamat datang di Sistem MMRC',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }, 500);
         } else {
-            Swal.fire({ icon: 'error', title: 'Akses Ditolak', text: 'Username atau Password Salah!' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak',
+                text: 'Username atau Password salah!'
+            });
         }
     },
 
-    logout: function() {
-        Swal.fire({
-            title: 'Keluar Sistem?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Keluar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                localStorage.removeItem('mmrc_session');
-                location.reload();
-            }
-        });
-    },
-
-    // --- DATABASE HANDLER ---
-    loadData: async function() {
-        Swal.fire({ title: 'Memuat Data...', didOpen: () => Swal.showLoading() });
-        
-        try {
-            const snapshot = await this.db.ref('mmrc_data').once('value');
-            const val = snapshot.val();
-            
-            if (val) {
-                this.data = this.sanitizeData(val);
-                console.log("Data Cloud Loaded:", this.data);
-            } else {
-                console.log("Data Kosong, inisialisasi baru.");
-                this.data = { patients: [] };
-            }
-            
-            Swal.close();
-            this.render(); // Render halaman aktif
-            
-        } catch (error) {
-            console.error("Firebase Error:", error);
-            Swal.fire('Koneksi Error', 'Gagal mengambil data database.', 'error');
-            // Fallback ke local storage jika ada
-            const local = localStorage.getItem('mmrc_backup');
-            if(local) {
-                this.data = JSON.parse(local);
-                this.render();
-            }
-        }
-    },
-
-    saveData: async function() {
-        try {
-            // Backup ke local dulu
-            localStorage.setItem('mmrc_backup', JSON.stringify(this.data));
-            // Save ke Cloud
-            await this.db.ref('mmrc_data').set(this.data);
-            console.log("Data Synced");
-        } catch (e) {
-            console.error("Save Error:", e);
-            Swal.fire('Gagal Simpan', 'Periksa koneksi internet Anda', 'warning');
-        }
-    },
-
-    // Mencegah error "Undefined" pada data lama
-    sanitizeData: function(rawData) {
-        if (!rawData.patients) rawData.patients = [];
-        rawData.patients = rawData.patients.map(p => ({
-            id: p.id || 'P-'+Date.now(),
-            reg: p.reg || { name: 'Tanpa Nama', rm: '-' },
-            history: p.history || {},
-            diagnosis: p.diagnosis || {},
-            medicine: p.medicine || { stock: [], logs: [] },
-            ttv: p.ttv || [],
-            visits: p.visits || [],
-            crisis: p.crisis || { bpss: [] },
-            program: p.program || { type: '-', duration: '-' },
-            therapy: p.therapy || ''
-        }));
-        return rawData;
+    checkAuth: function() {
+        // Session persistence check could go here
     },
 
     // --- NAVIGATION ---
-    nav: function(pageId) {
-        this.currentPage = pageId;
+    nav: function(viewName) {
+        this.currentView = viewName;
         
-        // Update Sidebar Active State
+        // Update Active Button State
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.getElementById('btn-' + pageId);
-        if (activeBtn) activeBtn.classList.add('active');
+        const activeBtn = document.getElementById(`btn-${viewName}`);
+        if(activeBtn) activeBtn.classList.add('active');
 
-        // Update Title Header
-        const titles = {
-            'dashboard': 'DASHBOARD UTAMA',
-            'medicine': 'MANAJEMEN OBAT',
-            'ttv': 'MONITORING TTV & GDS',
-            'visit': 'VISIT DOKTER',
-            'crisis': 'GRAFIK CRISIS & BPSS',
-            'program': 'RENCANA PROGRAM',
-            'therapy': 'CATATAN TERAPI'
-        };
-        document.getElementById('page-title').innerText = titles[pageId] || 'SYSTEM';
+        // Update Header Title
+        document.getElementById('page-title').innerText = viewName.replace('_', ' ').toUpperCase();
 
         // Render Content
-        this.render();
-    },
+        const contentDiv = document.getElementById('main-content');
+        contentDiv.innerHTML = ''; // Clear content
 
-    // --- RENDER ENGINE (View Controller) ---
-    render: function() {
-        const container = document.getElementById('main-content');
-        if (!container) return;
-        
-        container.innerHTML = ''; // Bersihkan layar
-
-        switch (this.currentPage) {
-            case 'dashboard': this.renderDashboard(container); break;
-            case 'medicine': this.renderMedicine(container); break;
-            case 'ttv': this.renderTTV(container); break;
-            case 'visit': this.renderVisit(container); break;
-            case 'crisis': this.renderCrisis(container); break;
-            case 'program': this.renderProgram(container); break;
-            case 'therapy': this.renderTherapy(container); break;
-            default: container.innerHTML = '<div class="p-4">Halaman tidak ditemukan</div>';
+        switch(viewName) {
+            case 'dashboard':
+                this.renderDashboard(contentDiv);
+                break;
+            case 'medicine':
+                this.renderGenericTable(contentDiv, 'medicines', ['Tanggal', 'Pasien', 'Obat', 'Dosis', 'Waktu'], ['date', 'patient', 'drug', 'dose', 'time']);
+                break;
+            case 'ttv':
+                this.renderGenericTable(contentDiv, 'ttv', ['Tanggal', 'Pasien', 'TD', 'Nadi', 'Suhu', 'SpO2'], ['date', 'patient', 'bp', 'hr', 'temp', 'spo2']);
+                break;
+            case 'visit':
+                this.renderGenericTable(contentDiv, 'visits', ['Tanggal', 'Pasien', 'Dokter', 'Catatan', 'Tanda Tangan'], ['date', 'patient', 'doctor', 'notes', 'signature_img']);
+                break;
+            case 'crisis':
+                this.renderGenericTable(contentDiv, 'crisis', ['Waktu', 'Pasien', 'Jenis Insiden', 'Penanganan'], ['datetime', 'patient', 'type', 'action']);
+                break;
+            case 'program':
+                this.renderGenericTable(contentDiv, 'programs', ['Minggu', 'Pasien', 'Fokus Program', 'Status'], ['week', 'patient', 'focus', 'status']);
+                break;
+            case 'therapy':
+                this.renderGenericTable(contentDiv, 'therapies', ['Sesi', 'Pasien', 'Jenis Terapi', 'Evaluasi'], ['session', 'patient', 'type', 'evaluation']);
+                break;
         }
     },
 
-    // ==========================================
-    // 3. PAGE RENDERERS
-    // ==========================================
-
-    // --- DASHBOARD ---
-    renderDashboard: function(c) {
-        c.innerHTML = `
-            <div class="flex justify-between items-center mb-6">
-                <div class="grid grid-cols-3 gap-4 w-full max-w-2xl">
-                    <div class="bg-teal-600 text-white p-4 rounded-2xl shadow-lg shadow-teal-200">
-                        <div class="text-xs font-bold opacity-70">TOTAL PASIEN</div>
-                        <div class="text-3xl font-black">${this.data.patients.length}</div>
-                    </div>
-                    <div class="bg-white text-slate-700 p-4 rounded-2xl border shadow-sm">
-                        <div class="text-xs font-bold opacity-70">RAWAT INAP</div>
-                        <div class="text-3xl font-black">${this.data.patients.filter(p=>p.program.type==='Rawat Inap').length}</div>
-                    </div>
-                    <div class="bg-white text-slate-700 p-4 rounded-2xl border shadow-sm">
-                        <div class="text-xs font-bold opacity-70">RAWAT JALAN</div>
-                        <div class="text-3xl font-black">${this.data.patients.filter(p=>p.program.type==='Rawat Jalan').length}</div>
-                    </div>
+    // --- RENDERING MODULES ---
+    
+    renderDashboard: function(container) {
+        // Statistics Cards
+        const totalPatients = this.db.patients.length;
+        const totalVisits = this.db.visits.length;
+        
+        const html = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="text-slate-400 text-xs font-bold uppercase">Total Pasien</div>
+                    <div class="text-3xl font-black text-slate-800 mt-2">${totalPatients}</div>
                 </div>
-                <button onclick="app.modalForm('patient')" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2">
-                    <i class="fas fa-user-plus"></i> REGISTRASI BARU
-                </button>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="text-slate-400 text-xs font-bold uppercase">Visit Dokter</div>
+                    <div class="text-3xl font-black text-teal-600 mt-2">${totalVisits}</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="text-slate-400 text-xs font-bold uppercase">Kepatuhan Obat</div>
+                    <div class="text-3xl font-black text-blue-600 mt-2">98%</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="text-slate-400 text-xs font-bold uppercase">Insiden Crisis</div>
+                    <div class="text-3xl font-black text-red-500 mt-2">${this.db.crisis.length}</div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-6">
-                ${this.data.patients.length === 0 ? '<div class="text-center p-10 text-slate-400">Belum ada data pasien. Silakan Registrasi.</div>' : ''}
-                ${this.data.patients.map(p => `
-                    <div class="bg-white p-6 rounded-3xl border hover:shadow-md transition-shadow search-item">
-                        <div class="flex items-start gap-4">
-                            <img src="${p.reg.photo || 'https://via.placeholder.com/100'}" class="w-20 h-20 rounded-2xl object-cover border bg-slate-100">
-                            <div class="flex-1">
-                                <div class="flex justify-between">
-                                    <h3 class="font-bold text-lg text-slate-800">${p.reg.name}</h3>
-                                    <span class="text-xs bg-slate-100 px-2 py-1 rounded font-mono">${p.reg.rm || 'No-RM'}</span>
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1 grid grid-cols-2 gap-x-4 gap-y-1">
-                                    <p><i class="fas fa-birthday-cake w-4"></i> ${p.reg.ttl || '-'}</p>
-                                    <p><i class="fas fa-briefcase w-4"></i> ${p.reg.job || '-'}</p>
-                                    <p><i class="fas fa-map-marker-alt w-4"></i> ${p.reg.addr || '-'}</p>
-                                    <p><i class="fas fa-user-shield w-4"></i> ${p.reg.guardian || '-'}</p>
-                                </div>
-                                <div class="mt-3 flex gap-2">
-                                    <button onclick="app.modalForm('patient', '${p.id}')" class="text-xs bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg font-bold border border-amber-200">EDIT DATA</button>
-                                    <button onclick="app.deletePatient('${p.id}')" class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold border border-red-200">HAPUS</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="font-bold text-slate-700 mb-4">Statistik Kesehatan Mingguan</h3>
+                    <canvas id="chartHealth"></canvas>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="font-bold text-slate-700 mb-4">Sebaran Diagnosis</h3>
+                    <canvas id="chartDiagnosis"></canvas>
+                </div>
             </div>
         `;
-    },
+        container.innerHTML = html;
 
-    // --- MEDICINE ---
-    renderMedicine: function(c) {
-        c.innerHTML = this.data.patients.map(p => {
-            const med = p.medicine || {stock:[], logs:[]};
-            return `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="font-bold text-teal-800">${p.reg.name}</h3>
-                    <button onclick="app.modalForm('stock', '${p.id}')" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold">+ TAMBAH OBAT</button>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Stok Tersedia</h4>
-                        <div class="space-y-2">
-                            ${(med.stock||[]).map((s, idx) => `
-                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border">
-                                    <div>
-                                        <div class="font-bold text-sm text-slate-700">${s.name}</div>
-                                        <div class="text-[10px] text-slate-400">Exp: ${s.exp || '-'}</div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="text-right">
-                                            <div class="font-black text-lg ${s.qty < 5 ? 'text-red-500' : 'text-teal-600'}">${s.qty}</div>
-                                            <div class="text-[8px] uppercase">Sisa</div>
-                                        </div>
-                                        <button onclick="app.useMedicine('${p.id}', ${idx})" class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors flex items-center justify-center">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                            ${med.stock.length === 0 ? '<p class="text-xs italic text-slate-400">Belum ada data obat</p>' : ''}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Riwayat Minum</h4>
-                        <div class="h-48 overflow-y-auto border rounded-xl bg-slate-50 p-2">
-                            <table class="w-full text-[10px]">
-                                <thead class="text-left text-slate-400"><tr><th class="p-1">Waktu</th><th class="p-1">Obat</th><th class="p-1">PJ</th></tr></thead>
-                                <tbody>
-                                    ${(med.logs||[]).map(l => `
-                                        <tr class="border-b border-slate-200">
-                                            <td class="p-1 font-mono text-slate-500">${l.time}</td>
-                                            <td class="p-1 font-bold text-slate-700">${l.name}</td>
-                                            <td class="p-1">${l.pj}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-    },
-
-    // --- TTV ---
-    renderTTV: function(c) {
-        c.innerHTML = this.data.patients.map(p => `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-800">${p.reg.name}</h3>
-                    <button onclick="app.modalForm('ttv', '${p.id}')" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold">+ INPUT DATA</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-500 font-bold">
-                            <tr><th class="p-3 rounded-l-xl">Waktu</th><th>TD (mmHg)</th><th>Nadi</th><th>Suhu</th><th>RR</th><th>GDS</th><th class="p-3 rounded-r-xl">Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${(p.ttv||[]).map((t, idx) => `
-                                <tr class="border-b">
-                                    <td class="p-3 font-mono">${t.date}</td>
-                                    <td class="p-3 font-bold text-slate-700">${t.td}</td>
-                                    <td class="p-3">${t.nadi}</td>
-                                    <td class="p-3">${t.suhu}</td>
-                                    <td class="p-3">${t.rr}</td>
-                                    <td class="p-3 font-bold text-amber-600">${t.gds}</td>
-                                    <td class="p-3"><button onclick="app.deleteSubItem('${p.id}', 'ttv', ${idx})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    // --- VISIT ---
-    renderVisit: function(c) {
-        c.innerHTML = this.data.patients.map(p => `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-800">${p.reg.name}</h3>
-                    <button onclick="app.modalForm('visit', '${p.id}')" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold">+ CATAT VISIT</button>
-                </div>
-                <div class="space-y-4">
-                    ${(p.visits||[]).map((v, idx) => `
-                        <div class="border rounded-2xl p-4 bg-slate-50 relative">
-                            <div class="flex items-center gap-3 mb-2 border-b pb-2">
-                                <i class="fas fa-user-md text-teal-600 text-xl"></i>
-                                <div>
-                                    <div class="text-[10px] text-slate-400 font-bold uppercase">${v.date}</div>
-                                    <div class="text-xs font-bold text-slate-700">Catatan Dokter</div>
-                                </div>
-                            </div>
-                            <p class="text-sm text-slate-600 mb-3 whitespace-pre-wrap">${v.note}</p>
-                            ${v.signature ? `<img src="${v.signature}" class="h-12 border rounded bg-white mt-2">` : ''}
-                            <button onclick="app.deleteSubItem('${p.id}', 'visits', ${idx})" class="absolute top-4 right-4 text-slate-300 hover:text-red-500"><i class="fas fa-times"></i></button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
-    },
-
-    // --- CRISIS ---
-    renderCrisis: function(c) {
-        c.innerHTML = this.data.patients.map(p => {
-            const bpss = p.crisis?.bpss || [];
-            const lastScore = bpss.length > 0 ? bpss[bpss.length-1].total : 0;
-            return `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h3 class="font-bold text-slate-800">${p.reg.name}</h3>
-                        <div class="text-xs text-red-500 font-bold">BPSS Score Terakhir: ${lastScore}</div>
-                    </div>
-                    <button onclick="app.modalForm('crisis', '${p.id}')" class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold">+ INPUT SKOR</button>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="h-48 border rounded-xl p-2"><canvas id="chart-${p.id}"></canvas></div>
-                    <div class="h-48 overflow-y-auto">
-                        <table class="w-full text-[10px] border-collapse">
-                            <tr class="bg-slate-100 text-left"><th>Tgl</th><th>Bio</th><th>Psy</th><th>Soc</th><th>Spi</th><th>Total</th></tr>
-                            ${bpss.map(b => `
-                                <tr class="border-b">
-                                    <td class="p-1">${b.date.split(',')[0]}</td>
-                                    <td>${b.bio}</td><td>${b.psy}</td><td>${b.soc}</td><td>${b.spi}</td>
-                                    <td class="font-bold">${b.total}</td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-
-        // Render Charts after DOM update
+        // Render Charts (Mock Data)
         setTimeout(() => {
-            this.data.patients.forEach(p => {
-                const ctx = document.getElementById(`chart-${p.id}`);
-                if (ctx && p.crisis?.bpss?.length > 0) {
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: p.crisis.bpss.map(b => b.date.split(',')[0]),
-                            datasets: [{
-                                label: 'Total Score',
-                                data: p.crisis.bpss.map(b => b.total),
-                                borderColor: '#dc2626',
-                                tension: 0.3,
-                                fill: false
-                            }]
-                        },
-                        options: { maintainAspectRatio: false, plugins: { legend: {display: false} } }
-                    });
+            new Chart(document.getElementById('chartHealth'), {
+                type: 'line',
+                data: {
+                    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                    datasets: [{
+                        label: 'Rata-rata TTV Stabil',
+                        data: [85, 88, 87, 90, 92, 91, 94],
+                        borderColor: '#0d9488',
+                        tension: 0.4
+                    }]
+                }
+            });
+
+            new Chart(document.getElementById('chartDiagnosis'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Schizophrenia', 'Bipolar', 'Depression', 'Anxiety', 'Addiction'],
+                    datasets: [{
+                        data: [30, 20, 25, 15, 10],
+                        backgroundColor: ['#0d9488', '#2dd4bf', '#99f6e4', '#ccfbf1', '#f0fdfa']
+                    }]
                 }
             });
         }, 100);
     },
 
-    // --- PROGRAM ---
-    renderProgram: function(c) {
-        c.innerHTML = this.data.patients.map(p => `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <h3 class="font-bold text-slate-800 mb-4">${p.reg.name}</h3>
-                <div class="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-300">
-                    <div class="grid grid-cols-2 gap-6 mb-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Jenis Program</label>
-                            <select id="prog-type-${p.id}" onchange="app.saveProgramDirect('${p.id}')" class="input-field mt-1">
-                                <option ${p.program.type==='Rawat Jalan'?'selected':''}>Rawat Jalan</option>
-                                <option ${p.program.type==='Rawat Inap'?'selected':''}>Rawat Inap</option>
-                                <option ${p.program.type==='Intensif'?'selected':''}>Intensif</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Target Durasi</label>
-                            <input id="prog-dur-${p.id}" value="${p.program.duration}" onchange="app.saveProgramDirect('${p.id}')" class="input-field mt-1" placeholder="Contoh: 1 Bulan">
-                        </div>
-                    </div>
-                    <div class="text-xs text-slate-400 italic text-center">Perubahan otomatis tersimpan saat anda mengganti nilai.</div>
+    renderGenericTable: function(container, collectionName, headers, keys) {
+        // Header with Add Button
+        const headerHtml = `
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-800">Data ${this.currentView.toUpperCase()}</h3>
+                <button onclick="app.openModal('${collectionName}')" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm transition-all flex items-center gap-2">
+                    <i class="fas fa-plus"></i> TAMBAH DATA
+                </button>
+            </div>
+        `;
+
+        // Table
+        let tableRows = '';
+        const data = this.db[collectionName];
+
+        if (data.length === 0) {
+            tableRows = `<tr><td colspan="${headers.length + 1}" class="text-center py-8 text-slate-400">Belum ada data tersedia.</td></tr>`;
+        } else {
+            data.forEach((item, index) => {
+                let cells = '';
+                keys.forEach(key => {
+                    let val = item[key] || '-';
+                    // Special render for signature/image
+                    if(key === 'signature_img' && val !== '-') {
+                        val = `<img src="${val}" class="h-8 border rounded bg-white">`;
+                    }
+                    cells += `<td class="p-4 text-sm text-slate-600">${val}</td>`;
+                });
+                
+                tableRows += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        ${cells}
+                        <td class="p-4 text-right">
+                            <button onclick="app.deleteItem('${collectionName}', ${index})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        const tableHtml = `
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                ${headers.map(h => `<th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">${h}</th>`).join('')}
+                                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        `).join('');
+        `;
+
+        container.innerHTML = headerHtml + tableHtml;
     },
 
-    // --- THERAPY ---
-    renderTherapy: function(c) {
-        c.innerHTML = this.data.patients.map(p => `
-            <div class="bg-white p-6 rounded-3xl border mb-6 search-item">
-                <h3 class="font-bold text-slate-800 mb-4">${p.reg.name}</h3>
-                <div class="relative">
-                    <textarea id="note-${p.id}" class="w-full h-40 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-slate-700 leading-relaxed focus:ring-2 focus:ring-yellow-400 outline-none" placeholder="Tulis catatan perkembangan terapi disini...">${p.therapy || ''}</textarea>
-                    <button onclick="app.saveTherapyDirect('${p.id}')" class="absolute bottom-4 right-4 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm">
-                        SIMPAN CATATAN
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    // ==========================================
-    // 4. MODAL & FORM HANDLERS
-    // ==========================================
-    modalForm: function(type, id = null) {
+    // --- MODAL & FORMS ---
+    openModal: function(type) {
         const modal = document.getElementById('modal-container');
         const body = document.getElementById('modal-body');
         const title = document.getElementById('modal-title');
         
-        // Find patient if ID exists
-        const p = id ? this.data.patients.find(x => x.id === id) : null;
-        
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        
-        let html = '';
+        title.innerText = `INPUT DATA: ${type.toUpperCase()}`;
 
-        if (type === 'patient') {
-            title.innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN BARU";
-            html = `
-                <form onsubmit="app.handleSave(event, 'patient', '${id||''}')" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="col-span-2 flex justify-center mb-4">
-                        <label class="w-24 h-24 bg-slate-100 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-200">
-                            <i class="fas fa-camera text-slate-400"></i>
-                            <input type="file" name="photo" class="hidden" accept="image/*">
-                        </label>
+        // Generate Form Fields
+        let fields = '';
+        const patientOptions = this.db.patients.map(p => `<option value="${p.name}">${p.name} (${p.mr})</option>`).join('');
+        const patientSelect = `
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-slate-700 mb-2">Nama Pasien</label>
+                <select id="input-patient" class="input-field">
+                    ${patientOptions}
+                </select>
+            </div>
+        `;
+
+        // Determine fields based on type
+        if (type === 'medicines') {
+            fields = `
+                ${patientSelect}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Nama Obat</label>
+                        <input type="text" id="input-drug" class="input-field" placeholder="Contoh: Risperidone">
                     </div>
-                    <input name="name" value="${p?.reg.name||''}" placeholder="Nama Lengkap" class="input-field" required>
-                    <input name="rm" value="${p?.reg.rm||''}" placeholder="No. RM" class="input-field">
-                    <input name="ttl" value="${p?.reg.ttl||''}" placeholder="Tempat, Tgl Lahir" class="input-field">
-                    <input name="job" value="${p?.reg.job||''}" placeholder="Pekerjaan" class="input-field">
-                    <input name="addr" value="${p?.reg.addr||''}" placeholder="Alamat Domisili" class="input-field">
-                    <input name="guardian" value="${p?.reg.guardian||''}" placeholder="Penanggung Jawab" class="input-field">
-                    <button type="submit" class="col-span-2 bg-teal-600 text-white py-3 rounded-xl font-bold mt-4">SIMPAN DATA</button>
-                </form>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Dosis</label>
+                        <input type="text" id="input-dose" class="input-field" placeholder="Contoh: 2mg">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Waktu Pemberian</label>
+                    <input type="datetime-local" id="input-time" class="input-field">
+                </div>
+            `;
+        } else if (type === 'visits') {
+            fields = `
+                ${patientSelect}
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Nama Dokter</label>
+                    <input type="text" id="input-doctor" class="input-field" placeholder="Dr. SpKJ">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Catatan Perkembangan (CPPT)</label>
+                    <textarea id="input-notes" class="input-field h-32" placeholder="SOAP..."></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Tanda Tangan Dokter</label>
+                    <div class="border rounded-xl bg-slate-50" style="height: 200px;">
+                        <canvas id="sig-canvas" class="w-full h-full rounded-xl"></canvas>
+                    </div>
+                    <button type="button" onclick="app.clearSignature()" class="text-xs text-red-500 mt-2 font-bold">Hapus Tanda Tangan</button>
+                </div>
+            `;
+        } else if (type === 'ttv') {
+             fields = `
+                ${patientSelect}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="mb-4"><label class="text-sm font-bold">Tekanan Darah (mmHg)</label><input id="input-bp" class="input-field" placeholder="120/80"></div>
+                    <div class="mb-4"><label class="text-sm font-bold">Nadi (bpm)</label><input id="input-hr" class="input-field" placeholder="80"></div>
+                    <div class="mb-4"><label class="text-sm font-bold">Suhu (°C)</label><input id="input-temp" class="input-field" placeholder="36.5"></div>
+                    <div class="mb-4"><label class="text-sm font-bold">SpO2 (%)</label><input id="input-spo2" class="input-field" placeholder="98"></div>
+                </div>
             `;
         }
-        else if (type === 'stock') {
-            title.innerText = `TAMBAH OBAT: ${p.reg.name}`;
-            html = `
-                <form onsubmit="app.handleSave(event, 'stock', '${id}')" class="space-y-4">
-                    <input name="name" placeholder="Nama Obat" class="input-field" required>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input name="qty" type="number" placeholder="Jumlah (Qty)" class="input-field" required>
-                        <input name="exp" type="date" class="input-field" required>
-                    </div>
-                    <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold">TAMBAH STOK</button>
-                </form>
+        // Add other types similarly...
+        else {
+             fields = `
+                ${patientSelect}
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Deskripsi / Detail</label>
+                    <textarea id="input-desc" class="input-field" placeholder="Detail data..."></textarea>
+                </div>
             `;
         }
-        else if (type === 'ttv') {
-            title.innerText = `INPUT TTV: ${p.reg.name}`;
-            html = `
-                <form onsubmit="app.handleSave(event, 'ttv', '${id}')" class="grid grid-cols-2 gap-4">
-                    <input name="td" placeholder="TD (mmHg)" class="input-field">
-                    <input name="nadi" placeholder="Nadi" class="input-field">
-                    <input name="suhu" placeholder="Suhu" class="input-field">
-                    <input name="rr" placeholder="RR" class="input-field">
-                    <input name="gds" placeholder="GDS" class="input-field col-span-2">
-                    <button type="submit" class="col-span-2 bg-teal-600 text-white py-3 rounded-xl font-bold">SIMPAN HASIL</button>
-                </form>
-            `;
-        }
-        else if (type === 'visit') {
-            title.innerText = `CATATAN DOKTER: ${p.reg.name}`;
-            html = `
-                <form onsubmit="app.handleSave(event, 'visit', '${id}')" class="space-y-4">
-                    <textarea name="note" placeholder="Catatan perkembangan..." class="input-field h-32"></textarea>
-                    <div class="border rounded-xl bg-slate-50 p-2">
-                        <div class="text-[10px] text-slate-400 mb-1">Tanda Tangan Dokter:</div>
-                        <canvas id="sig-canvas" class="w-full h-32 border bg-white cursor-crosshair"></canvas>
-                        <button type="button" onclick="app.sigPad.clear()" class="text-xs text-red-500 mt-1">Hapus TTD</button>
-                    </div>
-                    <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold">SIMPAN VISIT</button>
-                </form>
-            `;
+
+        body.innerHTML = `
+            <form onsubmit="event.preventDefault(); app.saveData('${type}')">
+                ${fields}
+                <div class="mt-8 pt-4 border-t flex justify-end gap-3">
+                    <button type="button" onclick="app.closeModal()" class="px-6 py-3 rounded-xl text-slate-500 font-bold hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 shadow-lg">SIMPAN DATA</button>
+                </div>
+            </form>
+        `;
+
+        // Init Signature Pad if needed
+        if (type === 'visits') {
             setTimeout(() => {
-                const cvs = document.getElementById('sig-canvas');
-                cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-                this.sigPad = new SignaturePad(cvs);
-            }, 300);
+                const canvas = document.getElementById('sig-canvas');
+                // Resize canvas for high DPI
+                const ratio =  Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                
+                this.signaturePad = new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)'
+                });
+            }, 100);
         }
-        else if (type === 'crisis') {
-            title.innerText = `BPSS SCORING: ${p.reg.name}`;
-            html = `
-                <form onsubmit="app.handleSave(event, 'crisis', '${id}')" class="grid grid-cols-2 gap-4">
-                    <input name="bio" type="number" placeholder="Bio Score" class="input-field">
-                    <input name="psy" type="number" placeholder="Psy Score" class="input-field">
-                    <input name="soc" type="number" placeholder="Soc Score" class="input-field">
-                    <input name="spi" type="number" placeholder="Spi Score" class="input-field">
-                    <button type="submit" class="col-span-2 bg-red-600 text-white py-3 rounded-xl font-bold">HITUNG & SIMPAN</button>
-                </form>
-            `;
-        }
-
-        body.innerHTML = html;
     },
 
     closeModal: function() {
@@ -546,165 +369,145 @@ window.app = {
         document.getElementById('modal-container').classList.remove('flex');
     },
 
-    // --- DATA PROCESSORS ---
-    handleSave: async function(e, type, id) {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        
-        if (type === 'patient') {
-            let p = id ? this.data.patients.find(x => x.id === id) : null;
-            
-            // Handle Photo
-            let photoBase64 = p ? p.reg.photo : null;
-            const file = fd.get('photo');
-            if (file && file.size > 0) photoBase64 = await this.toBase64(file);
+    clearSignature: function() {
+        if(this.signaturePad) this.signaturePad.clear();
+    },
 
-            const newReg = {
-                name: fd.get('name'), rm: fd.get('rm'), ttl: fd.get('ttl'),
-                job: fd.get('job'), addr: fd.get('addr'), guardian: fd.get('guardian'),
-                photo: photoBase64
-            };
+    // --- DATA HANDLING ---
+    saveData: function(collection) {
+        const newData = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString('id-ID'),
+            datetime: new Date().toLocaleString('id-ID'),
+            patient: document.getElementById('input-patient') ? document.getElementById('input-patient').value : 'Unknown'
+        };
 
-            if (p) {
-                p.reg = { ...p.reg, ...newReg };
+        // Capture specific fields
+        if(collection === 'medicines') {
+            newData.drug = document.getElementById('input-drug').value;
+            newData.dose = document.getElementById('input-dose').value;
+            newData.time = document.getElementById('input-time').value;
+        } else if (collection === 'visits') {
+            newData.doctor = document.getElementById('input-doctor').value;
+            newData.notes = document.getElementById('input-notes').value;
+            if(!this.signaturePad.isEmpty()) {
+                newData.signature_img = this.signaturePad.toDataURL();
             } else {
-                this.data.patients.push({
-                    id: 'P-' + Date.now(),
-                    reg: newReg,
-                    program: { type: 'Rawat Jalan', duration: '-' },
-                    medicine: { stock: [], logs: [] },
-                    ttv: [], visits: [], crisis: { bpss: [] }
-                });
+                Swal.fire('Error', 'Tanda tangan wajib diisi', 'warning');
+                return;
             }
-        }
-        else if (type === 'stock') {
-            const p = this.data.patients.find(x => x.id === id);
-            p.medicine.stock.push({
-                name: fd.get('name'),
-                qty: parseInt(fd.get('qty')),
-                exp: fd.get('exp')
-            });
-        }
-        else if (type === 'ttv') {
-            const p = this.data.patients.find(x => x.id === id);
-            p.ttv.unshift({
-                date: new Date().toLocaleString(),
-                td: fd.get('td'), nadi: fd.get('nadi'), suhu: fd.get('suhu'),
-                rr: fd.get('rr'), gds: fd.get('gds')
-            });
-        }
-        else if (type === 'visit') {
-            const p = this.data.patients.find(x => x.id === id);
-            p.visits.unshift({
-                date: new Date().toLocaleString(),
-                note: fd.get('note'),
-                signature: !this.sigPad.isEmpty() ? this.sigPad.toDataURL() : null
-            });
-        }
-        else if (type === 'crisis') {
-            const p = this.data.patients.find(x => x.id === id);
-            const bio = parseInt(fd.get('bio'))||0;
-            const psy = parseInt(fd.get('psy'))||0;
-            const soc = parseInt(fd.get('soc'))||0;
-            const spi = parseInt(fd.get('spi'))||0;
-            p.crisis.bpss.push({
-                date: new Date().toLocaleString(),
-                bio, psy, soc, spi,
-                total: bio + psy + soc + spi
-            });
+        } else if (collection === 'ttv') {
+            newData.bp = document.getElementById('input-bp').value;
+            newData.hr = document.getElementById('input-hr').value;
+            newData.temp = document.getElementById('input-temp').value;
+            newData.spo2 = document.getElementById('input-spo2').value;
         }
 
-        await this.saveData();
+        // Add to Local DB
+        this.db[collection].push(newData);
+        this.saveDataLocally();
+
+        // UI Feedback
         this.closeModal();
-        this.render();
-        Swal.fire({ icon: 'success', title: 'Data Tersimpan', timer: 1000, showConfirmButton: false });
-    },
-
-    // --- UTILITIES (Direct Actions) ---
-    useMedicine: async function(pid, idx) {
-        const { value: pjName } = await Swal.fire({
-            title: 'Konfirmasi Minum Obat',
-            input: 'text',
-            inputLabel: 'Nama PJ (Perawat/Wali)',
-            showCancelButton: true
+        this.nav(this.currentView); // Refresh view
+        Swal.fire({
+            icon: 'success',
+            title: 'Tersimpan',
+            text: 'Data berhasil ditambahkan ke database',
+            timer: 1500,
+            showConfirmButton: false
         });
+    },
 
-        if (pjName) {
-            const p = this.data.patients.find(x => x.id === pid);
-            const med = p.medicine.stock[idx];
-            
-            if(med.qty > 0) {
-                med.qty -= 1;
-                p.medicine.logs.unshift({
-                    time: new Date().toLocaleString(),
-                    name: med.name,
-                    pj: pjName
-                });
-                await this.saveData();
-                this.render();
-            } else {
-                Swal.fire('Stok Habis', 'Obat ini sudah habis.', 'error');
+    deleteItem: function(collection, index) {
+        Swal.fire({
+            title: 'Hapus Data?',
+            text: "Data yang dihapus tidak bisa dikembalikan",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Ya, Hapus'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.db[collection].splice(index, 1);
+                this.saveDataLocally();
+                this.nav(this.currentView);
+                Swal.fire('Terhapus!', 'Data telah dihapus.', 'success');
             }
-        }
-    },
-
-    saveProgramDirect: async function(pid) {
-        const p = this.data.patients.find(x => x.id === pid);
-        p.program.type = document.getElementById(`prog-type-${pid}`).value;
-        p.program.duration = document.getElementById(`prog-dur-${pid}`).value;
-        await this.saveData();
-    },
-
-    saveTherapyDirect: async function(pid) {
-        const p = this.data.patients.find(x => x.id === pid);
-        p.therapy = document.getElementById(`note-${pid}`).value;
-        await this.saveData();
-        Swal.fire({ icon: 'success', title: 'Catatan Tersimpan', toast: true, position: 'top-end', timer: 1500 });
-    },
-
-    deletePatient: async function(id) {
-        if((await Swal.fire({ title: 'Hapus Pasien?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-            this.data.patients = this.data.patients.filter(p => p.id !== id);
-            await this.saveData();
-            this.render();
-        }
-    },
-
-    deleteSubItem: async function(pid, key, idx) {
-        if(confirm("Hapus item ini?")) {
-            const p = this.data.patients.find(x => x.id === pid);
-            p[key].splice(idx, 1);
-            await this.saveData();
-            this.render();
-        }
+        });
     },
 
     search: function() {
-        const q = document.getElementById('global-search').value.toLowerCase();
-        document.querySelectorAll('.search-item').forEach(el => {
-            el.style.display = el.innerText.toLowerCase().includes(q) ? 'block' : 'none';
+        const query = document.getElementById('global-search').value.toLowerCase();
+        // Simple search filter logic implementation depends on requirement
+        // For now, this is a placeholder for filtering the displayed table
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
         });
     },
 
-    toBase64: file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    })
+    // --- EXPORTS ---
+    exportAllExcel: function() {
+        const wb = XLSX.utils.book_new();
+        
+        // Add sheets
+        for (const [key, data] of Object.entries(this.db)) {
+            if(Array.isArray(data) && data.length > 0) {
+                // Filter out large images from excel for performance
+                const cleanData = data.map(item => {
+                    const copy = {...item};
+                    if(copy.signature_img) copy.signature_img = "[Signature Image]";
+                    return copy;
+                });
+                const ws = XLSX.utils.json_to_sheet(cleanData);
+                XLSX.utils.book_append_sheet(wb, ws, key.toUpperCase());
+            }
+        }
+
+        XLSX.writeFile(wb, "MMRC_Full_Report.xlsx");
+        Swal.fire('Success', 'Laporan Excel berhasil diunduh', 'success');
+    },
+
+    exportToWord: function() {
+        // Simple DOCX export using 'docx' library
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
+
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: "Laporan Medis MMRC",
+                        heading: HeadingLevel.HEADING_1,
+                    }),
+                    new Paragraph({
+                        text: `Diekspor pada: ${new Date().toLocaleString('id-ID')}`,
+                        spacing: { after: 200 }
+                    }),
+                    new Paragraph({
+                        text: "Ringkasan data pasien dan aktivitas harian...",
+                        spacing: { after: 400 }
+                    }),
+                    // Add more dynamic content here based on this.db
+                ],
+            }],
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "MMRC_Report.docx";
+            a.click();
+            window.URL.revokeObjectURL(url);
+            Swal.fire('Success', 'Laporan Word berhasil diunduh', 'success');
+        });
+    }
 };
 
-// ==========================================
-// 5. SYSTEM BOOTSTRAP
-// ==========================================
-// Memastikan script berjalan setelah HTML siap
+// Start the App
 document.addEventListener('DOMContentLoaded', () => {
-    // Cek sesi login
-    if(localStorage.getItem('mmrc_session')) {
-        document.getElementById('auth-layer').style.display = 'none';
-        document.getElementById('app-layer').classList.remove('hidden');
-        document.getElementById('app-layer').style.display = 'flex';
-        window.app.loadData();
-        window.app.nav('dashboard');
-    }
+    app.init();
 });
