@@ -1,14 +1,16 @@
 // ============================================================
-// 1. KONFIGURASI FIREBASE (TETAP SAMA)
+// 1. KONFIGURASI FIREBASE (CLAUDE FLARE - SESUAI REQUEST)
 // ============================================================
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
-  authDomain: "mmrc-stock.firebaseapp.com",
-  databaseURL: "https://mmrc-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "mmrc-stock",
-  storageBucket: "mmrc-stock.firebasestorage.app",
-  messagingSenderId: "722563453659",
-  appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
+  apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
+  authDomain: "mmrc-stock1999.firebaseapp.com",
+  databaseURL: "https://mmrc-stock1999-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mmrc-stock1999",
+  storageBucket: "mmrc-stock1999.firebasestorage.app",
+  messagingSenderId: "486588564272",
+  appId: "1:486588564272:web:308b276a53401a738ebef5",
+  measurementId: "G-4218HRWRTC"
 };
 
 // INITIALIZE FIREBASE
@@ -26,26 +28,31 @@ const app = {
     signaturePad: null,
     saveTimer: null,
     isRendering: false,
-    chartInstances: {}, // Penampung Chart agar tidak error tumpuk (Solusi Klik Ikutan)
+    chartInstances: {}, // SOLUSI KLIK IKUTAN (Agar chart tidak tumpuk)
 
     // --- SYSTEM STARTUP ---
     init() {
         console.log("App Starting...");
     },
 
-    // --- SISTEM SIMPAN (ANTI-LAG) ---
+    // --- SISTEM SIMPAN ANTI-LAG ---
     saveDB() {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => {
             try {
+                // 1. Simpan Local
                 const jsonStr = JSON.stringify(this.data);
                 localStorage.setItem('MMRC_DATABASE', jsonStr);
+                
+                // 2. Simpan Cloud (Background)
                 db.ref('mmrc_data').set(this.data).then(() => {
                     console.log("✅ Cloud Synced");
                 }).catch(e => {
-                    console.warn("⚠️ Offline Mode (Saved Local):", e);
+                    console.warn("⚠️ Offline Mode:", e);
                 });
-            } catch (err) { console.error("Storage Error:", err); }
+            } catch (err) {
+                console.error("Storage Error:", err);
+            }
         }, 800);
     },
 
@@ -54,10 +61,12 @@ const app = {
         if (local) {
             try { this.data = JSON.parse(local); this.render(); } catch (e) { console.error(e); }
         }
+
         db.ref('mmrc_data').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
                 const isModalOpen = document.getElementById('modal-container') && !document.getElementById('modal-container').classList.contains('hidden');
+                
                 if (!this.data.patients || (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen)) {
                     this.data = cloudData;
                     localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
@@ -72,6 +81,7 @@ const app = {
     login() {
         const u = document.getElementById('login-user').value.trim();
         const p = document.getElementById('login-pass').value.trim();
+        
         if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
             document.getElementById('auth-layer').style.display = 'none';
             document.getElementById('app-layer').classList.remove('hidden');
@@ -88,12 +98,14 @@ const app = {
         const btn = document.getElementById(`btn-${page}`);
         if(btn) btn.classList.add('active');
         document.getElementById('page-title').innerText = page.toUpperCase();
+        
         setTimeout(() => this.render(), 50);
     },
 
     render() {
         if(this.isRendering) return;
         this.isRendering = true;
+
         requestAnimationFrame(() => {
             const container = document.getElementById('main-content');
             if (container) {
@@ -112,7 +124,7 @@ const app = {
         });
     },
 
-    // --- DASHBOARD (TETAP SAMA) ---
+    // --- DASHBOARD (NO CHANGE) ---
     viewDashboard(container) {
         container.innerHTML = `
             <div class="mb-6 flex justify-between items-center">
@@ -168,7 +180,6 @@ const app = {
     modalAddPatient(editId = null) {
         const p = editId ? this.data.patients.find(x => x.id === editId) : null;
         document.getElementById('modal-title').innerText = editId ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN BARU";
-        
         const val = (v) => v || '';
         const chk = (v) => v ? 'checked' : '';
 
@@ -266,14 +277,14 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- MEDICINE (EVALUASI POINT 1 & 3) ---
+    // --- MEDICINE (FITUR NO.1: REMINDER < 7 & FITUR NO.3: EXCEL) ---
     viewMedicine(container) {
         if (!this.data.patients || this.data.patients.length === 0) {
             container.innerHTML = '<p class="text-slate-400 text-center mt-10">Belum ada pasien terdaftar.</p>';
             return;
         }
 
-        // EVALUASI 3: TAMBAH TOMBOL DOWNLOAD EXCEL
+        // FITUR NO.3: TOMBOL DOWNLOAD EXCEL
         container.innerHTML = `
         <div class="mb-4 text-right">
             <button onclick="app.exportMedicineExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 shadow flex items-center gap-2 ml-auto">
@@ -292,8 +303,10 @@ const app = {
                         <div class="space-y-4">
                             ${(p.medicine?.stock || []).map((s, i) => {
                                 const sisa = s.init - s.used;
-                                // EVALUASI 1: REMINDER JIKA STOK < 7
+                                
+                                // FITUR NO.1: REMINDER JIKA STOK < 7 (MERAH & BERKEDIP)
                                 const isLow = sisa < 7;
+                                
                                 return `
                                 <div class="p-4 border rounded-2xl ${isLow ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'} relative transition hover:shadow-md">
                                     <div class="flex justify-between items-start">
@@ -343,7 +356,7 @@ const app = {
         `).join('');
     },
 
-    // FUNGSI BARU: DOWNLOAD EXCEL OBAT
+    // --- LOGIKA EXPORT EXCEL OBAT (BAGIAN DARI FITUR NO.3) ---
     exportMedicineExcel() {
         if(!this.data.patients.length) return Swal.fire('Info', 'Data kosong.', 'info');
         
@@ -353,14 +366,14 @@ const app = {
             if(p.medicine && p.medicine.stock) {
                 p.medicine.stock.forEach(s => {
                     rows.push({
-                        "Jenis Data": "STOK OBAT",
-                        "Nama Pasien": p.reg.name,
-                        "Nama Obat": s.name,
-                        "Jumlah Awal": s.init,
-                        "Terpakai": s.used,
-                        "Sisa": s.init - s.used,
-                        "Expired": s.exp,
-                        "Waktu Log": "-"
+                        "TIPE": "STOK",
+                        "PASIEN": p.reg.name,
+                        "NAMA OBAT": s.name,
+                        "JUMLAH AWAL": s.init,
+                        "TERPAKAI": s.used,
+                        "SISA": s.init - s.used,
+                        "EXPIRED": s.exp,
+                        "KETERANGAN": "-"
                     });
                 });
             }
@@ -368,14 +381,14 @@ const app = {
             if(p.medicine && p.medicine.logs) {
                 p.medicine.logs.forEach(l => {
                     rows.push({
-                        "Jenis Data": "LOG MINUM",
-                        "Nama Pasien": p.reg.name,
-                        "Nama Obat": l.name,
-                        "Jumlah Awal": "-",
-                        "Terpakai": 1,
-                        "Sisa": "-",
-                        "Expired": "-",
-                        "Waktu Log": l.time + " (PJ: " + l.pj + ")"
+                        "TIPE": "PEMAKAIAN",
+                        "PASIEN": p.reg.name,
+                        "NAMA OBAT": l.name,
+                        "JUMLAH AWAL": "-",
+                        "TERPAKAI": 1,
+                        "SISA": "-",
+                        "EXPIRED": "-",
+                        "KETERANGAN": `Waktu: ${l.time}, PJ: ${l.pj}`
                     });
                 });
             }
@@ -386,7 +399,7 @@ const app = {
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Laporan Obat");
-        XLSX.writeFile(wb, "MMRC_Laporan_Obat.xlsx");
+        XLSX.writeFile(wb, "Laporan_Obat_MMRC.xlsx");
     },
 
     modalMedStock(pid, editIdx = null) {
@@ -422,9 +435,7 @@ const app = {
         if(idx !== null) p.medicine.stock[idx] = data;
         else p.medicine.stock.push(data);
         
-        this.closeModal(); 
-        this.render();
-        this.saveDB(); 
+        this.closeModal(); this.render(); this.saveDB(); 
     },
 
     modalUseMed(pid, sIdx) {
@@ -501,7 +512,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- TTV (TETAP SAMA) ---
+    // --- TTV (NO CHANGE) ---
     viewTTV(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -574,7 +585,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- VISIT (TETAP SAMA) ---
+    // --- VISIT (NO CHANGE) ---
     viewVisit(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -646,7 +657,7 @@ const app = {
         this.render(); this.saveDB();
     },
 
-    // --- CRISIS (EVALUASI POINT 2: CHART 0-25 & CLEANUP) ---
+    // --- CRISIS (FITUR NO.2: GRAFIK H1-H7 & SKALA 0-25 & FIX KLIK IKUTAN) ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm border-l-4 border-l-red-500">
@@ -685,7 +696,7 @@ const app = {
         const ctx = document.getElementById(`chart-${p.id}`);
         if(!ctx || !p.crisis?.bpss?.length) return;
 
-        // FIX "KLIK IKUTAN": Hapus chart lama agar tidak glitch/flicker
+        // SOLUSI "KLIK IKUTAN": Hancurkan chart lama sebelum buat baru
         if (this.chartInstances[p.id]) {
             this.chartInstances[p.id].destroy();
         }
@@ -693,7 +704,7 @@ const app = {
         this.chartInstances[p.id] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // Label H-1, H-2...
+                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // LABEL SUMBU X: H-1, H-2, dst
                 datasets: [{ 
                     label: 'Skor BPSS', 
                     data: p.crisis.bpss.map(b => b.eval), 
@@ -711,9 +722,10 @@ const app = {
                 scales: {
                     y: { 
                         beginAtZero: true, 
-                        max: 25, // SKALA 0-25 SESUAI REQUEST
+                        min: 0,
+                        max: 25, // SKALA SUMBU Y: 0-25
                         grid: { color: '#f1f5f9' },
-                        title: { display: true, text: 'Total Score (0-25)' }
+                        title: { display: true, text: 'Score (0-25)' }
                     },
                     x: { grid: { display: false } }
                 }
@@ -743,7 +755,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- PROGRAM (TETAP SAMA) ---
+    // --- PROGRAM (NO CHANGE) ---
     viewProgram(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -779,7 +791,7 @@ const app = {
         this.closeModal(); this.render(); this.saveDB();
     },
 
-    // --- THERAPY (TETAP SAMA) ---
+    // --- THERAPY (NO CHANGE) ---
     viewTherapy(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-8 search-item shadow-sm">
@@ -797,7 +809,7 @@ const app = {
         toast.fire({ icon: 'success', title: 'Tersimpan' });
     },
 
-    // --- UTILS & GLOBAL EXPORTS ---
+    // --- UTILS ---
     async delPatient(pid) {
         const res = await Swal.fire({ title: 'Hapus Pasien?', text: "Data hilang permanen!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus' });
         if(res.isConfirmed) {
