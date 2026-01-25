@@ -56,33 +56,49 @@ const app = {
         }, 800); // Delay 0.8 detik di background, user tidak akan merasakan lag
     },
 
-    loadDB() {
-        // STEP 1: Load Local Instan
-        const local = localStorage.getItem('MMRC_DATABASE');
-        if (local) {
-            try {
-                this.data = JSON.parse(local);
-                this.render();
-            } catch (e) { console.error(e); }
+    async loadDB() {
+    // Tampilkan Loading di sini agar pasti muncul
+    Swal.fire({
+        title: 'Memuat Data...',
+        text: 'Menghubungkan ke Cloud Database',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading() }
+    });
+
+    try {
+        // Coba ambil data dengan timeout dari sisi logic
+        const dbRef = db.ref('mmrc_data');
+        const snapshot = await dbRef.once('value'); // Di sini biasanya stuck jika Rules salah
+        
+        const cloudData = snapshot.val();
+        
+        if (cloudData) {
+            this.data = cloudData;
+            console.log("Data Cloud Berhasil Diambil");
+        } else {
+            console.log("Database Cloud Kosong, menggunakan default.");
+            // Init data kosong jika cloud null
+            if (!this.data.patients) this.data = { patients: [] }; 
         }
 
-        // STEP 2: Realtime Sync dari Cloud
-        db.ref('mmrc_data').on('value', (snapshot) => {
-            const cloudData = snapshot.val();
-            if (cloudData) {
-                const isModalOpen = document.getElementById('modal-container') && !document.getElementById('modal-container').classList.contains('hidden');
-                
-                // Hanya update jika data cloud beda dan user TIDAK sedang mengetik di modal
-                if (!this.data.patients || (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen)) {
-                    this.data = cloudData;
-                    localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
-                    if (document.getElementById('app-layer') && !document.getElementById('app-layer').classList.contains('hidden')) {
-                        this.render();
-                    }
-                }
-            }
-        });
-    },
+        Swal.close(); // Tutup loading jika sukses
+        this.render();
+
+    } catch (e) {
+        console.error("Gagal ambil data cloud:", e);
+        Swal.close(); // Pastikan loading tertutup meski error
+        
+        // Fallback ke Local Storage
+        const local = localStorage.getItem('MMRC_DATABASE');
+        if (local) {
+            this.data = JSON.parse(local);
+            Swal.fire('Mode Offline', 'Gagal koneksi server, menggunakan data lokal HP.', 'warning');
+        } else {
+            Swal.fire('Error', 'Gagal mengambil data: ' + e.message, 'error');
+        }
+        this.render();
+    }
+},
 
     login() {
         const u = document.getElementById('login-user').value.trim();
