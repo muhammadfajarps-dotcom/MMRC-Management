@@ -1,11 +1,12 @@
-// 1. KONFIGURASI FIREBASE ANDA
+// 1. KONFIGURASI FIREBASE BARU (CLAUDE FLARE)
 const firebaseConfig = {
-    apiKey: "AIzaSyBdzWrKOBqrcu6talld7MN-2flHNibEWnE",
-    authDomain: "mmrc-stock.firebaseapp.com",
-    projectId: "mmrc-stock",
-    storageBucket: "mmrc-stock.firebasestorage.app",
-    messagingSenderId: "722563453659",
-    appId: "1:722563453659:web:b9f867367ecadb7a1df2fe"
+  apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
+  authDomain: "mmrc-stock1999.firebaseapp.com",
+  projectId: "mmrc-stock1999",
+  storageBucket: "mmrc-stock1999.firebasestorage.app",
+  messagingSenderId: "486588564272",
+  appId: "1:486588564272:web:b0e06dcef08ab7618ebef5",
+  measurementId: "G-WJJQRYDYPF"
 };
 
 // 2. INITIALIZE FIREBASE
@@ -18,31 +19,34 @@ const app = {
     data: { patients: [] }, 
     currentPage: 'dashboard',
     signaturePad: null,
-    isRendering: false, // Flag untuk mencegah render bentrok
+    saveTimer: null, // Timer untuk debouncing save
+    isRendering: false,
 
-    // --- FUNGSI SAVE (OPTIMIZED: BACKGROUND PROCESS) ---
+    // --- SISTEM PENYIMPANAN ANTI-LAG (ASYNCHRONOUS) ---
     saveDB() {
-        // RAHASIA ANTI-LAG: 
-        // Proses simpan data (yang berat) ditaruh di background process (setTimeout)
-        // Agar tombol UI tidak macet saat diklik.
-        setTimeout(() => {
+        // BATALKAN penyimpanan sebelumnya jika ada request baru dalam waktu dekat
+        // Ini mencegah browser 'hang' karena keseringan simpan data berat
+        if (this.saveTimer) clearTimeout(this.saveTimer);
+
+        this.saveTimer = setTimeout(() => {
+            // Proses berat (JSON.stringify) dilakukan setelah UI selesai animasi
             try {
-                // 1. Simpan Local
+                // 1. Simpan Local (Backup)
                 const jsonStr = JSON.stringify(this.data);
                 localStorage.setItem('MMRC_DATABASE', jsonStr);
                 
-                // 2. Simpan Cloud (Fire & Forget)
+                // 2. Simpan Cloud (Firebase)
                 db.ref('mmrc_data').set(this.data).catch(e => {
-                    console.warn("Sync pending (Offline mode):", e);
+                    console.warn("Internet slow, saved local only:", e);
                 });
             } catch (err) {
-                console.error("Storage Error (Quota Exceeded?):", err);
+                console.error("Storage Full / Error:", err);
             }
-        }, 100); // Delay 0.1 detik agar UI selesai animasi dulu
+        }, 800); // Delay 0.8 detik (User tidak akan sadar, tapi bikin HP adem)
     },
 
     loadDB() {
-        // STEP 1: Load Local Instan
+        // STEP 1: Load Local Instan (Biar langsung kebuka)
         const local = localStorage.getItem('MMRC_DATABASE');
         if (local) {
             try {
@@ -51,25 +55,23 @@ const app = {
             } catch (e) { console.error(e); }
         }
 
-        // STEP 2: Realtime Listener (Debounced)
-        let debounceTimer;
+        // STEP 2: Realtime Sync (Dioptimalkan agar tidak bentrok dengan save lokal)
         db.ref('mmrc_data').on('value', (snapshot) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                const cloudData = snapshot.val();
-                if (cloudData) {
-                    // Cek apakah data benar-benar berubah untuk menghindari kedip
-                    if (JSON.stringify(this.data) !== JSON.stringify(cloudData)) {
+            const cloudData = snapshot.val();
+            if (cloudData) {
+                // Cek apakah data benar-benar beda? (Untuk hindari render ulang yg tidak perlu)
+                // Kita gunakan JSON.stringify hanya jika data cloud ada isinya
+                if (!this.data.patients || JSON.stringify(this.data) !== JSON.stringify(cloudData)) {
+                    // Cek jika kita sedang mengetik/edit (hindari timpa data saat ngetik)
+                    if(!document.getElementById('modal-container').classList.contains('flex')) {
                         this.data = cloudData;
                         localStorage.setItem('MMRC_DATABASE', JSON.stringify(cloudData));
-                        
-                        // Hanya render jika user sedang di app utama
                         if (!document.getElementById('app-layer').classList.contains('hidden')) {
                             this.render();
                         }
                     }
                 }
-            }, 500); // Tunggu setengah detik sebelum update UI dari cloud
+            }
         });
     },
 
@@ -93,14 +95,17 @@ const app = {
         const btn = document.getElementById(`btn-${page}`);
         if(btn) btn.classList.add('active');
         document.getElementById('page-title').innerText = page.toUpperCase();
-        this.render();
+        
+        // Render dengan sedikit delay agar animasi klik menu mulus
+        setTimeout(() => this.render(), 50);
     },
 
     render() {
-        if(this.isRendering) return; // Cegah render tumpuk
+        // Mencegah render tumpuk (Flickering)
+        if(this.isRendering) return;
         this.isRendering = true;
 
-        // Gunakan requestAnimationFrame agar browser siap menggambar (Lebih Smooth)
+        // RequestAnimationFrame membuat browser menggambar di waktu yang tepat (Smooth)
         requestAnimationFrame(() => {
             const container = document.getElementById('main-content');
             if (container) {
@@ -237,9 +242,12 @@ const app = {
     async savePatient(e, editId) {
         e.preventDefault();
         
-        // UX TRICK: Close Modal Duluan biar terasa cepet
+        // UX TRICK: Close Modal DULUAN biar terasa INSTAN
         this.closeModal(); 
-        Swal.fire({ title: 'Menyimpan...', timer: 500, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+        
+        // Loading kecil biar user tau ada proses
+        const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+        toast.fire({ icon: 'success', title: 'Data disimpan...' });
 
         const fd = new FormData(e.target);
         let photoBase64 = null;
@@ -724,7 +732,8 @@ const app = {
     async saveTherapy(pid) {
         this.data.patients.find(x => x.id === pid).therapy = document.getElementById(`ther_${pid}`).value;
         this.saveDB(); // Khusus ini tidak perlu render ulang
-        Swal.fire({ icon: 'success', title: 'Tersimpan', timer: 800, showConfirmButton: false });
+        const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 800 });
+        toast.fire({ icon: 'success', title: 'Tersimpan' });
     },
 
     // --- UTILS ---
