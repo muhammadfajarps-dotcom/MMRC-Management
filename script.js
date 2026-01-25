@@ -19,18 +19,18 @@ const app = {
     currentPage: 'dashboard',
     signaturePad: null,
 
-    // --- FUNGSI PERBAIKAN DATA OTOMATIS (PENTING) ---
-    // Fungsi ini memastikan tidak ada data 'undefined' yang bikin error
+    // --- FITUR AUTO-REPAIR (PENTING: MENCEGAH CRASH DATA LAMA) ---
     fixDataStructure(data) {
-        if (!data.patients) data.patients = [];
+        if (!data || !data.patients) return { patients: [] };
         
         data.patients = data.patients.map(p => {
-            // Pastikan semua objek utama ada, jika tidak, buat kosong
+            // Pastikan objek utama ada
             if (!p.reg) p.reg = {};
             if (!p.history) p.history = {};
             if (!p.diagnosis) p.diagnosis = {};
             
-            // Perbaikan Menu Medicine
+            // Perbaikan Menu Medicine (Obat)
+            // Jika data lama tidak punya folder medicine, kita buatkan kosong
             if (!p.medicine) p.medicine = { stock: [], logs: [] };
             if (!p.medicine.stock) p.medicine.stock = [];
             if (!p.medicine.logs) p.medicine.logs = [];
@@ -41,7 +41,7 @@ const app = {
             // Perbaikan Menu Visit
             if (!p.visits) p.visits = [];
 
-            // Perbaikan Menu Crisis
+            // Perbaikan Menu Crisis (BPSS)
             if (!p.crisis) p.crisis = { bpss: [] };
             if (!p.crisis.bpss) p.crisis.bpss = [];
 
@@ -63,24 +63,25 @@ const app = {
             console.log("Data Tersinkron ke Cloud");
         } catch (e) {
             console.error("Gagal Sinkron:", e);
-            Swal.fire('Koneksi Error', 'Gagal menyimpan ke cloud, cek internet.', 'warning');
+            Swal.fire('Koneksi Error', 'Gagal menyimpan ke cloud (cek internet), data tersimpan di lokal.', 'warning');
         }
     },
 
    async loadDB() {
+        // Loading screen
         const loadingTimeout = setTimeout(() => {
             if (Swal.isVisible()) {
                 Swal.close();
-                Swal.fire('Koneksi Lambat', 'Mengambil data lokal...', 'info');
+                Swal.fire('Memuat Data', 'Sedang mengambil dan memperbaiki data...', 'info');
             }
-        }, 5000);
+        }, 2000);
 
         try {
             const snapshot = await db.ref('mmrc_data').once('value');
             let cloudData = snapshot.val();
             
             if (cloudData) {
-                // JALANKAN PERBAIKAN STRUKTUR DATA SEBELUM DIPAKAI
+                // JALANKAN PERBAIKAN STRUKTUR DATA
                 this.data = this.fixDataStructure(cloudData);
                 console.log("Data Cloud Berhasil Diambil & Diperbaiki");
             } else {
@@ -97,9 +98,10 @@ const app = {
             
             const local = localStorage.getItem('MMRC_DATABASE');
             if (local) {
-                // Perbaiki juga data lokal
                 this.data = this.fixDataStructure(JSON.parse(local));
                 Swal.fire('Mode Offline', 'Data diambil dari penyimpanan lokal.', 'info');
+            } else {
+                this.data = { patients: [] };
             }
             this.render();
         }
@@ -132,7 +134,7 @@ const app = {
         if (!container) return;
         container.innerHTML = '';
         
-        // Safety check lagi sebelum render
+        // Safety check lagi
         if(!this.data.patients) this.data.patients = [];
 
         try {
@@ -147,7 +149,7 @@ const app = {
             }
         } catch (error) {
             console.error("Render Error:", error);
-            Swal.fire("Error Tampilan", "Terjadi kesalahan saat menampilkan data. Coba refresh.", "error");
+            Swal.fire("Error Tampilan", "Terjadi kesalahan data. Silakan refresh halaman.", "error");
         }
     },
 
@@ -267,7 +269,6 @@ const app = {
         const fd = new FormData(e.target);
         const photoFile = fd.get('photo_file');
         
-        // Ambil foto lama jika tidak ada upload baru
         let photoBase64 = null;
         let existingPatient = null;
 
@@ -280,8 +281,9 @@ const app = {
             photoBase64 = await this.toBase64(photoFile);
         }
 
-        // Gunakan struktur default jika data existing kosong (Mencegah Error saat Save)
-        const def = { stock: [], logs: [] };
+        // INIT DEFAULT SUB-DATA AGAR TIDAK ERROR
+        const defMed = { stock: [], logs: [] };
+        const defCrisis = { bpss: [] };
         
         const pData = {
             id: editId || 'P-' + Date.now(),
@@ -297,11 +299,11 @@ const app = {
                 inj: fd.get('inj')==='on', urine: fd.get('urine')==='on', fiksasi: fd.get('fix')==='on',
                 rx_name: fd.get('d_rx'), rx_qty: fd.get('d_qty')
             },
-            // JAGA DATA SUB-COLLECTION (Obat, Visit, dll) AGAR TIDAK HILANG/ERROR
-            medicine: existingPatient ? (existingPatient.medicine || def) : def,
+            // PENTING: Pertahankan data lama, atau buat baru jika kosong
+            medicine: existingPatient ? (existingPatient.medicine || defMed) : defMed,
             ttv: existingPatient ? (existingPatient.ttv || []) : [],
             visits: existingPatient ? (existingPatient.visits || []) : [],
-            crisis: existingPatient ? (existingPatient.crisis || { bpss: [] }) : { bpss: [] },
+            crisis: existingPatient ? (existingPatient.crisis || defCrisis) : defCrisis,
             program: existingPatient ? (existingPatient.program || { type: '-', duration: '-' }) : { type: '-', duration: '-' },
             therapy: existingPatient ? (existingPatient.therapy || '') : ''
         };
@@ -319,11 +321,11 @@ const app = {
         Swal.fire('Berhasil', 'Data Pasien Tersimpan', 'success');
     },
 
-    // --- MEDICINE LOGIC ---
+    // --- MEDICINE LOGIC (UPDATED WITH SAFETY CHECK) ---
     viewMedicine(container) {
         const patients = this.data.patients || [];
         container.innerHTML = patients.map(p => {
-            // Gunakan Default Value agar tidak crash
+            // Safety Check: Gunakan '?' dan '||'
             const stock = p.medicine?.stock || [];
             const logs = p.medicine?.logs || [];
             
@@ -411,8 +413,7 @@ const app = {
 
     async saveMedStock(pid, idx) {
         const p = this.data.patients.find(x => x.id === pid);
-        
-        // Safety check jika p.medicine undefined (meskipun sudah di-repair)
+        // Pastikan path ada
         if (!p.medicine) p.medicine = { stock: [], logs: [] };
 
         const data = { 
@@ -546,7 +547,6 @@ const app = {
 
     async saveTTV(pid, idx) {
         const p = this.data.patients.find(x => x.id === pid);
-        // Safety init
         if(!p.ttv) p.ttv = [];
         
         const data = { time: idx !== null ? p.ttv[idx].time : new Date().toLocaleString('id-ID'), td: document.getElementById('t_td').value, sat: document.getElementById('t_sat').value, rr: document.getElementById('t_rr').value, tb: document.getElementById('t_tb').value, bb: document.getElementById('t_bb').value, gds: document.getElementById('t_gds').value };
@@ -619,10 +619,10 @@ const app = {
         await this.saveDB(); this.closeModal(); this.render();
     },
 
-    // --- CRISIS ---
+    // --- CRISIS (UPDATED WITH SAFETY CHECK) ---
     viewCrisis(container) {
         container.innerHTML = (this.data.patients || []).map(p => {
-            // Safety: pastikan p.crisis dan p.crisis.bpss ada
+            // Safety Check
             const crisis = p.crisis || { bpss: [] };
             const bpss = crisis.bpss || [];
             
@@ -656,13 +656,12 @@ const app = {
             </div>`;
         }).join('');
         
-        // Render Chart setelah DOM siap
         setTimeout(() => this.data.patients.forEach(p => this.renderChart(p)), 50);
     },
 
     renderChart(p) {
+        // Pastikan element ada dan data ada sebelum render chart
         const ctx = document.getElementById(`chart-${p.id}`);
-        // Cek data crisis lagi agar chart tidak error
         if(!ctx || !p.crisis || !p.crisis.bpss || p.crisis.bpss.length === 0) return;
         
         new Chart(ctx, {
@@ -748,12 +747,6 @@ const app = {
         this.openModal();
     },
 
-    async saveProgram(pid) {
-        const p = this.data.patients.find(x => x.id === pid);
-        p.program = { type: document.getElementById('pr_type').value, duration: document.getElementById('pr_dur').value };
-        await this.saveDB(); this.closeModal(); this.render();
-    },
-
     // --- THERAPY ---
     viewTherapy(container) {
         container.innerHTML = (this.data.patients || []).map(p => `
@@ -785,11 +778,11 @@ const app = {
         if(!confirm('Hapus item?')) return;
         const p = this.data.patients.find(x => x.id === pid);
         
-        // Akses nested object dengan aman
+        // Perbaikan Logic Delete agar lebih aman
         const parts = path.split('.');
         let target = p;
         for(let i=0; i<parts.length; i++) {
-            if(!target[parts[i]]) target[parts[i]] = []; // Buat array jika hilang
+            if(!target[parts[i]]) target[parts[i]] = []; // Jika undefined, jadikan array agar tidak crash
             target = target[parts[i]];
         }
         
