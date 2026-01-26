@@ -1,114 +1,127 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+/* IMPORT FONT PROFESIONAL */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* --- GLOBAL RESET & PERFORMANCE --- */
-body { 
-    font-family: 'Plus Jakarta Sans', sans-serif; 
-    -webkit-font-smoothing: antialiased; /* Font lebih tajam */
-    -moz-osx-font-smoothing: grayscale;
+/* --- DEFINISI WARNA MMRC --- */
+:root {
+    --mmrc-maroon: #662424;    /* Warna Merah Tua Logo */
+    --mmrc-maroon-dark: #4a1a1a;
+    --mmrc-cream: #f7f5f2;     /* Warna Latar Krem Lembut */
+    --mmrc-cream-dark: #eaddd0; /* Warna Border Krem */
+    --mmrc-grey: #808080;      /* Warna Aksen Abu Logo */
 }
 
-/* Mengurangi Lag saat scrolling di list panjang */
-.search-item {
-    content-visibility: auto; /* Browser tidak render yg di luar layar */
-    contain-intrinsic-size: 1px 300px;
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--mmrc-cream);
+    color: #333;
 }
 
-/* --- ANIMATIONS (GPU Accelerated) --- */
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+/* --- UTILITIES --- */
+.bg-mmrc-maroon { background-color: var(--mmrc-maroon); }
+.text-mmrc-maroon { color: var(--mmrc-maroon); }
+.bg-mmrc-cream { background-color: var(--mmrc-cream); }
+.bg-mmrc-grey { background-color: var(--mmrc-grey); }
 
-@keyframes popIn {
-    0% { opacity: 0; transform: scale(0.95); }
-    100% { opacity: 1; transform: scale(1); }
-}
-
-.animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-modal-pop { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-
-/* --- UI COMPONENTS --- */
-
-/* Input Field Modern */
 .input-field {
     width: 100%;
-    padding: 0.85rem 1rem;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.85rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #334155;
-    transition: all 0.2s ease;
+    padding: 0.75rem 1rem;
+    background-color: #fff;
+    border: 2px solid var(--mmrc-cream-dark);
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    transition: all 0.2s;
     outline: none;
 }
-
 .input-field:focus {
-    background-color: #ffffff;
-    border-color: #0d9488;
-    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+    border-color: var(--mmrc-maroon);
+    box-shadow: 0 0 0 3px rgba(102, 36, 36, 0.1);
 }
 
-.input-field::placeholder { color: #94a3b8; font-weight: 500; }
+/* --- TOMBOL --- */
+.btn-maroon {
+    background-color: var(--mmrc-maroon);
+    color: white;
+    transition: background-color 0.2s;
+}
+.btn-maroon:hover { background-color: var(--mmrc-maroon-dark); }
 
-/* Navigation Buttons */
+/* --- SIDEBAR NAVIGATION --- */
+.nav-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mmrc-grey);
+    padding: 0.5rem 0.75rem;
+}
+
 .nav-btn {
     width: 100%;
     text-align: left;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
     color: #64748b;
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
+    font-size: 0.9rem;
     transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    border: 1px solid transparent;
 }
 
-.nav-btn:hover { 
-    background: #f1f5f9; 
-    color: #0f172a; 
-    transform: translateX(4px);
+.nav-btn:hover {
+    background-color: var(--mmrc-cream);
+    color: var(--mmrc-maroon);
 }
 
-.nav-btn.active { 
-    background: linear-gradient(90deg, #f0fdfa, transparent);
-    color: #0d9488; 
-    border-left: 3px solid #0d9488;
+.nav-btn.active {
+    background-color: #fff;
+    color: var(--mmrc-maroon);
+    border-color: var(--mmrc-cream-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.nav-btn i { width: 24px; text-align: center; }
+/* --- ANIMASI --- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fadeUp 0.5s ease-out; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.animate-modal-pop { animation: popIn 0.2s ease-out; }
 
-/* Custom Scrollbar (Modern Look) */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* --- OVERRIDE TAILWIND DEFAULT UNTUK JS BAPAK --- */
+/* Karena script JS Bapak masih menghasilkan class 'bg-teal-600', dll,
+   kita paksa timpa warnanya lewat CSS ini agar sesuai tema Maroon. */
 
-/* Chart Container Fix */
-canvas {
-    max-height: 100%; 
-    width: 100% !important;
+/* Timpa Tombol Teal/Hijau jadi Maroon */
+.bg-teal-600, .hover\:bg-teal-700:hover, .bg-emerald-600, .hover\:bg-emerald-700:hover {
+    background-color: var(--mmrc-maroon) !important;
+}
+.bg-teal-600:hover, .bg-emerald-600:hover {
+    background-color: var(--mmrc-maroon-dark) !important;
+}
+.text-teal-600, .text-teal-700, .text-teal-800 {
+    color: var(--mmrc-maroon) !important;
+}
+.bg-teal-50, .bg-emerald-50 {
+    background-color: var(--mmrc-cream) !important;
+    color: var(--mmrc-maroon) !important;
+}
+.border-teal-100 { border-color: var(--mmrc-cream-dark) !important; }
+
+/* Timpa Tombol Blue jadi Grey MMRC */
+.bg-blue-600 { background-color: var(--mmrc-grey) !important; }
+.bg-blue-600:hover { background-color: #666 !important; }
+.bg-blue-50 { background-color: #f0f0f0 !important; color: #444 !important; }
+
+/* Timpa Latar Belakang Card */
+.bg-white.p-6.rounded-3xl.shadow-sm.border.border-slate-100 {
+    border-color: var(--mmrc-cream-dark) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
 }
 
-/* --- MOBILE RESPONSIVE TWEAKS --- */
-@media (max-width: 768px) {
-    #auth-layer > div { width: 90%; }
-    
-    /* Sidebar Mobile as Overlay */
-    aside {
-        position: fixed;
-        top: 0; left: 0; height: 100%;
-        box-shadow: 10px 0 30px rgba(0,0,0,0.1);
-    }
-    
-    #modal-container { padding: 1rem; }
-}
+/* Timpa Modal Header */
+#modal-title.text-teal-800 { color: var(--mmrc-maroon) !important; }
 
-/* --- PRINT STYLE (Just in case) --- */
-@media print {
-    aside, header, button { display: none !important; }
-    #main-content { padding: 0; }
-    body { background: white; }
-}
+/* Scrollbar Cantik */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--mmrc-cream); }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mmrc-grey); }
