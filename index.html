@@ -18,17 +18,16 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-50 text-slate-800">
+<body class="bg-gray-50 text-slate-800 font-sans">
 
     <div id="auth-layer" class="fixed inset-0 z-50 flex items-center justify-center bg-white">
         <div class="text-center w-full max-w-xs">
-            <img src="logo.png" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block'" class="h-24 mx-auto mb-4 object-contain">
-            <h1 id="logo-fallback" class="hidden text-3xl font-black text-red-800 mb-4 tracking-tighter">MMRC SYSTEM</h1>
-            
-            <div class="bg-white border-2 border-red-800 p-6 rounded-2xl shadow-[8px_8px_0px_0px_rgba(153,27,27,1)]">
-                <input id="login-user" class="w-full p-3 bg-red-50 border border-red-200 rounded-xl mb-3 font-bold text-center outline-none focus:ring-2 ring-red-800" placeholder="ID STAFF">
-                <input id="login-pass" type="password" class="w-full p-3 bg-red-50 border border-red-200 rounded-xl mb-4 font-bold text-center outline-none focus:ring-2 ring-red-800" placeholder="PASSWORD">
-                <button onclick="app.login()" class="w-full bg-red-800 text-white py-3 rounded-xl font-bold hover:bg-red-900 transition transform active:scale-95">MASUK SISTEM</button>
+            <img src="logo.png" alt="MMRC Logo" class="h-24 mx-auto mb-6 object-contain">
+            <div class="bg-white border-2 border-red-900 p-6 rounded-2xl shadow-xl">
+                <h2 class="text-red-900 font-bold mb-4">LOGIN STAFF</h2>
+                <input id="login-user" class="w-full p-3 bg-red-50 border border-red-200 rounded-xl mb-3 font-bold text-center outline-none" placeholder="USERNAME">
+                <input id="login-pass" type="password" class="w-full p-3 bg-red-50 border border-red-200 rounded-xl mb-4 font-bold text-center outline-none" placeholder="PASSWORD">
+                <button onclick="app.login()" class="w-full bg-red-900 text-white py-3 rounded-xl font-bold hover:bg-red-800 transition">MASUK</button>
             </div>
         </div>
     </div>
@@ -36,9 +35,9 @@
     <div id="app-layer" class="hidden flex h-screen overflow-hidden">
         
         <aside class="w-64 bg-red-900 text-white flex-col hidden md:flex shadow-2xl relative z-20">
-            <div class="p-6 border-b border-red-800 text-center">
-                <img src="logo.png" onerror="this.style.display='none'" class="h-16 mx-auto bg-white rounded-lg p-1 mb-2">
-                <h2 class="font-black tracking-widest text-lg">MMRC ADMIN</h2>
+            <div class="p-6 border-b border-red-800 text-center bg-white/10">
+                <img src="logo.png" class="h-12 mx-auto bg-white rounded p-1 mb-2">
+                <h2 class="font-bold tracking-widest text-sm text-red-100">MEDICAL RECORD</h2>
             </div>
             
             <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -57,10 +56,10 @@
         </aside>
 
         <main class="flex-1 flex flex-col h-full bg-gray-100">
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-red-100">
                 <div class="flex items-center gap-4">
                     <button class="md:hidden text-red-800 text-xl" onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');"><i class="fas fa-bars"></i></button>
-                    <h2 id="page-title" class="font-black text-2xl text-slate-800 uppercase tracking-tighter">DASHBOARD</h2>
+                    <h2 id="page-title" class="font-black text-2xl text-red-900 uppercase tracking-tighter">DASHBOARD</h2>
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -77,7 +76,7 @@
     </div>
 
     <div id="modal-container" class="fixed inset-0 z-[100] bg-black/50 hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-pop">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div class="px-6 py-4 border-b bg-red-50 flex justify-between items-center">
                 <h3 id="modal-title" class="font-black text-xl text-red-800">FORM INPUT</h3>
                 <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white text-red-800 hover:bg-red-800 hover:text-white transition flex items-center justify-center font-bold">✕</button>
