@@ -1,383 +1,492 @@
-/**
- * MMRC Management System - Logic
- * Author: AI Assistant
- * Stack: Pure JS + LocalStorage
- */
+// CONFIGURATION
+const DB_KEY = 'MMRC_DATABASE';
+const appData = {
+    patients: []
+};
 
-const STORAGE_KEY = 'mmrc_data';
-
-// --- INITIALIZATION ---
+// INITIALIZATION
 const app = {
-    data: {
-        patients: []
-    },
-    currentUser: null,
-    signaturePad: null,
-    bpssChart: null,
-
-    init: function() {
-        // Load data from LocalStorage
-        const storedData = localStorage.getItem(STORAGE_KEY);
+    init: () => {
+        const storedData = localStorage.getItem(DB_KEY);
         if (storedData) {
-            this.data = JSON.parse(storedData);
+            appData.patients = JSON.parse(storedData);
         }
-        
-        // Init Signature Pad if on visit page
-        const canvas = document.getElementById('signature-pad');
-        if(canvas) {
-            this.signaturePad = new SignaturePad(canvas);
-        }
+        app.checkAuth();
+    },
 
-        // Check Login Status (Session only for simple demo)
-        if(sessionStorage.getItem('isLoggedIn') === 'true') {
-            document.getElementById('login-page').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-            this.showPage('dashboard');
+    checkAuth: () => {
+        const isLogged = sessionStorage.getItem('mmrc_logged');
+        if (isLogged) {
+            document.getElementById('auth-layer').classList.add('hidden');
+            document.getElementById('app-layer').classList.remove('hidden');
+            app.nav('dashboard');
         }
     },
 
-    // --- AUTHENTICATION ---
-    login: function() {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
-        const form = document.getElementById('login-form');
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-                sessionStorage.setItem('isLoggedIn', 'true');
-                document.getElementById('login-page').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                this.loadPatientDropdowns();
-                this.renderPatientTable();
-                Swal.fire('Login Berhasil', 'Selamat datang di MMRC System', 'success');
-            } else {
-                Swal.fire('Login Gagal', 'Username atau Password salah', 'error');
-            }
-        });
+    login: (e) => {
+        e.preventDefault();
+        const u = document.getElementById('login-user').value;
+        const p = document.getElementById('login-pass').value;
+        if (u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+            sessionStorage.setItem('mmrc_logged', 'true');
+            Swal.fire('Sukses', 'Selamat Datang di MMRC System', 'success').then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire('Gagal', 'Username atau Password Salah', 'error');
+        }
     },
 
-    logout: function() {
-        sessionStorage.clear();
+    logout: () => {
+        sessionStorage.removeItem('mmrc_logged');
         location.reload();
     },
 
-    // --- NAVIGATION ---
-    showPage: function(pageId) {
-        document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
-        document.getElementById(pageId).classList.remove('hidden');
+    nav: (page) => {
+        // Reset Active Class
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${page}`).classList.add('active');
         
-        document.querySelectorAll('.sidebar li').forEach(el => el.classList.remove('active'));
-        // Highlight logic requires getting element by text or index, simplistic here
-        document.getElementById('page-title').innerText = pageId.toUpperCase().replace('-', ' ');
+        // Render Page Content
+        const content = document.getElementById('content-area');
+        const title = document.getElementById('page-title');
         
-        if(pageId !== 'dashboard') {
-            this.loadPatientDropdowns();
+        title.innerText = page.toUpperCase().replace('_', ' ');
+        content.innerHTML = app.pages[page]();
+        
+        // Post-render scripts (Listeners, Charts, etc)
+        if(page === 'dashboard') app.renderPatientTable();
+        if(page === 'crisis') app.initChart();
+    },
+
+    saveDB: () => {
+        localStorage.setItem(DB_KEY, JSON.stringify(appData.patients));
+    },
+
+    // --- MODALS & FORMS ---
+    openModal: (title, html) => {
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('modal-container').classList.remove('hidden');
+    },
+
+    closeModal: () => {
+        document.getElementById('modal-container').classList.add('hidden');
+    },
+
+    // --- PAGES RENDERER ---
+    pages: {
+        dashboard: () => `
+            <div class="card">
+                <div class="grid-2">
+                    <h3>Data Pasien</h3>
+                    <div style="text-align:right;">
+                        <button onclick="app.forms.addPatient()" class="btn btn-primary"><i class="fas fa-plus"></i> Registrasi Pasien Baru</button>
+                        <button onclick="app.exportToExcel()" class="btn btn-success"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nama Pasien</th>
+                            <th>Usia</th>
+                            <th>Diagnosa Masuk</th>
+                            <th>Dokter PJ</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patient-table-body"></tbody>
+                </table>
+            </div>
+        `,
+        medicine: () => `
+            <div class="card">
+                <h3>Manajemen Obat Pasien</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-med" onchange="app.renderMedicineView()" class="input-field"></select>
+                </div>
+                <div id="medicine-view"></div>
+            </div>
+        `,
+        ttv: () => `
+            <div class="card">
+                <h3>Tanda Tanda Vital (TTV) & GDS</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-ttv" onchange="app.renderTTVView()" class="input-field"></select>
+                </div>
+                <div id="ttv-view"></div>
+            </div>
+        `,
+        visit: () => `
+            <div class="card">
+                <h3>Visit Dokter</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-visit" onchange="app.renderVisitView()" class="input-field"></select>
+                </div>
+                <div id="visit-view"></div>
+            </div>
+        `,
+        crisis: () => `
+            <div class="card">
+                <h3>Pasien Crisis & BPSS Score</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-crisis" onchange="app.renderCrisisView()" class="input-field"></select>
+                </div>
+                <div id="crisis-view"></div>
+            </div>
+        `,
+        program: () => `
+            <div class="card">
+                <h3>Rencana Program</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-prog" onchange="app.renderProgramView()" class="input-field"></select>
+                </div>
+                <div id="program-view"></div>
+            </div>
+        `,
+        therapy: () => `
+            <div class="card">
+                <h3>Rencana Terapi</h3>
+                <div class="form-group">
+                    <label>Pilih Pasien:</label>
+                    <select id="select-patient-tera" onchange="app.renderTherapyView()" class="input-field"></select>
+                </div>
+                <div id="therapy-view"></div>
+            </div>
+        `
+    },
+
+    // --- LOGIC: DASHBOARD & PATIENT ---
+    renderPatientTable: () => {
+        const tbody = document.getElementById('patient-table-body');
+        let html = '';
+        appData.patients.forEach((p, index) => {
+            html += `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.biodata.nama}</td>
+                    <td>${p.biodata.usia}</td>
+                    <td>${p.diagnosa.diagnosaMasuk}</td>
+                    <td>${p.diagnosa.dokter}</td>
+                    <td>
+                        <button onclick="app.forms.editPatient(${index})" class="btn btn-secondary"><i class="fas fa-edit"></i></button>
+                        <button onclick="app.deletePatient(${index})" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        <button onclick="app.exportWordPatient(${index})" class="btn btn-primary"><i class="fas fa-file-word"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    },
+
+    forms: {
+        addPatient: () => {
+            app.openModal('Registrasi Pasien Baru', `
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>Nama Lengkap</label>
+                        <input type="text" id="p-nama" class="input-field">
+                        <label>TTL</label>
+                        <input type="text" id="p-ttl" class="input-field">
+                        <label>Usia</label>
+                        <input type="number" id="p-usia" class="input-field">
+                        <label>Status</label>
+                        <select id="p-status" class="input-field">
+                            <option>Menikah</option><option>Lajang</option><option>Cerai</option>
+                        </select>
+                        <label>Alamat</label>
+                        <input type="text" id="p-alamat" class="input-field">
+                        <label>Wali</label>
+                        <input type="text" id="p-wali" class="input-field">
+                    </div>
+                    <div class="form-group">
+                        <label>Riwayat Fisik</label>
+                        <textarea id="p-fisik" class="input-field"></textarea>
+                        <label>Riwayat Psikis</label>
+                        <textarea id="p-psikis" class="input-field"></textarea>
+                        <label>Diagnosa Lalu</label>
+                        <input type="text" id="p-diag-lalu" class="input-field">
+                        <label>Riwayat Obat</label>
+                        <input type="text" id="p-obat-lalu" class="input-field">
+                    </div>
+                    <div class="form-group">
+                        <label>Nama Dokter</label>
+                        <input type="text" id="p-dokter" class="input-field">
+                        <label>Diagnosa Masuk</label>
+                        <input type="text" id="p-diag-masuk" class="input-field">
+                        <label>Planning</label>
+                        <textarea id="p-planning" class="input-field"></textarea>
+                        <label>Intervensi</label>
+                        <div>
+                            <input type="checkbox" id="chk-inj"> Injeksi <br>
+                            <input type="checkbox" id="chk-urin"> Urine Test <br>
+                            <input type="checkbox" id="chk-fik"> Fiksasi
+                        </div>
+                    </div>
+                </div>
+                <button onclick="app.submitPatient()" class="btn btn-success" style="width:100%">SIMPAN DATA</button>
+            `);
         }
     },
 
-    // --- CRUD: PATIENT REGISTRATION ---
-    savePatient: function(e) {
-        e.preventDefault();
-        
-        const fileInput = document.getElementById('foto-pasien');
-        let photoData = "";
-        
-        // Helper to get value
-        const getVal = (id) => document.getElementById(id).value;
-
-        // Process Image to Base64
-        if (fileInput.files.length > 0) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                photoData = event.target.result;
-                app.processSavePatientData(photoData);
-            };
-            reader.readAsDataURL(fileInput.files[0]);
-        } else {
-            this.processSavePatientData("");
-        }
-    },
-
-    processSavePatientData: function(photoData) {
-        const getVal = (id) => document.getElementById(id).value;
-        const getCheck = (id) => document.getElementById(id).checked;
-
+    submitPatient: () => {
+        const id = 'P-' + Date.now();
         const newPatient = {
-            id: Date.now().toString(),
+            id: id,
             timestamp: new Date().toLocaleString(),
-            photo: photoData,
             biodata: {
-                nama: getVal('nama-pasien'),
-                ttl: getVal('ttl'),
-                usia: getVal('usia'),
-                status: getVal('status-nikah'),
-                pekerjaan: getVal('pekerjaan'),
-                alamat: getVal('alamat'),
-                wali: getVal('wali'),
-                spotcheck: getVal('spotcheck')
+                nama: document.getElementById('p-nama').value,
+                ttl: document.getElementById('p-ttl').value,
+                usia: document.getElementById('p-usia').value,
+                status: document.getElementById('p-status').value,
+                alamat: document.getElementById('p-alamat').value,
+                wali: document.getElementById('p-wali').value
             },
-            riwayat: {
-                fisik: getVal('riwayat-fisik'),
-                psikis: getVal('riwayat-psikis'),
-                diagnosaLalu: getVal('diagnosa-lalu'),
-                obatLalu: getVal('riwayat-obat'),
-                kondisi: getVal('kondisi-kini')
+            history: {
+                fisik: document.getElementById('p-fisik').value,
+                psikis: document.getElementById('p-psikis').value,
+                obat: document.getElementById('p-obat-lalu').value
             },
             diagnosa: {
-                dokter: getVal('dokter-pj'),
-                utama: getVal('diagnosa-masuk'),
-                planning: getVal('planning'),
-                tindakan: {
-                    injeksi: getCheck('check-injeksi'),
-                    urine: getCheck('check-urine'),
-                    fiksasi: getCheck('check-fiksasi')
-                },
-                resepAwal: {
-                    nama: getVal('resep-nama'),
-                    jumlah: getVal('resep-jml')
+                dokter: document.getElementById('p-dokter').value,
+                diagnosaMasuk: document.getElementById('p-diag-masuk').value,
+                planning: document.getElementById('p-planning').value,
+                intervensi: {
+                    injeksi: document.getElementById('chk-inj').checked,
+                    urine: document.getElementById('chk-urin').checked,
+                    fiksasi: document.getElementById('chk-fik').checked
                 }
             },
-            // Initialize empty arrays for other modules
-            medicine: [],
-            medicineLogs: [],
+            medicine: [], // Array of {name, initial, used, current, exp}
+            medicineLog: [],
             ttv: [],
             visits: [],
-            crisis: [], // BPSS data
+            bpss: [],
             program: {},
-            therapy: []
+            therapy: ""
         };
-
-        this.data.patients.push(newPatient);
-        this.saveData();
-        this.renderPatientTable();
-        document.getElementById('form-registrasi').reset();
-        Swal.fire('Sukses', 'Data Pasien Berhasil Disimpan', 'success');
+        
+        appData.patients.push(newPatient);
+        app.saveDB();
+        app.closeModal();
+        app.renderPatientTable();
+        Swal.fire('Sukses', 'Data Tersimpan', 'success');
     },
 
-    // --- DATA DISPLAY ---
-    renderPatientTable: function() {
-        const tbody = document.querySelector('#table-pasien tbody');
-        tbody.innerHTML = '';
-        this.data.patients.forEach(p => {
-            const row = `<tr>
-                <td>${p.id.substring(8)}</td>
-                <td>${p.biodata.nama}</td>
-                <td>${p.diagnosa.utama}</td>
-                <td>${p.diagnosa.dokter}</td>
-                <td>
-                    <button onclick="app.deletePatient('${p.id}')" class="btn-small btn-danger"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
-    },
-
-    deletePatient: function(id) {
+    deletePatient: (index) => {
         if(confirm('Hapus data pasien ini?')) {
-            this.data.patients = this.data.patients.filter(p => p.id !== id);
-            this.saveData();
-            this.renderPatientTable();
+            appData.patients.splice(index, 1);
+            app.saveDB();
+            app.renderPatientTable();
         }
     },
 
-    searchData: function() {
-        const query = document.getElementById('search-dashboard').value.toLowerCase();
-        const rows = document.querySelectorAll('#table-pasien tbody tr');
-        rows.forEach(row => {
-            const name = row.cells[1].innerText.toLowerCase();
-            row.style.display = name.includes(query) ? '' : 'none';
+    populatePatientSelect: (elemId) => {
+        const select = document.getElementById(elemId);
+        select.innerHTML = '<option value="">-- Pilih Pasien --</option>';
+        appData.patients.forEach((p, idx) => {
+            select.innerHTML += `<option value="${idx}">${p.biodata.nama} (${p.id})</option>`;
         });
     },
 
-    loadPatientDropdowns: function() {
-        const selects = document.querySelectorAll('select[id$="-pasien-select"]');
-        selects.forEach(select => {
-            select.innerHTML = '<option value="">-- Pilih Pasien --</option>';
-            this.data.patients.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">${p.biodata.nama}</option>`;
-            });
-        });
-    },
-
-    // --- MODULE: MEDICINE ---
-    loadMedicineData: function() {
-        const pid = document.getElementById('med-pasien-select').value;
-        const patient = this.data.patients.find(p => p.id === pid);
-        const tbody = document.querySelector('#table-obat tbody');
-        const selectLog = document.getElementById('log-nama-obat');
+    // --- LOGIC: MEDICINE ---
+    renderMedicineView: () => {
+        app.populatePatientSelect('select-patient-med');
+        const select = document.getElementById('select-patient-med');
         
-        tbody.innerHTML = '';
-        selectLog.innerHTML = '<option value="">Pilih Obat</option>';
-        document.getElementById('stock-warning').classList.add('hidden');
-
-        if(patient && patient.medicine) {
-            patient.medicine.forEach((med, index) => {
-                // Render Table
-                let rowColor = med.stok <= 7 ? 'style="color:red; font-weight:bold"' : '';
-                let row = `<tr>
-                    <td>${med.nama}</td>
-                    <td ${rowColor}>${med.stok}</td>
-                    <td>${med.exp}</td>
-                    <td><button onclick="app.deleteMedicine('${pid}', ${index})" class="btn-small btn-danger">X</button></td>
-                </tr>`;
-                tbody.innerHTML += row;
-
-                // Populate Dropdown for Usage Log
-                selectLog.innerHTML += `<option value="${index}">${med.nama}</option>`;
-
-                // Reminder Logic
-                if(med.stok <= 7) {
-                    const warn = document.getElementById('stock-warning');
-                    warn.innerText = `PERINGATAN: Stok obat ${med.nama} menipis (${med.stok})`;
-                    warn.classList.remove('hidden');
-                }
-            });
-        }
-    },
-
-    addMedicine: function() {
-        const pid = document.getElementById('med-pasien-select').value;
-        if(!pid) return Swal.fire('Error', 'Pilih Pasien Dulu', 'error');
-
-        const newMed = {
-            nama: document.getElementById('obat-nama').value,
-            stok: parseInt(document.getElementById('obat-stok').value),
-            exp: document.getElementById('obat-exp').value
-        };
-
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        this.data.patients[pIndex].medicine.push(newMed);
-        this.saveData();
-        this.loadMedicineData();
-        // Clear inputs
-        document.getElementById('obat-nama').value = '';
-        document.getElementById('obat-stok').value = '';
-    },
-
-    useMedicine: function() {
-        const pid = document.getElementById('med-pasien-select').value;
-        const medIndex = document.getElementById('log-nama-obat').value;
-        const jumlah = parseInt(document.getElementById('log-jumlah').value);
-        
-        if(!pid || medIndex === "") return Swal.fire('Error', 'Data tidak lengkap', 'error');
-
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        
-        // Reduce Stock
-        if(this.data.patients[pIndex].medicine[medIndex].stok >= jumlah) {
-            this.data.patients[pIndex].medicine[medIndex].stok -= jumlah;
+        // Re-attach listener hack for dynamic content
+        select.onchange = () => {
+            const idx = select.value;
+            const container = document.getElementById('medicine-view');
+            if(idx === "") { container.innerHTML = ''; return; }
             
-            // Add Log
-            const log = {
-                timestamp: new Date().toLocaleString(),
-                obat: this.data.patients[pIndex].medicine[medIndex].nama,
-                jumlah: jumlah,
-                pj: document.getElementById('log-pj').value,
-                ket: document.getElementById('log-ket').value
-            };
-            this.data.patients[pIndex].medicineLogs.push(log);
+            const p = appData.patients[idx];
             
-            this.saveData();
-            this.loadMedicineData();
-            Swal.fire('Sukses', 'Penggunaan obat tercatat', 'success');
-        } else {
-            Swal.fire('Gagal', 'Stok tidak mencukupi', 'error');
+            let stockHtml = p.medicine.map((m, i) => `
+                <tr>
+                    <td>${m.name}</td>
+                    <td>${m.initial}</td>
+                    <td>${m.used}</td>
+                    <td class="${m.current <= 7 ? 'text-danger' : ''}">${m.current}</td>
+                    <td>${m.exp}</td>
+                    <td><button onclick="app.useMedicine(${idx}, ${i})" class="btn btn-warning btn-small">Gunakan</button></td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="grid-2">
+                    <div>
+                        <h4>Stok Obat</h4>
+                        <button onclick="app.addMedicineStock(${idx})" class="btn btn-primary" style="margin-bottom:10px;">+ Tambah Obat</button>
+                        <table>
+                            <thead><tr><th>Nama</th><th>Awal</th><th>Pakai</th><th>Sisa</th><th>Exp</th><th>Aksi</th></tr></thead>
+                            <tbody>${stockHtml}</tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4>Riwayat Penggunaan</h4>
+                        <ul style="max-height:300px; overflow-y:auto; list-style:none;">
+                            ${p.medicineLog.map(l => `<li style="border-bottom:1px solid #ddd; padding:5px;"><b>${l.obat}</b> (${l.amount}) - ${l.timestamp} <br> <small>Ket: ${l.ket} | PJ: ${l.pj}</small></li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
         }
     },
 
-    // --- MODULE: TTV ---
-    saveTTV: function() {
-        const pid = document.getElementById('ttv-pasien-select').value;
-        if(!pid) return Swal.fire('Error', 'Pilih Pasien', 'error');
-
-        const ttvData = {
-            timestamp: new Date().toLocaleString(),
-            td: document.getElementById('ttv-td').value,
-            sat: document.getElementById('ttv-sat').value,
-            rr: document.getElementById('ttv-rr').value,
-            tb: document.getElementById('ttv-tb').value,
-            bb: document.getElementById('ttv-bb').value,
-            gds: document.getElementById('ttv-gds').value
-        };
-
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        this.data.patients[pIndex].ttv.push(ttvData);
-        this.saveData();
-        
-        // Simple Render Update (Append to table)
-        const tbody = document.querySelector('#table-ttv tbody');
-        tbody.innerHTML = `<tr>
-            <td>${ttvData.timestamp}</td><td>${ttvData.td}</td><td>${ttvData.sat}</td><td>${ttvData.rr}</td><td>${ttvData.gds}</td>
-        </tr>` + tbody.innerHTML;
-        
-        Swal.fire('Tersimpan', '', 'success');
+    addMedicineStock: (pIdx) => {
+        app.openModal('Tambah Stok Obat', `
+            <label>Nama Obat</label><input type="text" id="med-name" class="input-field">
+            <label>Jumlah Awal</label><input type="number" id="med-qty" class="input-field">
+            <label>Exp Date</label><input type="date" id="med-exp" class="input-field">
+            <button onclick="app.submitMedicine(${pIdx})" class="btn btn-success" style="margin-top:10px; width:100%">SIMPAN</button>
+        `);
     },
 
-    // --- MODULE: VISIT (SIGNATURE) ---
-    clearSignature: function() {
-        this.signaturePad.clear();
+    submitMedicine: (pIdx) => {
+        const name = document.getElementById('med-name').value;
+        const qty = parseInt(document.getElementById('med-qty').value);
+        const exp = document.getElementById('med-exp').value;
+
+        appData.patients[pIdx].medicine.push({
+            name: name,
+            initial: qty,
+            used: 0,
+            current: qty,
+            exp: exp
+        });
+        app.saveDB();
+        app.closeModal();
+        document.getElementById('select-patient-med').onchange(); // Refresh view
     },
 
-    saveVisit: function() {
-        const pid = document.getElementById('visit-pasien-select').value;
-        if(!pid) return;
+    useMedicine: (pIdx, mIdx) => {
+        app.openModal('Catat Penggunaan', `
+            <label>Jumlah Digunakan</label><input type="number" id="use-qty" class="input-field">
+            <label>Nama PJ</label><input type="text" id="use-pj" class="input-field">
+            <label>Keterangan</label><input type="text" id="use-ket" class="input-field">
+            <button onclick="app.submitUseMedicine(${pIdx}, ${mIdx})" class="btn btn-danger" style="margin-top:10px; width:100%">KURANGI STOK</button>
+        `);
+    },
 
-        if (this.signaturePad.isEmpty()) {
-            return Swal.fire('Warning', 'Tanda tangan dokter diperlukan', 'warning');
+    submitUseMedicine: (pIdx, mIdx) => {
+        const qty = parseInt(document.getElementById('use-qty').value);
+        const pj = document.getElementById('use-pj').value;
+        const ket = document.getElementById('use-ket').value;
+        const med = appData.patients[pIdx].medicine[mIdx];
+
+        if(med.current < qty) {
+            Swal.fire('Error', 'Stok tidak cukup!', 'error');
+            return;
         }
 
-        const visitData = {
+        med.used += qty;
+        med.current -= qty;
+
+        appData.patients[pIdx].medicineLog.push({
             timestamp: new Date().toLocaleString(),
-            keterangan: document.getElementById('visit-ket').value,
-            signature: this.signaturePad.toDataURL(),
-            // Photo handling would be similar to registration (Base64)
-        };
-
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        this.data.patients[pIndex].visits.push(visitData);
-        this.saveData();
-        Swal.fire('Sukses', 'Data Visit Tersimpan', 'success');
-        this.clearSignature();
-        document.getElementById('visit-ket').value = '';
-    },
-
-    // --- MODULE: CRISIS (BPSS CHART) ---
-    loadBPSS: function() {
-        const pid = document.getElementById('bpss-pasien-select').value;
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        const bpssData = this.data.patients[pIndex].crisis; // Array of {day, bio, psy, soc, spi}
-
-        // Prepare Chart Data
-        const labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'];
-        const dataTotal = [0,0,0,0,0,0,0];
-
-        bpssData.forEach(d => {
-            const dayIdx = parseInt(d.day) - 1;
-            if(dayIdx >=0 && dayIdx < 7) {
-                // Simple average or sum logic for radar? Prompt asks for Total score polygon
-                // Calculating average of components for the plot
-                const avg = (parseInt(d.bio) + parseInt(d.psy) + parseInt(d.soc) + parseInt(d.spi)) / 4;
-                dataTotal[dayIdx] = avg; 
-            }
+            obat: med.name,
+            amount: qty,
+            pj: pj,
+            ket: ket
         });
 
-        // Render Chart
+        app.saveDB();
+        app.closeModal();
+        document.getElementById('select-patient-med').onchange();
+    },
+
+    // --- LOGIC: CRISIS & CHART ---
+    renderCrisisView: () => {
+        app.populatePatientSelect('select-patient-crisis');
+        const select = document.getElementById('select-patient-crisis');
+        
+        select.onchange = () => {
+            const idx = select.value;
+            const container = document.getElementById('crisis-view');
+            if(idx === "") { container.innerHTML = ''; return; }
+            
+            const p = appData.patients[idx];
+            
+            container.innerHTML = `
+                <div class="grid-2">
+                    <div>
+                        <h4>Input Score BPSS (Day 1-7)</h4>
+                        <label>Hari Ke-</label>
+                        <select id="bpss-day" class="input-field">
+                            <option value="1">Day 1</option><option value="2">Day 2</option><option value="3">Day 3</option>
+                            <option value="4">Day 4</option><option value="5">Day 5</option><option value="6">Day 6</option><option value="7">Day 7</option>
+                        </select>
+                        <div class="grid-2">
+                            <input type="number" id="sc-bio" placeholder="Bio (0-25)" class="input-field">
+                            <input type="number" id="sc-psy" placeholder="Psy (0-25)" class="input-field">
+                            <input type="number" id="sc-soc" placeholder="Social (0-25)" class="input-field">
+                            <input type="number" id="sc-spi" placeholder="Spiritual (0-25)" class="input-field">
+                        </div>
+                        <button onclick="app.submitBPSS(${idx})" class="btn btn-primary" style="width:100%; margin-top:10px;">UPDATE SCORE</button>
+                    </div>
+                    <div>
+                        <h4>Grafik Perkembangan</h4>
+                        <canvas id="bpssChart"></canvas>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => app.renderChart(p), 100);
+        }
+    },
+
+    submitBPSS: (pIdx) => {
+        const day = document.getElementById('bpss-day').value;
+        const score = {
+            day: day,
+            bio: parseInt(document.getElementById('sc-bio').value) || 0,
+            psy: parseInt(document.getElementById('sc-psy').value) || 0,
+            soc: parseInt(document.getElementById('sc-soc').value) || 0,
+            spi: parseInt(document.getElementById('sc-spi').value) || 0,
+        };
+        
+        // Remove existing day if present
+        appData.patients[pIdx].bpss = appData.patients[pIdx].bpss.filter(s => s.day !== day);
+        appData.patients[pIdx].bpss.push(score);
+        
+        app.saveDB();
+        app.renderChart(appData.patients[pIdx]);
+        Swal.fire('Tersimpan', 'Score diperbarui', 'success');
+    },
+
+    renderChart: (patient) => {
         const ctx = document.getElementById('bpssChart').getContext('2d');
         
-        if(this.bpssChart) this.bpssChart.destroy();
+        // Prepare Data
+        let labels = ['Bio', 'Psy', 'Soc', 'Spi'];
+        let datasets = [];
+        
+        // Only showing latest day for Radar simplicity, or Day 1 vs Day 7 logic can be applied
+        // Here we map all available days
+        patient.bpss.sort((a,b) => a.day - b.day).forEach(d => {
+            datasets.push({
+                label: `Day ${d.day}`,
+                data: [d.bio, d.psy, d.soc, d.spi],
+                fill: true,
+                backgroundColor: `rgba(0, 128, 128, 0.${d.day})`,
+                borderColor: 'rgba(0, 128, 128, 1)',
+                pointBackgroundColor: 'rgba(0, 128, 128, 1)',
+            });
+        });
 
-        this.bpssChart = new Chart(ctx, {
+        // Destroy old chart if exists (need global ref or recreation)
+        // For simplicity in this structure:
+        new Chart(ctx, {
             type: 'radar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'BPSS Progress (Avg)',
-                    data: dataTotal,
-                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
-                    borderColor: 'rgba(39, 174, 96, 1)',
-                    borderWidth: 1
-                }]
+                datasets: datasets
             },
             options: {
                 scales: {
@@ -390,105 +499,136 @@ const app = {
         });
     },
 
-    saveBPSS: function() {
-        const pid = document.getElementById('bpss-pasien-select').value;
-        if(!pid) return;
-
-        const data = {
-            day: document.getElementById('bpss-day').value,
-            bio: document.getElementById('score-bio').value,
-            psy: document.getElementById('score-psy').value,
-            soc: document.getElementById('score-soc').value,
-            spi: document.getElementById('score-spi').value,
-            timestamp: new Date().toLocaleString()
-        };
-
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        // Remove existing day data if any to overwrite
-        this.data.patients[pIndex].crisis = this.data.patients[pIndex].crisis.filter(c => c.day !== data.day);
+    // --- LOGIC: VISIT DOKTER (Signature) ---
+    renderVisitView: () => {
+        app.populatePatientSelect('select-patient-visit');
+        const select = document.getElementById('select-patient-visit');
         
-        this.data.patients[pIndex].crisis.push(data);
-        this.saveData();
-        this.loadBPSS(); // Refresh Chart
-        Swal.fire('Saved', 'Score BPSS Updated', 'success');
-    },
-
-    // --- MODULE: PROGRAM & THERAPY ---
-    saveProgram: function() {
-        const pid = document.getElementById('prog-pasien-select').value;
-        if(!pid) return;
-        const progData = {
-            paket: document.getElementById('prog-paket').value,
-            durasi: document.getElementById('prog-durasi').value,
-            timestamp: new Date().toLocaleString()
-        };
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        this.data.patients[pIndex].program = progData;
-        this.saveData();
-        document.getElementById('program-display').innerHTML = `Paket: ${progData.paket} | Durasi: ${progData.durasi}`;
-    },
-
-    saveTherapy: function() {
-        const pid = document.getElementById('tera-pasien-select').value;
-        if(!pid) return;
-        const note = document.getElementById('tera-note').value;
-        const pIndex = this.data.patients.findIndex(p => p.id === pid);
-        
-        this.data.patients[pIndex].therapy.push({
-            date: new Date().toLocaleString(),
-            note: note
-        });
-        this.saveData();
-        
-        const list = document.getElementById('therapy-list');
-        list.innerHTML = `<p><b>${new Date().toLocaleTimeString()}</b>: ${note}</p>` + list.innerHTML;
-        document.getElementById('tera-note').value = '';
-    },
-
-    // --- CORE: DATA MANAGEMENT ---
-    saveData: function() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-    },
-
-    exportData: function(type) {
-        if(type === 'pasien') {
-            // Simple Excel Export using SheetJS
-            // Flatten data for nice Excel columns
-            const flatData = this.data.patients.map(p => ({
-                Nama: p.biodata.nama,
-                Usia: p.biodata.usia,
-                Diagnosa: p.diagnosa.utama,
-                Dokter: p.diagnosa.dokter,
-                Masuk: p.timestamp
-            }));
+        select.onchange = () => {
+            const idx = select.value;
+            const container = document.getElementById('visit-view');
+            if(idx === "") { container.innerHTML = ''; return; }
             
-            const ws = XLSX.utils.json_to_sheet(flatData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Pasien");
-            XLSX.writeFile(wb, "Data_Pasien_MMRC.xlsx");
+            const p = appData.patients[idx];
+            
+            container.innerHTML = `
+                <div class="form-group">
+                    <label>Keterangan Dokter</label>
+                    <textarea id="visit-ket" class="input-field"></textarea>
+                    <label>Tanda Tangan Dokter</label>
+                    <div style="border:1px solid #ccc; background:#fff;">
+                        <canvas id="sig-canvas" width="400" height="200"></canvas>
+                    </div>
+                    <button onclick="app.clearSig()" class="btn btn-secondary btn-small">Clear Sign</button>
+                    <button onclick="app.submitVisit(${idx})" class="btn btn-primary" style="margin-top:10px;">SIMPAN VISIT</button>
+                </div>
+                <h4>Riwayat Visit</h4>
+                ${p.visits.map(v => `<div class="card"><b>${v.date}</b><p>${v.ket}</p><img src="${v.sign}" width="100"/></div>`).join('')}
+            `;
+            
+            setTimeout(() => {
+                window.signaturePad = new SignaturePad(document.getElementById('sig-canvas'));
+            }, 100);
         }
     },
-    
-    // Very Basic HTML-to-Word export logic using Blob
-    exportWordVisit: function() {
-        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
-        const footer = "</body></html>";
-        const sourceHTML = header+document.getElementById("visit").innerHTML+footer;
+
+    clearSig: () => { window.signaturePad.clear(); },
+
+    submitVisit: (pIdx) => {
+        if(window.signaturePad.isEmpty()) { Swal.fire('Error', 'Tanda tangan kosong', 'warning'); return; }
         
-        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-        const fileDownload = document.createElement("a");
-        document.body.appendChild(fileDownload);
-        fileDownload.href = source;
-        fileDownload.download = 'Laporan_Visit.doc';
-        fileDownload.click();
-        document.body.removeChild(fileDownload);
+        const visit = {
+            date: new Date().toLocaleString(),
+            ket: document.getElementById('visit-ket').value,
+            sign: window.signaturePad.toDataURL()
+        };
+        
+        appData.patients[pIdx].visits.push(visit);
+        app.saveDB();
+        document.getElementById('select-patient-visit').onchange();
+        Swal.fire('Sukses', 'Data Visit Tersimpan', 'success');
+    },
+
+    // --- PLACEHOLDERS FOR TTV, PROGRAM, THERAPY (Structure similar to above) ---
+    renderTTVView: () => { 
+        app.populatePatientSelect('select-patient-ttv'); 
+        document.getElementById('select-patient-ttv').onchange = (e) => {
+            const idx = e.target.value;
+            if(idx === "") return;
+            const p = appData.patients[idx];
+            document.getElementById('ttv-view').innerHTML = `
+                <div class="grid-2">
+                    <input type="text" id="ttv-td" placeholder="TD" class="input-field">
+                    <input type="text" id="ttv-sat" placeholder="Sat" class="input-field">
+                    <input type="text" id="ttv-gds" placeholder="GDS" class="input-field">
+                </div>
+                <button onclick="app.addTTV(${idx})" class="btn btn-primary" style="margin-top:10px">Simpan TTV</button>
+                <br><br>
+                <table><thead><tr><th>Waktu</th><th>TD</th><th>Sat</th><th>GDS</th></tr></thead>
+                <tbody>${p.ttv.map(t => `<tr><td>${t.date}</td><td>${t.td}</td><td>${t.sat}</td><td>${t.gds}</td></tr>`).join('')}</tbody></table>
+            `;
+        }
+    },
+    addTTV: (idx) => {
+        appData.patients[idx].ttv.push({
+            date: new Date().toLocaleString(),
+            td: document.getElementById('ttv-td').value,
+            sat: document.getElementById('ttv-sat').value,
+            gds: document.getElementById('ttv-gds').value
+        });
+        app.saveDB();
+        document.getElementById('select-patient-ttv').onchange({target:{value:idx}});
+    },
+
+    // --- EXPORT FUNCTIONS ---
+    exportToExcel: () => {
+        const ws = XLSX.utils.json_to_sheet(appData.patients.map(p => ({
+            Nama: p.biodata.nama,
+            Usia: p.biodata.usia,
+            Diagnosa: p.diagnosa.diagnosaMasuk,
+            Dokter: p.diagnosa.dokter
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Pasien");
+        XLSX.writeFile(wb, "MMRC_Data_Pasien.xlsx");
+    },
+
+    exportWordPatient: (idx) => {
+        const p = appData.patients[idx];
+        const content = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Export HTML To Doc</title></head>
+            <body>
+                <h1>DATA PASIEN MMRC</h1>
+                <h2>BIODATA</h2>
+                <p>Nama: ${p.biodata.nama}</p>
+                <p>Usia: ${p.biodata.usia}</p>
+                <p>Alamat: ${p.biodata.alamat}</p>
+                <h2>MEDIS</h2>
+                <p>Diagnosa: ${p.diagnosa.diagnosaMasuk}</p>
+                <p>Dokter PJ: ${p.diagnosa.dokter}</p>
+                <p>History Fisik: ${p.history.fisik}</p>
+            </body>
+            </html>
+        `;
+        const blob = new Blob(['\ufeff', content], {
+            type: 'application/msword'
+        });
+        saveAs(blob, 'Pasien_' + p.biodata.nama + '.doc');
+    },
+
+    search: () => {
+        const term = document.getElementById('global-search').value.toLowerCase();
+        const rows = document.querySelectorAll('#patient-table-body tr');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+        });
     }
 };
 
-// --- EVENT LISTENER FOR FORM SUBMIT ---
-document.getElementById('form-registrasi').addEventListener('submit', function(e) {
-    app.savePatient(e);
-});
+// Event Listener for Login Form
+document.getElementById('login-form').addEventListener('submit', app.login);
 
-// Initialize
+// Start
 app.init();
