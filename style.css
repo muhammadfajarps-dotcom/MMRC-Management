@@ -1,127 +1,36 @@
-/* IMPORT FONT PROFESIONAL */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- DEFINISI WARNA MMRC --- */
-:root {
-    --mmrc-maroon: #662424;    /* Warna Merah Tua Logo */
-    --mmrc-maroon-dark: #4a1a1a;
-    --mmrc-cream: #f7f5f2;     /* Warna Latar Krem Lembut */
-    --mmrc-cream-dark: #eaddd0; /* Warna Border Krem */
-    --mmrc-grey: #808080;      /* Warna Aksen Abu Logo */
-}
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--mmrc-cream);
-    color: #333;
-}
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #991b1b; border-radius: 10px; }
 
-/* --- UTILITIES --- */
-.bg-mmrc-maroon { background-color: var(--mmrc-maroon); }
-.text-mmrc-maroon { color: var(--mmrc-maroon); }
-.bg-mmrc-cream { background-color: var(--mmrc-cream); }
-.bg-mmrc-grey { background-color: var(--mmrc-grey); }
-
-.input-field {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background-color: #fff;
-    border: 2px solid var(--mmrc-cream-dark);
-    border-radius: 0.75rem;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    outline: none;
-}
-.input-field:focus {
-    border-color: var(--mmrc-maroon);
-    box-shadow: 0 0 0 3px rgba(102, 36, 36, 0.1);
-}
-
-/* --- TOMBOL --- */
-.btn-maroon {
-    background-color: var(--mmrc-maroon);
-    color: white;
-    transition: background-color 0.2s;
-}
-.btn-maroon:hover { background-color: var(--mmrc-maroon-dark); }
-
-/* --- SIDEBAR NAVIGATION --- */
-.nav-section-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--mmrc-grey);
-    padding: 0.5rem 0.75rem;
-}
-
+/* Navigation Buttons */
 .nav-btn {
-    width: 100%;
-    text-align: left;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    color: #64748b;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    display: flex; align-items: center; gap: 0.75rem;
-    border: 1px solid transparent;
+    width: 100%; text-align: left; padding: 12px 16px;
+    border-radius: 12px; font-weight: 600; font-size: 0.9rem;
+    color: #fecaca; transition: all 0.2s; display: flex; align-items: center; gap: 12px;
 }
+.nav-btn:hover { background: rgba(255,255,255,0.1); color: white; transform: translateX(5px); }
+.nav-btn.active { background: white; color: #991b1b; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
-.nav-btn:hover {
-    background-color: var(--mmrc-cream);
-    color: var(--mmrc-maroon);
+/* Inputs */
+.input-field {
+    width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb;
+    border-radius: 10px; font-size: 0.9rem; font-weight: 600; outline: none; transition: 0.2s;
 }
+.input-field:focus { border-color: #991b1b; background: #fffafa; }
 
-.nav-btn.active {
-    background-color: #fff;
-    color: var(--mmrc-maroon);
-    border-color: var(--mmrc-cream-dark);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+/* Animations */
+@keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.animate-pop { animation: pop 0.2s ease-out; }
+
+/* Card Style */
+.card-mmrc {
+    background: white; border-radius: 20px; padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f3f4f6; transition: 0.2s;
 }
-
-/* --- ANIMASI --- */
-@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-up { animation: fadeUp 0.5s ease-out; }
-@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-.animate-modal-pop { animation: popIn 0.2s ease-out; }
-
-/* --- OVERRIDE TAILWIND DEFAULT UNTUK JS BAPAK --- */
-/* Karena script JS Bapak masih menghasilkan class 'bg-teal-600', dll,
-   kita paksa timpa warnanya lewat CSS ini agar sesuai tema Maroon. */
-
-/* Timpa Tombol Teal/Hijau jadi Maroon */
-.bg-teal-600, .hover\:bg-teal-700:hover, .bg-emerald-600, .hover\:bg-emerald-700:hover {
-    background-color: var(--mmrc-maroon) !important;
-}
-.bg-teal-600:hover, .bg-emerald-600:hover {
-    background-color: var(--mmrc-maroon-dark) !important;
-}
-.text-teal-600, .text-teal-700, .text-teal-800 {
-    color: var(--mmrc-maroon) !important;
-}
-.bg-teal-50, .bg-emerald-50 {
-    background-color: var(--mmrc-cream) !important;
-    color: var(--mmrc-maroon) !important;
-}
-.border-teal-100 { border-color: var(--mmrc-cream-dark) !important; }
-
-/* Timpa Tombol Blue jadi Grey MMRC */
-.bg-blue-600 { background-color: var(--mmrc-grey) !important; }
-.bg-blue-600:hover { background-color: #666 !important; }
-.bg-blue-50 { background-color: #f0f0f0 !important; color: #444 !important; }
-
-/* Timpa Latar Belakang Card */
-.bg-white.p-6.rounded-3xl.shadow-sm.border.border-slate-100 {
-    border-color: var(--mmrc-cream-dark) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
-}
-
-/* Timpa Modal Header */
-#modal-title.text-teal-800 { color: var(--mmrc-maroon) !important; }
-
-/* Scrollbar Cantik */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--mmrc-cream); }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--mmrc-grey); }
+.card-mmrc:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: #fca5a5; }
