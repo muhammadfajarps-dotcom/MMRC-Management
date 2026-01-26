@@ -20,23 +20,24 @@ const app = {
     data: { patients: [] },
     activePatientId: null,
     activeTab: 'biodata',
+    currentCategory: 'rehab', // 'detox' or 'rehab'
     signaturePad: null,
     chartInstance: null,
 
     init() {
-        console.log("MMRC System V9.0 - Optimization & New Features");
+        console.log("MMRC System V10.0 - Split Dashboard");
         // this.loadDB(); // Uncomment for auto-load
     },
 
     saveDB() {
         try {
-            localStorage.setItem('MMRC_DATA_V9', JSON.stringify(this.data));
+            localStorage.setItem('MMRC_DATA_V10', JSON.stringify(this.data));
             if(db) db.ref('mmrc_data').set(this.data);
         } catch(e) { console.error("Save failed", e); }
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V9');
+        const local = localStorage.getItem('MMRC_DATA_V10');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
@@ -45,9 +46,9 @@ const app = {
                 if(snap.val() && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = snap.val();
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V9', JSON.stringify(this.data));
+                    localStorage.setItem('MMRC_DATA_V10', JSON.stringify(this.data));
                     if(this.activePatientId) this.renderPatientDetail();
-                    else this.renderDashboard();
+                    else this.renderDashboard(); // Refresh current view
                 }
             });
         }
@@ -64,26 +65,97 @@ const app = {
         } else Swal.fire('Error', 'Login Gagal', 'error');
     },
 
-    // --- DASHBOARD ---
+    // ============================================================
+    // 1. DASHBOARD UTAMA (MENU PILIHAN) - MODIFIED
+    // ============================================================
     renderDashboard() {
         this.activePatientId = null;
         document.getElementById('page-title').innerText = "DASHBOARD UTAMA";
+        document.getElementById('header-actions').innerHTML = ''; // Clear buttons
+
         const container = document.getElementById('main-content');
         
+        // TAMPILAN PILIHAN MENU (SPLIT VIEW)
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center min-h-[60vh] gap-8 animate-fade-in">
+                <div class="text-center mb-4">
+                    <h2 class="text-2xl font-black text-slate-700">PILIH UNIT LAYANAN</h2>
+                    <p class="text-slate-400">Silakan pilih kategori pasien untuk dikelola</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl px-4">
+                    <div onclick="app.renderPatientList('detox')" class="group cursor-pointer bg-white p-8 rounded-3xl border border-slate-200 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-rose-100 rounded-bl-full -mr-8 -mt-8 opacity-50 group-hover:scale-110 transition"></div>
+                        <i class="fas fa-procedures text-5xl text-rose-500 mb-4 group-hover:scale-110 transition duration-300"></i>
+                        <h3 class="text-2xl font-black text-slate-800 mb-2">STABILISASI & DETOX</h3>
+                        <p class="text-sm text-slate-500 font-medium">Unit perawatan intensif awal, detoksifikasi fisik, dan pemulihan medis dasar.</p>
+                        <div class="mt-6 flex items-center text-rose-600 font-bold text-sm group-hover:translate-x-2 transition">
+                            BUKA DATA <i class="fas fa-arrow-right ml-2"></i>
+                        </div>
+                    </div>
+
+                    <div onclick="app.renderPatientList('rehab')" class="group cursor-pointer bg-white p-8 rounded-3xl border border-slate-200 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-brand-100 rounded-bl-full -mr-8 -mt-8 opacity-50 group-hover:scale-110 transition"></div>
+                        <i class="fas fa-walking text-5xl text-brand-600 mb-4 group-hover:scale-110 transition duration-300"></i>
+                        <h3 class="text-2xl font-black text-slate-800 mb-2">REHABILITASI</h3>
+                        <p class="text-sm text-slate-500 font-medium">Program Primary, Re-Entry, dan Advanced. Fokus perubahan perilaku & sosial.</p>
+                        <div class="mt-6 flex items-center text-brand-700 font-bold text-sm group-hover:translate-x-2 transition">
+                            BUKA DATA <i class="fas fa-arrow-right ml-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    // ============================================================
+    // 2. RENDER PATIENT LIST (ISI FOLDER) - NEW LOGIC
+    // ============================================================
+    renderPatientList(category) {
+        this.currentCategory = category; // 'detox' or 'rehab'
+        this.activePatientId = null;
+        
+        const title = category === 'detox' ? "UNIT STABILISASI (DETOX)" : "UNIT REHABILITASI";
+        const themeColor = category === 'detox' ? 'text-rose-600' : 'text-brand-600';
+        
+        document.getElementById('page-title').innerHTML = `<span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / <span class="${themeColor}">${title}</span>`;
+        
+        const container = document.getElementById('main-content');
+        
+        // Header Actions (Search & Add)
         document.getElementById('header-actions').innerHTML = `
-            <input id="dash-search" onkeyup="app.searchDashboard()" placeholder="Cari Pasien..." class="bg-slate-100 rounded-full px-4 py-2 text-xs font-bold w-64 outline-none focus:ring-2 ring-brand-100">
+            <button onclick="app.renderDashboard()" class="mr-2 bg-slate-200 text-slate-600 w-8 h-8 rounded-full hover:bg-slate-300 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
+            <input id="dash-search" onkeyup="app.searchDashboard()" placeholder="Cari Pasien..." class="bg-slate-100 rounded-full px-4 py-2 text-xs font-bold w-48 md:w-64 outline-none focus:ring-2 ring-brand-100">
             <button onclick="app.modalPatient()" class="bg-brand-600 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-brand-700 shadow flex items-center gap-2"><i class="fas fa-plus"></i> PASIEN BARU</button>
         `;
 
-        if(!this.data.patients.length) {
-            container.innerHTML = `<div class="text-center mt-20 text-slate-400"><i class="fas fa-users text-4xl mb-4 opacity-30"></i><p>Belum ada data.</p></div>`;
+        // Filter Logic:
+        // Detox = Program Name contains 'Detox' or 'Recovery'
+        // Rehab = Program Name contains 'Primary', 'Advanced', 'Re-Entry', 'Reguler' OR Undefined (Default to Rehab)
+        const filteredPatients = this.data.patients.filter(p => {
+            const prog = (p.program?.name || '').toLowerCase();
+            if(category === 'detox') {
+                return prog.includes('detox') || prog.includes('recovery');
+            } else {
+                // Rehab includes everything else (Primary, etc) AND patients with no program set yet
+                return !prog.includes('detox') && !prog.includes('recovery');
+            }
+        });
+
+        if(!filteredPatients.length) {
+            container.innerHTML = `
+                <div class="text-center mt-20 text-slate-400">
+                    <i class="fas fa-folder-open text-4xl mb-4 opacity-30"></i>
+                    <p>Belum ada pasien di unit ${category === 'detox' ? 'Stabilisasi' : 'Rehabilitasi'}.</p>
+                    <p class="text-xs mt-2">Pasien akan muncul disini berdasarkan <br>jenis Program yang dipilih di menu Biodata.</p>
+                </div>`;
             return;
         }
 
         const grid = document.createElement('div');
-        grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6";
+        grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in";
         
-        this.data.patients.forEach(p => {
+        filteredPatients.forEach(p => {
             const card = document.createElement('div');
             card.className = "bg-white p-5 rounded-3xl border border-slate-100 card-hover cursor-pointer search-item relative overflow-hidden group";
             card.onclick = (e) => { if(!e.target.closest('button')) app.openPatient(p.id); };
@@ -94,14 +166,19 @@ const app = {
             if(p.checklist?.inj) badges += `<span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">INJ</span>`;
 
             // Hitung Program Dashboard
-            let progLabel = 'Reguler';
+            let progLabel = 'Belum Set Program';
             if(p.program?.startDate && p.program?.days) {
                 const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
                 progLabel = `Hari ke-${diff} / ${p.program.days}`;
+            } else if (p.program?.name) {
+                progLabel = p.program.name;
             }
 
+            // Card Color Stripe (Red for Detox, Brand for Rehab)
+            const stripeColor = category === 'detox' ? 'bg-rose-500' : 'bg-brand-600';
+
             card.innerHTML = `
-                <div class="absolute top-0 left-0 w-2 h-full bg-brand-600"></div>
+                <div class="absolute top-0 left-0 w-2 h-full ${stripeColor}"></div>
                 <div class="flex items-center gap-4 mb-4 pl-4">
                     <img src="${p.reg.photo || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-2xl object-cover bg-slate-50 border shadow-sm">
                     <div>
@@ -129,32 +206,32 @@ const app = {
 
     renderPatientDetail() {
         const p = this.data.patients.find(x => x.id === this.activePatientId);
-        if(!p) return this.renderDashboard();
+        // Fallback jika user refresh di halaman detail, kembalikan ke list yang sesuai
+        if(!p) return this.renderDashboard(); 
 
         document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
         
+        // BACK BUTTON LOGIC: Kembali ke list kategori sebelumnya
         document.getElementById('header-actions').innerHTML = `
             <button onclick="app.exportToWord('${p.id}')" class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-700" title="Download Word"><i class="fas fa-file-word"></i></button>
             <button onclick="app.exportToExcel('${p.id}')" class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-emerald-700" title="Download Excel"><i class="fas fa-file-excel"></i></button>
             <div class="w-px h-8 bg-slate-300 mx-2"></div>
-            <button onclick="app.renderDashboard()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-300 flex items-center gap-2"><i class="fas fa-arrow-left"></i> KEMBALI</button>
+            <button onclick="app.renderPatientList('${this.currentCategory}')" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-300 flex items-center gap-2"><i class="fas fa-arrow-left"></i> KEMBALI</button>
         `;
 
         const container = document.getElementById('main-content');
         
-        // --- 5. MENU BARU: PROGRES HARIAN DITAMBAHKAN ---
         const tabs = [
             {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
             {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
             {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
-            {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'}, // NEW
+            {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'},
             {id: 'visit', icon: 'fa-user-md', label: 'Visit Dokter'},
             {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'},
             {id: 'program', icon: 'fa-list-check', label: 'Program'},
             {id: 'counseling', icon: 'fa-comments', label: 'Konseling'},
         ];
 
-        // --- 1. LOGIKA PROGRAM SYNC (BIODATA) ---
         let programStatus = `<span class="text-slate-400 italic">Belum ada program aktif</span>`;
         if(p.program?.startDate && p.program?.days) {
             const start = new Date(p.program.startDate);
@@ -265,7 +342,7 @@ const app = {
             `;
         }
 
-        // --- MEDICINE (UPDATED: Edit & Auto-Refund Stock on Delete) ---
+        // --- MEDICINE ---
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
@@ -342,13 +419,12 @@ const app = {
                 </div>`;
         }
 
-        // --- VISIT / KONSELING / PROGRES HARIAN (SHARED TEMPLATE) ---
-        // NEW: 'daily' ditambahkan di sini agar strukturnya sama persis
+        // --- VISIT / KONSELING / PROGRES HARIAN ---
         if(tab === 'visit' || tab === 'counseling' || tab === 'daily') {
             let dataArr, typeLabel, modalType;
             if(tab === 'visit') { dataArr = p.visits || []; typeLabel = "VISIT DOKTER"; modalType = 'visit'; }
             else if(tab === 'counseling') { dataArr = p.counseling || []; typeLabel = "SESI KONSELING"; modalType = 'counseling'; }
-            else { dataArr = p.daily_progress || []; typeLabel = "PROGRES HARIAN"; modalType = 'daily'; } // NEW
+            else { dataArr = p.daily_progress || []; typeLabel = "PROGRES HARIAN"; modalType = 'daily'; }
             
             return `
                 ${searchInput}
@@ -416,7 +492,7 @@ const app = {
                 </div>`;
         }
 
-        // --- 2. PROGRAM (OPTIMALISASI: INFO LENGKAP) ---
+        // --- PROGRAM ---
         if(tab === 'program') {
             const prog = p.program || {};
             let currentInfo = "Belum ada program";
@@ -445,6 +521,7 @@ const app = {
                         </div>
                     </div>
                     <button onclick="app.modalProgram('${p.id}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition border border-slate-200 flex items-center justify-center gap-2"><i class="fas fa-cog"></i> ATUR / GANTI PROGRAM</button>
+                    <p class="text-center text-[10px] text-slate-400 mt-2">Perubahan program akan memindahkan pasien ke folder Rehabilitasi atau Stabilisasi.</p>
                 </div>`;
         }
     },
@@ -564,14 +641,16 @@ const app = {
             crisis: pOld?.crisis || { bpss: [] },
             program: pOld?.program || {},
             counseling: pOld?.counseling || [],
-            daily_progress: pOld?.daily_progress || [] // NEW
+            daily_progress: pOld?.daily_progress || []
         };
         
         if(id) this.data.patients[this.data.patients.findIndex(x=>x.id===id)] = newP;
         else this.data.patients.push(newP);
         
         this.closeModal(); this.saveDB();
-        if(!id) this.renderDashboard(); else this.renderPatientDetail();
+        
+        // Return to the current list view, NOT dashboard root
+        if(!id) this.renderPatientList(this.currentCategory); else this.renderPatientDetail();
     },
 
     modalStock(id, index = null) {
@@ -627,7 +706,6 @@ const app = {
         Swal.fire({icon:'success', title:'Tercatat', timer:1000, showConfirmButton:false});
     },
     
-    // --- 3. FITUR BARU: EDIT & DELETE LOG OBAT (OTOMATIS BALIKIN STOK) ---
     modalEditLog(id, logIndex) {
         const p = this.data.patients.find(x => x.id === id);
         const log = p.medicine.logs[logIndex];
@@ -654,13 +732,10 @@ const app = {
             if(r.isConfirmed) {
                 const p = this.data.patients.find(x => x.id === id);
                 const log = p.medicine.logs[logIndex];
-                
-                // Cari stok obat yang namanya sama, lalu kurangi 'used' (artinya stok nambah)
                 const stockItem = p.medicine.stock.find(s => s.name === log.name);
                 if(stockItem && stockItem.used > 0) {
                     stockItem.used--; 
                 }
-                
                 p.medicine.logs.splice(logIndex, 1);
                 this.saveDB(); this.renderPatientDetail();
                 Swal.fire('Terhapus', 'Log dihapus dan stok dikembalikan.', 'success');
@@ -701,14 +776,12 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // --- MODAL SIGN (Digunakan Visit, Konseling, DAN PROGRES HARIAN) ---
     modalSign(id, type, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
-        // Tentukan array tujuan berdasarkan tipe
         let arr;
         if(type === 'visit') arr = p.visits || (p.visits=[]);
         else if(type === 'counseling') arr = p.counseling || (p.counseling=[]);
-        else arr = p.daily_progress || (p.daily_progress=[]); // NEW for daily
+        else arr = p.daily_progress || (p.daily_progress=[]);
 
         const v = index !== null ? arr[index] : null;
         const title = type === 'visit' ? 'VISIT DOKTER' : (type === 'counseling' ? 'KONSELING' : 'PROGRES HARIAN');
@@ -737,7 +810,7 @@ const app = {
         let arr;
         if(type === 'visit') arr = p.visits || (p.visits=[]);
         else if(type === 'counseling') arr = p.counseling || (p.counseling=[]);
-        else arr = p.daily_progress || (p.daily_progress=[]); // NEW
+        else arr = p.daily_progress || (p.daily_progress=[]);
 
         const f = document.getElementById('v_photo').files[0];
         let photo = 'https://via.placeholder.com/150';
@@ -777,12 +850,10 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // --- 2. MODAL PROGRAM (UPDATED: Detail Paket + Tanggal) ---
     modalProgram(id) {
         const p = this.data.patients.find(x => x.id === id);
         const prog = p.program || {};
         
-        // Setup dropdown paket dengan detail
         this.openModal(`
             <h3 class="font-bold mb-4 text-center">PENGATURAN PAKET PROGRAM</h3>
             <label class="text-xs font-bold text-slate-500">Pilih Paket</label>
@@ -863,21 +934,28 @@ const app = {
     openModal(html) { document.getElementById('modal-body').innerHTML = html; document.getElementById('modal-container').classList.remove('hidden'); },
     closeModal() { document.getElementById('modal-container').classList.add('hidden'); },
     toBase64: f => new Promise((r) => { const rd = new FileReader(); rd.readAsDataURL(f); rd.onload=()=>r(rd.result); }),
-    deletePatient(id) { Swal.fire({title:'Hapus Pasien?', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderDashboard();}})},
+    deletePatient(id) { 
+        Swal.fire({title:'Hapus Pasien?', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r=>{
+            if(r.isConfirmed){
+                this.data.patients=this.data.patients.filter(x=>x.id!==id); 
+                this.saveDB(); 
+                this.renderPatientList(this.currentCategory); // Render current list
+            }
+        })
+    },
 
     // ============================================================
-    // EXPORT LOGIC (WORD & EXCEL - OPTIMIZED COMPLETE)
+    // EXPORT LOGIC
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x=>x.id===id);
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Table, TableRow, TableCell } = docx;
         const b64Blob = (b64) => { try{ return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) }catch(e){return null} };
         const addImg = (b64, w=100, h=100) => { const d=b64Blob(b64); if(d) children.push(new Paragraph({children:[new ImageRun({data:d, transformation:{width:w, height:h}})]})); };
 
         const c = p.checklist || {};
         const checkText = `Urine: ${c.urine?'Positif ('+c.urine_note+')':'Negatif'} | Fiksasi: ${c.fix?'Ya ('+c.fix_note+')':'Tidak'} | Injeksi: ${c.inj?'Ya ('+c.inj_note+')':'Tidak'}`;
 
-        // 2. Info Program di Word
         let progInfo = "Belum Ada Program";
         if(p.program?.name) {
              const diff = p.program.startDate ? Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1 : 0;
@@ -893,7 +971,7 @@ const app = {
             new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`),
             new Paragraph(`Status: ${p.reg.status || '-'} | Pekerjaan: ${p.reg.job || '-'}`),
             new Paragraph(`Penanggung Jawab: ${p.reg.guardian}`),
-            new Paragraph(`Program Saat Ini: ${progInfo}`), // Added Program Info
+            new Paragraph(`Program Saat Ini: ${progInfo}`),
             new Paragraph(`Diagnosa: ${p.diagnosis.plan}`),
             new Paragraph(`Checklist Medis: ${checkText}`),
             new Paragraph({ text: "Resep Obat Dokter:", bold: true }),
@@ -901,15 +979,12 @@ const app = {
             new Paragraph({ text: "" }),
         ];
 
-        // LOG OBAT
         children.push(new Paragraph({ text: "II. RIWAYAT OBAT", heading: HeadingLevel.HEADING_2 }));
         (p.medicine?.logs || []).forEach(l => children.push(new Paragraph(`${l.time} - ${l.name} (PJ: ${l.pj})`)));
 
-        // TTV
         children.push(new Paragraph({ text: "III. DATA TTV & GDS", heading: HeadingLevel.HEADING_2 }));
         (p.ttv || []).forEach(t => children.push(new Paragraph(`${t.time}: TD ${t.td}, Nadi ${t.nadi}, GDS ${t.gds}, TB/BB ${t.tb}/${t.bb}`)));
 
-        // 4. BPSS TABLE & CHART PLACEHOLDER
         children.push(new Paragraph({ text: "IV. DATA KRISIS (BPSS)", heading: HeadingLevel.HEADING_2 }));
         const bpssRows = [
             new TableRow({ children: [
@@ -933,7 +1008,6 @@ const app = {
         });
         children.push(new Table({ rows: bpssRows }));
         
-        // Try capture chart
         try {
             const chartCanvas = document.getElementById('crisisChart');
             if(chartCanvas) {
@@ -942,7 +1016,6 @@ const app = {
             }
         } catch(e) {}
 
-        // VISIT, KONSELING, DAN 5. PROGRES HARIAN
         const addSection = (title, arr, label) => {
             children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2 }));
             (arr || []).forEach(v => {
@@ -955,7 +1028,7 @@ const app = {
         };
         addSection("V. VISIT DOKTER", p.visits, "Dokter");
         addSection("VI. KONSELING", p.counseling, "Konselor");
-        addSection("VII. PROGRES HARIAN", p.daily_progress, "Petugas"); // Added Progres Harian
+        addSection("VII. PROGRES HARIAN", p.daily_progress, "Petugas");
 
         const doc = new Document({ sections: [{ children }] });
         const blob = await Packer.toBlob(doc);
@@ -968,7 +1041,6 @@ const app = {
         const wb = XLSX.utils.book_new();
         const c = p.checklist || {};
 
-        // 2. Program masuk Excel
         const bio = [{ 
             Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, 
             Status: p.reg.status, Riwayat_Penyakit: p.reg.history,
@@ -987,7 +1059,6 @@ const app = {
         const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, GDS:t.gds, TB:t.tb, BB:t.bb}));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV");
 
-        // 5. Progres Harian masuk Excel
         const allVisits = [
             ...(p.visits||[]).map(v=>({Tipe:'Dokter', Waktu:v.time, Note:v.note})),
             ...(p.counseling||[]).map(c=>({Tipe:'Konseling', Waktu:c.time, Note:c.note})),
@@ -995,7 +1066,6 @@ const app = {
         ];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allVisits), "Log_Kegiatan");
         
-        // 4. BPSS masuk Excel
         const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "BPSS_Score");
 
