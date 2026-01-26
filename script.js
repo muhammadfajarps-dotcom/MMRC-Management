@@ -1,14 +1,16 @@
 // ============================================================
 // 1. KONFIGURASI FIREBASE
 // ============================================================
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
   authDomain: "mmrc-stock1999.firebaseapp.com",
+  databaseURL: "https://mmrc-stock1999-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "mmrc-stock1999",
   storageBucket: "mmrc-stock1999.firebasestorage.app",
   messagingSenderId: "486588564272",
-  appId: "1:486588564272:web:b0e06dcef08ab7618ebef5",
-  measurementId: "G-WJJQRYDYPF"
+  appId: "1:486588564272:web:308b276a53401a738ebef5",
+  measurementId: "G-4218HRWRTC"
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
