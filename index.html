@@ -9,267 +9,78 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="login-page" class="login-container">
+    <div id="auth-layer" class="auth-container">
         <div class="login-box">
-            <h2><i class="fas fa-brain"></i> MMRC SYSTEM</h2>
-            <p>Madani Mental Recovery Center</p>
+            <div class="logo-area">
+                <i class="fas fa-heartbeat"></i>
+                <h2>MMRC SYSTEM</h2>
+                <p>Madani Mental Recovery Center</p>
+            </div>
             <form id="login-form">
                 <div class="input-group">
                     <i class="fas fa-user"></i>
-                    <input type="text" id="username" placeholder="Username" required>
+                    <input type="text" id="login-user" placeholder="Username" required>
                 </div>
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Password" required>
+                    <input type="password" id="login-pass" placeholder="Password" required>
                 </div>
-                <button type="submit" class="btn-login">LOGIN MASUK</button>
+                <button type="submit" class="btn-login">MASUK SISTEM</button>
             </form>
         </div>
     </div>
 
-    <div id="app-container" class="app-container hidden">
+    <div id="app-layer" class="app-container hidden">
         
         <aside class="sidebar">
             <div class="brand">
                 <h3>MMRC ADMIN</h3>
             </div>
             <nav>
-                <ul>
-                    <li onclick="app.showPage('dashboard')" class="active"><i class="fas fa-home"></i> Dashboard & Registrasi</li>
-                    <li onclick="app.showPage('medicine')"><i class="fas fa-pills"></i> Medicine & Stok</li>
-                    <li onclick="app.showPage('ttv')"><i class="fas fa-heartbeat"></i> TTV & GDS</li>
-                    <li onclick="app.showPage('visit')"><i class="fas fa-user-md"></i> Visit Dokter</li>
-                    <li onclick="app.showPage('crisis')"><i class="fas fa-chart-line"></i> Pasien Crisis (BPSS)</li>
-                    <li onclick="app.showPage('program')"><i class="fas fa-list-check"></i> Rencana Program</li>
-                    <li onclick="app.showPage('therapy')"><i class="fas fa-hand-holding-heart"></i> Rencana Terapi</li>
-                    <li onclick="app.logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
-                </ul>
+                <button onclick="app.nav('dashboard')" id="btn-dashboard" class="nav-btn active"><i class="fas fa-home"></i> Dashboard Pasien</button>
+                <button onclick="app.nav('medicine')" id="btn-medicine" class="nav-btn"><i class="fas fa-pills"></i> Medicine & Stok</button>
+                <button onclick="app.nav('ttv')" id="btn-ttv" class="nav-btn"><i class="fas fa-stethoscope"></i> TTV & GDS</button>
+                <button onclick="app.nav('visit')" id="btn-visit" class="nav-btn"><i class="fas fa-user-md"></i> Visit Dokter</button>
+                <button onclick="app.nav('crisis')" id="btn-crisis" class="nav-btn"><i class="fas fa-chart-line"></i> Pasien Crisis (BPSS)</button>
+                <button onclick="app.nav('program')" id="btn-program" class="nav-btn"><i class="fas fa-clipboard-list"></i> Rencana Program</button>
+                <button onclick="app.nav('therapy')" id="btn-therapy" class="nav-btn"><i class="fas fa-notes-medical"></i> Rencana Terapi</button>
             </nav>
+            <div class="logout-area">
+                <button onclick="app.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
         </aside>
 
-        <main class="content">
+        <div class="main-content">
             <header>
-                <h2 id="page-title">Dashboard</h2>
-                <div class="user-info">
-                    <span>Admin Operasional</span>
-                    <i class="fas fa-user-circle"></i>
+                <h2 id="page-title">DASHBOARD</h2>
+                <div class="header-tools">
+                    <input type="text" id="global-search" placeholder="Cari Pasien..." onkeyup="app.search()">
+                    <div class="user-profile">
+                        <span>Admin Operasional</span>
+                        <i class="fas fa-user-circle"></i>
+                    </div>
                 </div>
             </header>
 
-            <section id="dashboard" class="page-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Registrasi Pasien Baru</h3>
-                        <div class="search-box">
-                            <input type="text" id="search-dashboard" placeholder="Cari Pasien..." onkeyup="app.searchData()">
-                        </div>
-                    </div>
-                    <form id="form-registrasi">
-                        <div class="grid-3">
-                            <div class="form-group">
-                                <h4><i class="fas fa-id-card"></i> Biodata</h4>
-                                <input type="file" id="foto-pasien" accept="image/*">
-                                <input type="text" id="nama-pasien" placeholder="Nama Lengkap" required>
-                                <input type="text" id="ttl" placeholder="Tempat & Tgl Lahir">
-                                <input type="number" id="usia" placeholder="Usia">
-                                <select id="status-nikah">
-                                    <option value="">Status Pernikahan</option>
-                                    <option value="Lajang">Lajang</option>
-                                    <option value="Menikah">Menikah</option>
-                                    <option value="Duda/Janda">Duda/Janda</option>
-                                </select>
-                                <input type="text" id="pekerjaan" placeholder="Pekerjaan">
-                                <textarea id="alamat" placeholder="Alamat"></textarea>
-                                <input type="text" id="wali" placeholder="Nama Wali">
-                                <input type="text" id="spotcheck" placeholder="Spotcheck Barang Bawaan">
-                            </div>
-
-                            <div class="form-group">
-                                <h4><i class="fas fa-file-medical"></i> Riwayat Medis</h4>
-                                <textarea id="riwayat-fisik" placeholder="Riwayat Penyakit Fisik"></textarea>
-                                <textarea id="riwayat-psikis" placeholder="Riwayat Penyakit Psikis"></textarea>
-                                <input type="text" id="diagnosa-lalu" placeholder="Diagnosa Sebelumnya">
-                                <textarea id="riwayat-obat" placeholder="Riwayat Penggunaan Obat"></textarea>
-                                <textarea id="kondisi-kini" placeholder="Kondisi Terkini"></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <h4><i class="fas fa-user-doctor"></i> Diagnosa MMRC</h4>
-                                <input type="text" id="dokter-pj" placeholder="Nama Dokter PJ">
-                                <input type="text" id="diagnosa-masuk" placeholder="Diagnosa Masuk">
-                                <textarea id="planning" placeholder="Planning Dokter"></textarea>
-                                <div class="checkbox-group">
-                                    <label><input type="checkbox" id="check-injeksi"> Injeksi</label>
-                                    <label><input type="checkbox" id="check-urine"> Urine Test</label>
-                                    <label><input type="checkbox" id="check-fiksasi"> Fiksasi</label>
-                                </div>
-                                <input type="text" id="urine-ket" placeholder="Ket. Urine Test" style="display:none;">
-                                <div class="mini-resep">
-                                    <input type="text" id="resep-nama" placeholder="Resep Awal">
-                                    <input type="number" id="resep-jml" placeholder="Jumlah">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-buttons">
-                            <button type="submit" class="btn-save"><i class="fas fa-save"></i> Simpan Data</button>
-                            <button type="button" class="btn-export" onclick="app.exportData('pasien')"><i class="fas fa-file-excel"></i> Export Excel</button>
-                        </div>
-                    </form>
+            <div id="content-area">
                 </div>
-                
-                <div class="card mt-2">
-                    <h3>Data Pasien Terdaftar</h3>
-                    <div class="table-responsive">
-                        <table id="table-pasien">
-                            <thead>
-                                <tr><th>ID</th><th>Nama</th><th>Diagnosa</th><th>Dokter</th><th>Aksi</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+        </div>
+    </div>
+
+    <div id="modal-container" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal" onclick="app.closeModal()">&times;</span>
+            <h3 id="modal-title">Form Input</h3>
+            <div id="modal-body">
                 </div>
-            </section>
-
-            <section id="medicine" class="page-section hidden">
-                <div class="card">
-                    <h3>Manajemen Obat & Stok</h3>
-                    <div class="form-group">
-                        <label>Pilih Pasien:</label>
-                        <select id="med-pasien-select" onchange="app.loadMedicineData()"></select>
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <h4>Input Stok</h4>
-                            <input type="text" id="obat-nama" placeholder="Nama Obat">
-                            <input type="number" id="obat-stok" placeholder="Stok Awal">
-                            <input type="date" id="obat-exp" placeholder="Estimasi Habis">
-                            <button onclick="app.addMedicine()" class="btn-small">Tambah Obat</button>
-                        </div>
-                        <div class="form-group">
-                            <h4>Catatan Penggunaan</h4>
-                            <select id="log-nama-obat"></select>
-                            <input type="number" id="log-jumlah" placeholder="Jumlah Keluar (Tablet)">
-                            <input type="text" id="log-pj" placeholder="Nama PJ">
-                            <textarea id="log-ket" placeholder="Keterangan"></textarea>
-                            <button onclick="app.useMedicine()" class="btn-small btn-warning">Catat Penggunaan</button>
-                        </div>
-                    </div>
-                    <div id="stock-warning" class="alert-box hidden"></div>
-                    
-                    <h4>Tabel Stok Obat</h4>
-                    <table id="table-obat"><thead><tr><th>Obat</th><th>Stok</th><th>Exp</th><th>Aksi</th></tr></thead><tbody></tbody></table>
-                </div>
-            </section>
-
-            <section id="ttv" class="page-section hidden">
-                <div class="card">
-                    <h3>Input TTV & GDS</h3>
-                    <select id="ttv-pasien-select" class="full-width mb-2"></select>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <input type="text" id="ttv-td" placeholder="Tensi Darah (mmHg)">
-                            <input type="text" id="ttv-sat" placeholder="Saturasi (%)">
-                            <input type="text" id="ttv-rr" placeholder="RR">
-                        </div>
-                        <div class="form-group">
-                            <input type="text" id="ttv-tb" placeholder="Tinggi Badan (cm)">
-                            <input type="text" id="ttv-bb" placeholder="Berat Badan (kg)">
-                            <textarea id="ttv-gds" placeholder="Keterangan GDS"></textarea>
-                        </div>
-                    </div>
-                    <button onclick="app.saveTTV()" class="btn-save">Simpan TTV</button>
-                    
-                    <div class="mt-2">
-                        <table id="table-ttv"><thead><tr><th>Waktu</th><th>TD</th><th>Sat</th><th>RR</th><th>GDS</th></tr></thead><tbody></tbody></table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="visit" class="page-section hidden">
-                <div class="card">
-                    <h3>Visit Dokter</h3>
-                    <select id="visit-pasien-select" class="full-width mb-2"></select>
-                    
-                    <div class="form-group">
-                        <label>Upload Foto Visit:</label>
-                        <input type="file" id="visit-foto">
-                        <textarea id="visit-ket" placeholder="Keterangan / Hasil Wawancara Dokter" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Tanda Tangan Dokter:</label>
-                        <canvas id="signature-pad" width="400" height="200" style="border:1px solid #ccc; background:#fff;"></canvas>
-                        <br>
-                        <button onclick="app.clearSignature()" class="btn-small btn-danger">Clear</button>
-                    </div>
-
-                    <button onclick="app.saveVisit()" class="btn-save">Simpan Visit</button>
-                    <button onclick="app.exportWordVisit()" class="btn-export">Export Word</button>
-                </div>
-            </section>
-
-            <section id="crisis" class="page-section hidden">
-                <div class="card">
-                    <h3>BPSS Monitoring (7 Hari)</h3>
-                    <select id="bpss-pasien-select" class="full-width mb-2" onchange="app.loadBPSS()"></select>
-                    
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Pilih Hari:</label>
-                            <select id="bpss-day">
-                                <option value="1">Day 1</option><option value="2">Day 2</option>
-                                <option value="3">Day 3</option><option value="4">Day 4</option>
-                                <option value="5">Day 5</option><option value="6">Day 6</option>
-                                <option value="7">Day 7</option>
-                            </select>
-                            <input type="number" id="score-bio" placeholder="Biological (0-25)" max="25">
-                            <input type="number" id="score-psy" placeholder="Psychological (0-25)" max="25">
-                            <input type="number" id="score-soc" placeholder="Social (0-25)" max="25">
-                            <input type="number" id="score-spi" placeholder="Spiritual (0-25)" max="25">
-                            <button onclick="app.saveBPSS()" class="btn-save mt-1">Simpan Score</button>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="bpssChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="program" class="page-section hidden">
-                <div class="card">
-                    <h3>Rencana Program</h3>
-                    <select id="prog-pasien-select" class="full-width mb-2"></select>
-                    <select id="prog-paket">
-                        <option value="Reguler">Reguler</option>
-                        <option value="Eksklusif">Eksklusif</option>
-                    </select>
-                    <select id="prog-durasi">
-                        <option value="7 Hari">7 Hari (Detox)</option>
-                        <option value="14 Hari">14 Hari</option>
-                        <option value="30 Hari">30 Hari</option>
-                        <option value="60 Hari">60 Hari</option>
-                    </select>
-                    <button onclick="app.saveProgram()" class="btn-save">Tetapkan Program</button>
-                    <div id="program-display" class="mt-2 p-2 bg-light"></div>
-                </div>
-            </section>
-
-            <section id="therapy" class="page-section hidden">
-                <div class="card">
-                    <h3>Rencana Terapi & Catatan</h3>
-                    <select id="tera-pasien-select" class="full-width mb-2"></select>
-                    <textarea id="tera-note" placeholder="Tulis rencana terapi atau catatan perkembangan..." rows="5"></textarea>
-                    <button onclick="app.saveTherapy()" class="btn-save">Simpan Catatan</button>
-                    <div id="therapy-list" class="mt-2"></div>
-                </div>
-            </section>
-
-        </main>
+        </div>
     </div>
 
     <script src="script.js"></script>
