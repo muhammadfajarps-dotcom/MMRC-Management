@@ -22,8 +22,8 @@ const app = {
     chartInstance: null,
 
     init() {
-        console.log("MMRC System V7 - Enhanced Edition Ready");
-        // this.loadDB(); // Uncomment for auto-load
+        console.log("MMRC System V8 - Complete Edition Ready");
+        // this.loadDB(); // Uncomment for auto-load if needed
     },
 
     saveDB() {
@@ -40,7 +40,6 @@ const app = {
 
         if(db) {
             db.ref('mmrc_data').on('value', snap => {
-                // Hanya update jika tidak sedang membuka modal input agar tidak menimpa ketikan
                 if(snap.val() && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = snap.val();
                     if(!this.data.patients) this.data.patients = [];
@@ -175,16 +174,38 @@ const app = {
     getTabContent(p, tab) {
         const searchInput = `<div class="absolute top-6 right-6"><input onkeyup="app.searchTable(this)" placeholder="Cari..." class="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-1 ring-brand-200"></div>`;
         const noData = `<p class="text-center text-slate-400 text-xs py-4">Belum ada data</p>`;
+        const v = (val) => val || '-';
 
-        // --- 1. BIODATA (Updated with Checklists) ---
+        // --- 1. BIODATA (UPDATED: Added TTL, Status, History) ---
         if(tab === 'biodata') {
             const check = p.checklist || {};
             return `
                 <h3 class="font-bold text-lg text-brand-800 mb-6 border-b pb-2">Informasi Lengkap Pasien</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400">TTL / Usia</span>${p.reg.age} Tahun</div>
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400">Penanggung Jawab</span>${p.reg.guardian}</div>
-                    <div class="p-4 bg-slate-50 rounded-xl border col-span-2"><span class="block text-xs font-bold text-slate-400">Diagnosa & Planning</span>${p.diagnosis.plan}</div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Tempat / Tgl Lahir</span>
+                        <div class="font-bold text-slate-700">${v(p.reg.ttl)}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Usia</span>
+                        <div class="font-bold text-slate-700">${v(p.reg.age)} Tahun</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                         <span class="block text-xs font-bold text-slate-400 uppercase">Status Pernikahan</span>
+                         <div class="font-bold text-slate-700">${v(p.reg.status)}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                         <span class="block text-xs font-bold text-slate-400 uppercase">Penanggung Jawab</span>
+                         <div class="font-bold text-slate-700">${v(p.reg.guardian)}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border col-span-2">
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Riwayat Penyakit</span>
+                        <div class="text-slate-700 mt-1">${v(p.reg.history)}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border col-span-2">
+                        <span class="block text-xs font-bold text-slate-400 uppercase">Diagnosa & Planning</span>
+                        <div class="text-slate-700 mt-1">${v(p.diagnosis.plan)}</div>
+                    </div>
                 </div>
                 
                 <h4 class="font-bold text-sm text-brand-600 uppercase mb-3">Checklist Medis</h4>
@@ -202,7 +223,7 @@ const app = {
                         <p class="text-sm">${check.inj ? '✅ ' + check.inj_note : '❌ Tidak'}</p>
                     </div>
                 </div>
-                <button onclick="app.modalPatient('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-bold shadow hover:bg-brand-700">EDIT BIODATA</button>
+                <button onclick="app.modalPatient('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-bold shadow hover:bg-brand-700">EDIT BIODATA LENGKAP</button>
             `;
         }
 
@@ -367,10 +388,10 @@ const app = {
     },
 
     // ============================================================
-    // MODALS & SAVING LOGIC (WITH EDIT SUPPORT)
+    // MODALS & SAVING LOGIC
     // ============================================================
 
-    // 1. PATIENT MODAL (With Checklists)
+    // 1. PATIENT MODAL (ADDED: TTL, Status, History)
     modalPatient(id = null) {
         const p = id ? this.data.patients.find(x => x.id === id) : null;
         document.getElementById('modal-title').innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN";
@@ -386,12 +407,28 @@ const app = {
                 </div>
                 
                 <input id="p_name" class="input-modern" value="${v(p?.reg.name)}" placeholder="Nama Lengkap" required>
+                
                 <div class="grid grid-cols-2 gap-3">
-                    <input id="p_age" type="number" class="input-modern" value="${v(p?.reg.age)}" placeholder="Usia">
+                    <input id="p_ttl" class="input-modern" value="${v(p?.reg.ttl)}" placeholder="Tempat, Tgl Lahir">
+                    <input id="p_age" type="number" class="input-modern" value="${v(p?.reg.age)}" placeholder="Usia (Th)">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="p_status" class="input-modern">
+                        <option value="">- Status Pernikahan -</option>
+                        <option ${p?.reg.status==='Belum Menikah'?'selected':''}>Belum Menikah</option>
+                        <option ${p?.reg.status==='Menikah'?'selected':''}>Menikah</option>
+                        <option ${p?.reg.status==='Cerai Hidup'?'selected':''}>Cerai Hidup</option>
+                        <option ${p?.reg.status==='Cerai Mati'?'selected':''}>Cerai Mati</option>
+                    </select>
                     <input id="p_job" class="input-modern" value="${v(p?.reg.job)}" placeholder="Pekerjaan">
                 </div>
+
                 <input id="p_guard" class="input-modern" value="${v(p?.reg.guardian)}" placeholder="Penanggung Jawab">
-                <textarea id="m_plan" class="input-modern h-20" placeholder="Diagnosa & Plan">${v(p?.diagnosis.plan)}</textarea>
+                
+                <textarea id="p_history" class="input-modern h-16" placeholder="Riwayat Penyakit (Terdahulu)">${v(p?.reg.history)}</textarea>
+
+                <textarea id="m_plan" class="input-modern h-20" placeholder="Diagnosa & Plan Saat Ini">${v(p?.diagnosis.plan)}</textarea>
                 <input id="m_dr" class="input-modern" value="${v(p?.diagnosis.dr_name)}" placeholder="Dokter DPJP">
 
                 <div class="border-t pt-2 mt-2">
@@ -441,7 +478,18 @@ const app = {
 
         const newP = {
             id: id || 'P-' + Date.now(),
-            reg: { name: get('p_name'), age: get('p_age'), job: get('p_job'), guardian: get('p_guard'), addr: pOld?.reg.addr||'-', photo, timestamp: pOld?.reg.timestamp || new Date().toLocaleString() },
+            reg: { 
+                name: get('p_name'), 
+                age: get('p_age'),
+                ttl: get('p_ttl'),          // Added
+                status: get('p_status'),    // Added
+                history: get('p_history'),  // Added
+                job: get('p_job'), 
+                guardian: get('p_guard'), 
+                addr: pOld?.reg.addr||'-', 
+                photo, 
+                timestamp: pOld?.reg.timestamp || new Date().toLocaleString() 
+            },
             diagnosis: { dr_name: get('m_dr'), plan: get('m_plan') },
             checklist: checklist,
             // Keep existing arrays
@@ -460,7 +508,7 @@ const app = {
         if(!id) this.renderDashboard(); else this.renderPatientDetail();
     },
 
-    // 2. STOCK MODAL (Add & Edit)
+    // 2. STOCK MODAL
     modalStock(id, index = null) {
         const p = this.data.patients.find(x => x.id === id);
         const s = index !== null ? p.medicine.stock[index] : null;
@@ -508,22 +556,13 @@ const app = {
     execUseMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         if(!p.medicine.logs) p.medicine.logs = [];
-        
-        // Decrement Stock
         p.medicine.stock[idx].used++;
-        
-        // Add Log
-        p.medicine.logs.unshift({
-            time: new Date().toLocaleString(),
-            name: p.medicine.stock[idx].name,
-            pj: document.getElementById('u_pj').value
-        });
-
+        p.medicine.logs.unshift({ time: new Date().toLocaleString(), name: p.medicine.stock[idx].name, pj: document.getElementById('u_pj').value });
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
         Swal.fire({icon:'success', title:'Tercatat', timer:1000, showConfirmButton:false});
     },
 
-    // 3. TTV MODAL (Add & Edit)
+    // 3. TTV MODAL
     modalTTV(id, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const t = index !== null ? p.ttv[index] : null;
@@ -545,7 +584,7 @@ const app = {
         const p = this.data.patients.find(x=>x.id===id);
         if(!p.ttv) p.ttv = [];
         const data = {
-            time: index!==null ? p.ttv[index].time : new Date().toLocaleString(), // Keep orig time if edit
+            time: index!==null ? p.ttv[index].time : new Date().toLocaleString(),
             td: document.getElementById('t_td').value,
             nadi: document.getElementById('t_nadi').value,
             rr: document.getElementById('t_rr').value,
@@ -557,7 +596,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 4. VISIT & COUNSELING MODAL (Add & Edit)
+    // 4. VISIT & COUNSELING MODAL
     modalSign(id, type, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const arr = type === 'visit' ? p.visits : p.counseling;
@@ -585,29 +624,21 @@ const app = {
     async saveSign(id, type, index) {
         const p = this.data.patients.find(x=>x.id===id);
         const arr = type === 'visit' ? (p.visits||(p.visits=[])) : (p.counseling||(p.counseling=[]));
-        
-        // Handle Photo
         const f = document.getElementById('v_photo').files[0];
         let photo = 'https://via.placeholder.com/150';
         if(f) photo = await this.toBase64(f);
-        else if(index!==null) photo = arr[index].photo; // Keep old if edit & no new file
+        else if(index!==null) photo = arr[index].photo;
 
-        // Handle Sign
         let sign = this.signaturePad.isEmpty() ? null : this.signaturePad.toDataURL();
-        if(index!==null && !sign) sign = arr[index].sign; // Keep old if edit & no new sign
+        if(index!==null && !sign) sign = arr[index].sign;
         if(!sign) return Swal.fire('Error','Tanda Tangan Wajib','error');
 
-        const data = {
-            time: index!==null ? arr[index].time : new Date().toLocaleString(),
-            note: document.getElementById('v_note').value,
-            photo, sign
-        };
-
+        const data = { time: index!==null ? arr[index].time : new Date().toLocaleString(), note: document.getElementById('v_note').value, photo, sign };
         if(index!==null) arr[index] = data; else arr.unshift(data);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 5. CRISIS MODAL (Add & Edit)
+    // 5. CRISIS MODAL
     modalCrisis(id, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const b = index !== null ? p.crisis.bpss[index] : null;
@@ -626,10 +657,8 @@ const app = {
     saveCrisis(id, index) {
         const p = this.data.patients.find(x=>x.id===id);
         if(!p.crisis) p.crisis = {bpss:[]};
-        const bio=+document.getElementById('c_bio').value, psy=+document.getElementById('c_psy').value, 
-              soc=+document.getElementById('c_soc').value, spi=+document.getElementById('c_spi').value;
+        const bio=+document.getElementById('c_bio').value, psy=+document.getElementById('c_psy').value, soc=+document.getElementById('c_soc').value, spi=+document.getElementById('c_spi').value;
         const data = {bio, psy, soc, spi, total: bio+psy+soc+spi};
-        
         if(index!==null) p.crisis.bpss[index] = data; else p.crisis.bpss.push(data);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
@@ -647,11 +676,6 @@ const app = {
             <select id="pr_type" class="input-modern mb-4"><option>Reguler</option><option>VIP</option></select>
             <button onclick="app.saveProgram('${id}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">UPDATE PROGRAM</button>
         `);
-    },
-    saveProgram(id) {
-        const p = this.data.patients.find(x=>x.id===id);
-        p.program = {duration: document.getElementById('pr_dur').value, type: document.getElementById('pr_type').value};
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
     // --- UTILS & HELPERS ---
@@ -696,12 +720,11 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus Pasien?', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderDashboard();}})},
 
     // ============================================================
-    // EXPORT LOGIC (WORD & EXCEL UPDATED)
+    // EXPORT LOGIC (WORD & EXCEL - Includes New Biodata)
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x=>x.id===id);
         const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } = docx;
-
         const b64Blob = (b64) => { try{ return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) }catch(e){return null} };
         const addImg = (b64, w=100, h=100) => { const d=b64Blob(b64); if(d) children.push(new Paragraph({children:[new ImageRun({data:d, transformation:{width:w, height:h}})]})); };
 
@@ -713,8 +736,11 @@ const app = {
             new Paragraph({ text: `Dicetak: ${new Date().toLocaleString()}`, alignment: "center" }),
             new Paragraph({ text: "" }),
             new Paragraph({ text: "I. BIODATA PRIBADI", heading: HeadingLevel.HEADING_2 }),
-            new Paragraph(`Nama: ${p.reg.name} | Usia: ${p.reg.age} | ID: ${p.id}`),
+            new Paragraph(`Nama: ${p.reg.name} | ID: ${p.id}`),
+            new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`),
+            new Paragraph(`Status: ${p.reg.status || '-'} | Pekerjaan: ${p.reg.job || '-'}`),
             new Paragraph(`Penanggung Jawab: ${p.reg.guardian}`),
+            new Paragraph(`Riwayat Penyakit: ${p.reg.history || '-'}`),
             new Paragraph(`Diagnosa: ${p.diagnosis.plan}`),
             new Paragraph(`Checklist Medis: ${checkText}`),
             new Paragraph({ text: "" }),
@@ -754,7 +780,9 @@ const app = {
         const c = p.checklist || {};
 
         const bio = [{ 
-            Nama: p.reg.name, Usia: p.reg.age, Diagnosa: p.diagnosis.plan, 
+            Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, 
+            Status: p.reg.status, Riwayat_Penyakit: p.reg.history,
+            Diagnosa: p.diagnosis.plan, 
             Urine: c.urine?'YA':'TDK', Urine_Ket: c.urine_note, 
             Fiksasi: c.fix?'YA':'TDK', Fiks_Ket: c.fix_note, 
             Injeksi: c.inj?'YA':'TDK', Inj_Ket: c.inj_note 
