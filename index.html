@@ -5,81 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMRC Management System</title>
     
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="bg-gray-50 text-slate-800 font-sans">
 
-    <div id="auth-layer" class="auth-container">
-        <div class="login-box">
-            <div class="logo-area">
-                <i class="fas fa-heartbeat"></i>
-                <h2>MMRC SYSTEM</h2>
-                <p>Madani Mental Recovery Center</p>
-            </div>
-            <form id="login-form">
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="login-user" placeholder="Username" required>
+    <div id="auth-layer" class="fixed inset-0 z-50 flex items-center justify-center bg-mmrc-maroon">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center animate-fade-in">
+            <img src="logo.png" alt="Logo MMRC" class="h-24 mx-auto mb-4 object-contain">
+            <h2 class="text-2xl font-black text-mmrc-maroon mb-1">MMRC SYSTEM</h2>
+            <p class="text-xs text-gray-500 mb-6">Madani Mental Recovery Center</p>
+            
+            <form id="login-form" class="space-y-4">
+                <div class="relative">
+                    <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="username" placeholder="Username" class="input-login pl-10" required>
                 </div>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="login-pass" placeholder="Password" required>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                    <input type="password" id="password" placeholder="Password" class="input-login pl-10" required>
                 </div>
-                <button type="submit" class="btn-login">MASUK SISTEM</button>
+                <button type="submit" class="btn-primary w-full py-3 rounded-xl font-bold shadow-lg">MASUK SISTEM</button>
             </form>
         </div>
     </div>
 
-    <div id="app-layer" class="app-container hidden">
+    <div id="app-layer" class="hidden flex h-screen overflow-hidden">
         
-        <aside class="sidebar">
-            <div class="brand">
-                <h3>MMRC ADMIN</h3>
+        <aside class="w-64 bg-mmrc-maroon text-white flex flex-col shadow-2xl z-20">
+            <div class="p-6 text-center border-b border-red-900/50">
+                <img src="logo.png" class="h-12 mx-auto bg-white rounded p-1 mb-2">
+                <h3 class="font-bold tracking-widest text-sm">ADMIN PANEL</h3>
             </div>
-            <nav>
-                <button onclick="app.nav('dashboard')" id="btn-dashboard" class="nav-btn active"><i class="fas fa-home"></i> Dashboard Pasien</button>
-                <button onclick="app.nav('medicine')" id="btn-medicine" class="nav-btn"><i class="fas fa-pills"></i> Medicine & Stok</button>
-                <button onclick="app.nav('ttv')" id="btn-ttv" class="nav-btn"><i class="fas fa-stethoscope"></i> TTV & GDS</button>
-                <button onclick="app.nav('visit')" id="btn-visit" class="nav-btn"><i class="fas fa-user-md"></i> Visit Dokter</button>
-                <button onclick="app.nav('crisis')" id="btn-crisis" class="nav-btn"><i class="fas fa-chart-line"></i> Pasien Crisis (BPSS)</button>
-                <button onclick="app.nav('program')" id="btn-program" class="nav-btn"><i class="fas fa-clipboard-list"></i> Rencana Program</button>
-                <button onclick="app.nav('therapy')" id="btn-therapy" class="nav-btn"><i class="fas fa-notes-medical"></i> Rencana Terapi</button>
+            
+            <nav class="flex-1 overflow-y-auto p-4 space-y-2">
+                <button onclick="app.nav('dashboard')" id="btn-dashboard" class="nav-btn active"><i class="fas fa-hospital-user w-6"></i> Dashboard Pasien</button>
+                <button onclick="app.nav('medicine')" id="btn-medicine" class="nav-btn"><i class="fas fa-pills w-6"></i> Medicine & Stok</button>
+                <button onclick="app.nav('ttv')" id="btn-ttv" class="nav-btn"><i class="fas fa-heartbeat w-6"></i> TTV & GDS</button>
+                <button onclick="app.nav('visit')" id="btn-visit" class="nav-btn"><i class="fas fa-user-md w-6"></i> Visit Dokter</button>
+                <button onclick="app.nav('crisis')" id="btn-crisis" class="nav-btn"><i class="fas fa-chart-line w-6"></i> Pasien Crisis</button>
+                <button onclick="app.nav('program')" id="btn-program" class="nav-btn"><i class="fas fa-clipboard-list w-6"></i> Rencana Program</button>
+                <button onclick="app.nav('therapy')" id="btn-therapy" class="nav-btn"><i class="fas fa-brain w-6"></i> Rencana Terapi</button>
             </nav>
-            <div class="logout-area">
-                <button onclick="app.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+
+            <div class="p-4 border-t border-red-900/50">
+                <button onclick="app.logout()" class="w-full bg-red-950 hover:bg-black text-white py-2 rounded text-xs font-bold transition">LOGOUT</button>
             </div>
         </aside>
 
-        <div class="main-content">
-            <header>
-                <h2 id="page-title">DASHBOARD</h2>
-                <div class="header-tools">
-                    <input type="text" id="global-search" placeholder="Cari Pasien..." onkeyup="app.search()">
-                    <div class="user-profile">
-                        <span>Admin Operasional</span>
-                        <i class="fas fa-user-circle"></i>
+        <main class="flex-1 flex flex-col relative bg-gray-100">
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
+                <h2 id="page-title" class="text-xl font-black text-mmrc-maroon uppercase">DASHBOARD</h2>
+                <div class="flex items-center gap-3">
+                    <div class="bg-gray-100 rounded-full px-4 py-2 flex items-center">
+                        <i class="fas fa-search text-gray-400"></i>
+                        <input type="text" id="search-input" onkeyup="app.search()" placeholder="Cari Pasien..." class="bg-transparent border-none outline-none ml-2 text-sm w-48">
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-bold text-gray-500">
+                        <i class="fas fa-circle text-green-500 text-[8px]"></i> OPERASIONAL
                     </div>
                 </div>
             </header>
 
-            <div id="content-area">
+            <div id="content-area" class="flex-1 p-6 overflow-y-auto pb-24">
                 </div>
-        </div>
+        </main>
     </div>
 
-    <div id="modal-container" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-modal" onclick="app.closeModal()">&times;</span>
-            <h3 id="modal-title">Form Input</h3>
-            <div id="modal-body">
-                </div>
+    <div id="modal-container" class="fixed inset-0 z-[100] bg-black/50 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-pop">
+            <div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 id="modal-title" class="font-black text-lg text-mmrc-maroon">FORM INPUT</h3>
+                <button onclick="app.closeModal()" class="w-8 h-8 rounded-full hover:bg-red-100 text-red-800 flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-body" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
 
