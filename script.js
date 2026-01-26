@@ -22,7 +22,7 @@ const app = {
     chartInstance: null,
 
     init() {
-        console.log("MMRC System V8 - Complete Edition Ready");
+        console.log("MMRC System V8.1 - Final Prescription Update");
         // this.loadDB(); // Uncomment for auto-load if needed
     },
 
@@ -176,7 +176,7 @@ const app = {
         const noData = `<p class="text-center text-slate-400 text-xs py-4">Belum ada data</p>`;
         const v = (val) => val || '-';
 
-        // --- 1. BIODATA (UPDATED: Added TTL, Status, History) ---
+        // --- 1. BIODATA (UPDATED: Added Prescription below checklist) ---
         if(tab === 'biodata') {
             const check = p.checklist || {};
             return `
@@ -209,7 +209,7 @@ const app = {
                 </div>
                 
                 <h4 class="font-bold text-sm text-brand-600 uppercase mb-3">Checklist Medis</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div class="p-3 border rounded-xl ${check.urine?'bg-yellow-50 border-yellow-200':''}">
                         <p class="font-bold text-xs mb-1">Tes Urine</p>
                         <p class="text-sm">${check.urine ? '✅ ' + check.urine_note : '❌ Tidak'}</p>
@@ -223,7 +223,13 @@ const app = {
                         <p class="text-sm">${check.inj ? '✅ ' + check.inj_note : '❌ Tidak'}</p>
                     </div>
                 </div>
-                <button onclick="app.modalPatient('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-bold shadow hover:bg-brand-700">EDIT BIODATA LENGKAP</button>
+
+                <div class="p-4 bg-white border border-slate-200 rounded-xl shadow-sm mb-6">
+                    <p class="font-bold text-xs text-brand-600 uppercase mb-2"><i class="fas fa-file-prescription mr-2"></i>RESEP OBAT DOKTER</p>
+                    <p class="text-slate-700 text-sm whitespace-pre-line">${v(p.diagnosis.prescription)}</p>
+                </div>
+
+                <button onclick="app.modalPatient('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-bold shadow hover:bg-brand-700">EDIT BIODATA & RESEP</button>
             `;
         }
 
@@ -391,7 +397,7 @@ const app = {
     // MODALS & SAVING LOGIC
     // ============================================================
 
-    // 1. PATIENT MODAL (ADDED: TTL, Status, History)
+    // 1. PATIENT MODAL (ADDED: Prescription Input below Checklist)
     modalPatient(id = null) {
         const p = id ? this.data.patients.find(x => x.id === id) : null;
         document.getElementById('modal-title').innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN";
@@ -451,6 +457,8 @@ const app = {
                         <div class="flex-1"><p class="text-xs font-bold">Injeksi</p></div>
                         <input id="note_inj" class="input-modern py-1 text-xs" style="width:50%" placeholder="Ket..." value="${v(chk.inj_note)}">
                     </div>
+
+                    <textarea id="p_prescription" class="input-modern h-24 mt-3" placeholder="Tulis Resep Obat Dokter di sini...">${v(p?.diagnosis.prescription)}</textarea>
                 </div>
 
                 <button class="w-full bg-brand-700 text-white py-3 rounded-xl font-bold shadow-lg mt-4">SIMPAN DATA</button>
@@ -481,16 +489,20 @@ const app = {
             reg: { 
                 name: get('p_name'), 
                 age: get('p_age'),
-                ttl: get('p_ttl'),          // Added
-                status: get('p_status'),    // Added
-                history: get('p_history'),  // Added
+                ttl: get('p_ttl'),
+                status: get('p_status'),
+                history: get('p_history'),
                 job: get('p_job'), 
                 guardian: get('p_guard'), 
                 addr: pOld?.reg.addr||'-', 
                 photo, 
                 timestamp: pOld?.reg.timestamp || new Date().toLocaleString() 
             },
-            diagnosis: { dr_name: get('m_dr'), plan: get('m_plan') },
+            diagnosis: { 
+                dr_name: get('m_dr'), 
+                plan: get('m_plan'),
+                prescription: get('p_prescription') // ADDED: Saving prescription
+            },
             checklist: checklist,
             // Keep existing arrays
             medicine: pOld?.medicine || {stock:[], logs:[]},
@@ -720,7 +732,7 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus Pasien?', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderDashboard();}})},
 
     // ============================================================
-    // EXPORT LOGIC (WORD & EXCEL - Includes New Biodata)
+    // EXPORT LOGIC (WORD & EXCEL - Includes Prescription)
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x=>x.id===id);
@@ -743,6 +755,9 @@ const app = {
             new Paragraph(`Riwayat Penyakit: ${p.reg.history || '-'}`),
             new Paragraph(`Diagnosa: ${p.diagnosis.plan}`),
             new Paragraph(`Checklist Medis: ${checkText}`),
+            // ADDED: Prescription in Word
+            new Paragraph({ text: "Resep Obat Dokter:", bold: true }),
+            new Paragraph(p.diagnosis.prescription || '-'),
             new Paragraph({ text: "" }),
         ];
 
@@ -785,7 +800,9 @@ const app = {
             Diagnosa: p.diagnosis.plan, 
             Urine: c.urine?'YA':'TDK', Urine_Ket: c.urine_note, 
             Fiksasi: c.fix?'YA':'TDK', Fiks_Ket: c.fix_note, 
-            Injeksi: c.inj?'YA':'TDK', Inj_Ket: c.inj_note 
+            Injeksi: c.inj?'YA':'TDK', Inj_Ket: c.inj_note,
+            // ADDED: Prescription in Excel
+            Resep_Dokter: p.diagnosis.prescription 
         }];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata");
 
