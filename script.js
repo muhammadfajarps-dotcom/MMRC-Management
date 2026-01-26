@@ -22,19 +22,19 @@ const app = {
     chartInstance: null,
 
     init() {
-        console.log("MMRC System V8.1 - Final Prescription Update");
-        // this.loadDB(); // Uncomment for auto-load if needed
+        console.log("MMRC System V9.0 - Optimization & New Features");
+        // this.loadDB(); // Uncomment for auto-load
     },
 
     saveDB() {
         try {
-            localStorage.setItem('MMRC_DATA_V7', JSON.stringify(this.data));
+            localStorage.setItem('MMRC_DATA_V9', JSON.stringify(this.data));
             if(db) db.ref('mmrc_data').set(this.data);
         } catch(e) { console.error("Save failed", e); }
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V7');
+        const local = localStorage.getItem('MMRC_DATA_V9');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
@@ -43,7 +43,7 @@ const app = {
                 if(snap.val() && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = snap.val();
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V7', JSON.stringify(this.data));
+                    localStorage.setItem('MMRC_DATA_V9', JSON.stringify(this.data));
                     if(this.activePatientId) this.renderPatientDetail();
                     else this.renderDashboard();
                 }
@@ -86,11 +86,17 @@ const app = {
             card.className = "bg-white p-5 rounded-3xl border border-slate-100 card-hover cursor-pointer search-item relative overflow-hidden group";
             card.onclick = (e) => { if(!e.target.closest('button')) app.openPatient(p.id); };
             
-            // Generate Badges for Checklists
             let badges = '';
             if(p.checklist?.urine) badges += `<span class="bg-yellow-100 text-yellow-700 text-[9px] px-1.5 py-0.5 rounded font-bold mr-1">URINE</span>`;
             if(p.checklist?.fix) badges += `<span class="bg-red-100 text-red-700 text-[9px] px-1.5 py-0.5 rounded font-bold mr-1">FIX</span>`;
             if(p.checklist?.inj) badges += `<span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">INJ</span>`;
+
+            // Hitung Program Dashboard
+            let progLabel = 'Reguler';
+            if(p.program?.startDate && p.program?.days) {
+                const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                progLabel = `Hari ke-${diff} / ${p.program.days}`;
+            }
 
             card.innerHTML = `
                 <div class="absolute top-0 left-0 w-2 h-full bg-brand-600"></div>
@@ -98,7 +104,7 @@ const app = {
                     <img src="${p.reg.photo || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-2xl object-cover bg-slate-50 border shadow-sm">
                     <div>
                         <h3 class="font-extrabold text-slate-800 text-lg leading-tight group-hover:text-brand-700 transition">${p.reg.name}</h3>
-                        <p class="text-xs text-slate-500 font-semibold">${p.reg.age} Th • ${p.program?.type || 'Reguler'}</p>
+                        <p class="text-xs text-slate-500 font-semibold">${p.reg.age} Th • ${progLabel}</p>
                         <div class="mt-1">${badges}</div>
                     </div>
                 </div>
@@ -125,33 +131,57 @@ const app = {
 
         document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
         
-        // Header Actions (Full Export)
         document.getElementById('header-actions').innerHTML = `
-            <button onclick="app.exportToWord('${p.id}')" class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-700" title="Download Word Lengkap"><i class="fas fa-file-word"></i></button>
-            <button onclick="app.exportToExcel('${p.id}')" class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-emerald-700" title="Download Excel Lengkap"><i class="fas fa-file-excel"></i></button>
+            <button onclick="app.exportToWord('${p.id}')" class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-700" title="Download Word"><i class="fas fa-file-word"></i></button>
+            <button onclick="app.exportToExcel('${p.id}')" class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-emerald-700" title="Download Excel"><i class="fas fa-file-excel"></i></button>
             <div class="w-px h-8 bg-slate-300 mx-2"></div>
             <button onclick="app.renderDashboard()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-300 flex items-center gap-2"><i class="fas fa-arrow-left"></i> KEMBALI</button>
         `;
 
         const container = document.getElementById('main-content');
         
-        // Tabs
+        // --- 5. MENU BARU: PROGRES HARIAN DITAMBAHKAN ---
         const tabs = [
             {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
             {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
             {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
+            {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'}, // NEW
             {id: 'visit', icon: 'fa-user-md', label: 'Visit Dokter'},
             {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'},
             {id: 'program', icon: 'fa-list-check', label: 'Program'},
             {id: 'counseling', icon: 'fa-comments', label: 'Konseling'},
         ];
 
+        // --- 1. LOGIKA PROGRAM SYNC (BIODATA) ---
+        let programStatus = `<span class="text-slate-400 italic">Belum ada program aktif</span>`;
+        if(p.program?.startDate && p.program?.days) {
+            const start = new Date(p.program.startDate);
+            const now = new Date();
+            const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+            const total = p.program.days;
+            const percent = Math.min(100, Math.max(0, (diff/total)*100));
+            
+            programStatus = `
+                <div class="mt-2">
+                    <p class="text-xs font-bold text-brand-700 mb-1 uppercase tracking-wide">
+                        <i class="fas fa-clock mr-1"></i> ${p.program.name} : Hari ke-${diff} / ${total}
+                    </p>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-brand-600 h-2 rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
         let nav = `<div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-6 mb-6 items-center md:items-start fade-in">
             <img src="${p.reg.photo || 'https://via.placeholder.com/150'}" class="w-24 h-24 rounded-2xl object-cover border-4 border-slate-50 shadow-md">
-            <div class="flex-1 text-center md:text-left">
+            <div class="flex-1 text-center md:text-left w-full">
                 <h1 class="text-2xl font-black text-brand-800">${p.reg.name}</h1>
-                <p class="text-sm text-slate-500 font-bold mb-2">ID: ${p.id.slice(-6)} • Masuk: ${p.reg.timestamp}</p>
-                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                <p class="text-sm text-slate-500 font-bold mb-1">ID: ${p.id.slice(-6)} • Masuk: ${p.reg.timestamp}</p>
+                
+                ${programStatus}
+
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start mt-3">
                     <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">Dr. ${p.diagnosis.dr_name}</span>
                     ${p.checklist?.urine ? '<span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-[10px] font-bold">Urine (+)</span>' : ''}
                     ${p.checklist?.fix ? '<span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-[10px] font-bold">Fiksasi</span>' : ''}
@@ -176,7 +206,7 @@ const app = {
         const noData = `<p class="text-center text-slate-400 text-xs py-4">Belum ada data</p>`;
         const v = (val) => val || '-';
 
-        // --- 1. BIODATA (UPDATED: Added Prescription below checklist) ---
+        // --- BIODATA ---
         if(tab === 'biodata') {
             const check = p.checklist || {};
             return `
@@ -233,7 +263,7 @@ const app = {
             `;
         }
 
-        // --- 2. MEDICINE (Revised Logic) ---
+        // --- MEDICINE (UPDATED: Edit & Auto-Refund Stock on Delete) ---
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
@@ -258,7 +288,10 @@ const app = {
                     <td class="py-2 pl-2 text-slate-500">${l.time}</td>
                     <td class="py-2 font-bold text-slate-700">${l.name}</td>
                     <td class="py-2">${l.pj}</td>
-                    <td class="text-right pr-2"><button onclick="app.delSubItem('medicine.logs', ${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
+                    <td class="text-right pr-2 flex justify-end gap-2">
+                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-400 hover:text-blue-600"><i class="fas fa-pen"></i></button>
+                        <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+                    </td>
                 </tr>`).join('') || `<tr><td colspan="4" class="text-center p-4 text-xs text-slate-400">Belum ada riwayat minum</td></tr>`;
 
             return `
@@ -271,14 +304,14 @@ const app = {
                     <div class="lg:col-span-2">
                         <h4 class="font-bold text-brand-800 mb-4">LOG MINUM OBAT</h4>
                         <div class="bg-white border rounded-xl overflow-hidden shadow-sm">
-                            <table class="w-full text-left"><thead class="bg-slate-50 text-[10px] text-slate-500 uppercase"><tr><th class="p-2">Waktu</th><th>Obat</th><th>PJ</th><th class="text-right p-2">Del</th></tr></thead>
+                            <table class="w-full text-left"><thead class="bg-slate-50 text-[10px] text-slate-500 uppercase"><tr><th class="p-2">Waktu</th><th>Obat</th><th>PJ</th><th class="text-right p-2">Aksi</th></tr></thead>
                             <tbody>${logHtml}</tbody></table>
                         </div>
                     </div>
                 </div>`;
         }
 
-        // --- 3. TTV (With Edit) ---
+        // --- TTV ---
         if(tab === 'ttv') {
             return `
                 ${searchInput}
@@ -307,17 +340,19 @@ const app = {
                 </div>`;
         }
 
-        // --- 4. VISIT & 6. KONSELING (With Edit) ---
-        if(tab === 'visit' || tab === 'counseling') {
-            const isVisit = tab === 'visit';
-            const dataArr = isVisit ? (p.visits || []) : (p.counseling || []);
-            const typeLabel = isVisit ? "VISIT DOKTER" : "SESI KONSELING";
+        // --- VISIT / KONSELING / PROGRES HARIAN (SHARED TEMPLATE) ---
+        // NEW: 'daily' ditambahkan di sini agar strukturnya sama persis
+        if(tab === 'visit' || tab === 'counseling' || tab === 'daily') {
+            let dataArr, typeLabel, modalType;
+            if(tab === 'visit') { dataArr = p.visits || []; typeLabel = "VISIT DOKTER"; modalType = 'visit'; }
+            else if(tab === 'counseling') { dataArr = p.counseling || []; typeLabel = "SESI KONSELING"; modalType = 'counseling'; }
+            else { dataArr = p.daily_progress || []; typeLabel = "PROGRES HARIAN"; modalType = 'daily'; } // NEW
             
             return `
                 ${searchInput}
                 <div class="flex justify-between items-center mb-6 mt-2">
                     <h4 class="font-bold text-brand-800">RIWAYAT ${typeLabel}</h4>
-                    <button onclick="app.modalSign('${p.id}', '${tab}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">+ INPUT BARU</button>
+                    <button onclick="app.modalSign('${p.id}', '${modalType}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">+ INPUT BARU</button>
                 </div>
                 <div class="grid grid-cols-1 gap-4">
                     ${dataArr.map((v, i) => `
@@ -327,8 +362,8 @@ const app = {
                             <div class="flex justify-between items-start">
                                 <h5 class="font-bold text-brand-800 text-sm">${v.time}</h5>
                                 <div class="flex gap-2">
-                                    <button onclick="app.modalSign('${p.id}', '${tab}', ${i})" class="text-blue-500 hover:text-blue-700 p-1 bg-white rounded shadow-sm border"><i class="fas fa-pen"></i></button>
-                                    <button onclick="app.delSubItem('${isVisit?'visits':'counseling'}', ${i})" class="text-red-500 hover:text-red-700 p-1 bg-white rounded shadow-sm border"><i class="fas fa-trash"></i></button>
+                                    <button onclick="app.modalSign('${p.id}', '${modalType}', ${i})" class="text-blue-500 hover:text-blue-700 p-1 bg-white rounded shadow-sm border"><i class="fas fa-pen"></i></button>
+                                    <button onclick="app.delSubItem('${modalType === 'daily' ? 'daily_progress' : (modalType === 'visit' ? 'visits' : 'counseling')}', ${i})" class="text-red-500 hover:text-red-700 p-1 bg-white rounded shadow-sm border"><i class="fas fa-trash"></i></button>
                                 </div>
                             </div>
                             <p class="text-xs text-slate-600 mt-2 italic bg-white p-2 rounded border border-slate-100">"${v.note}"</p>
@@ -341,7 +376,7 @@ const app = {
                 </div>`;
         }
 
-        // --- 5. CRISIS / BPSS (With Edit & Detail Score) ---
+        // --- CRISIS / BPSS ---
         if(tab === 'crisis') {
             const listHtml = (p.crisis?.bpss || []).map((b,i) => `
                 <tr class="border-b search-row hover:bg-slate-50">
@@ -379,16 +414,35 @@ const app = {
                 </div>`;
         }
 
-        // --- PROGRAM ---
+        // --- 2. PROGRAM (OPTIMALISASI: INFO LENGKAP) ---
         if(tab === 'program') {
+            const prog = p.program || {};
+            let currentInfo = "Belum ada program";
+            if(prog.startDate) {
+                const diff = Math.floor((new Date() - new Date(prog.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                currentInfo = `Hari ke-${diff} dari ${prog.days} Hari`;
+            }
+
             return `
-                <div class="max-w-md mx-auto mt-6 text-center">
-                    <div class="bg-gradient-to-br from-brand-600 to-brand-800 text-white p-8 rounded-3xl shadow-xl mb-6 transform hover:scale-105 transition">
+                <div class="max-w-2xl mx-auto mt-4">
+                    <div class="bg-gradient-to-br from-brand-600 to-brand-800 text-white p-8 rounded-3xl shadow-xl mb-6 relative overflow-hidden">
+                        <i class="fas fa-calendar-check absolute -right-6 -bottom-6 text-9xl opacity-20"></i>
                         <p class="text-xs font-bold opacity-70 mb-2 uppercase tracking-widest">Paket Saat Ini</p>
-                        <h2 class="text-3xl font-black mb-1">${p.program?.type || 'REGULER'}</h2>
-                        <p class="text-lg font-semibold opacity-90">${p.program?.duration || 'Belum diatur'}</p>
+                        <h2 class="text-3xl font-black mb-1">${prog.name || 'BELUM DIATUR'}</h2>
+                        <p class="text-sm font-semibold opacity-90 mb-4">${prog.desc || 'Silakan pilih paket program.'}</p>
+                        
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="block text-[10px] opacity-75 uppercase">Tanggal Mulai</span>
+                                <span class="font-bold text-lg">${prog.startDate ? new Date(prog.startDate).toLocaleDateString('id-ID') : '-'}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[10px] opacity-75 uppercase">Progres</span>
+                                <span class="font-bold text-lg text-yellow-300">${currentInfo}</span>
+                            </div>
+                        </div>
                     </div>
-                    <button onclick="app.modalProgram('${p.id}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition border border-slate-200">UBAH PAKET PROGRAM</button>
+                    <button onclick="app.modalProgram('${p.id}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition border border-slate-200 flex items-center justify-center gap-2"><i class="fas fa-cog"></i> ATUR / GANTI PROGRAM</button>
                 </div>`;
         }
     },
@@ -397,7 +451,6 @@ const app = {
     // MODALS & SAVING LOGIC
     // ============================================================
 
-    // 1. PATIENT MODAL (ADDED: Prescription Input below Checklist)
     modalPatient(id = null) {
         const p = id ? this.data.patients.find(x => x.id === id) : null;
         document.getElementById('modal-title').innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN";
@@ -474,7 +527,6 @@ const app = {
         const file = document.getElementById('p_photo').files[0];
         if(file) photo = await this.toBase64(file);
 
-        // Checklist Data
         const checklist = {
             urine: document.getElementById('chk_urine').checked,
             urine_note: get('note_urine'),
@@ -501,16 +553,16 @@ const app = {
             diagnosis: { 
                 dr_name: get('m_dr'), 
                 plan: get('m_plan'),
-                prescription: get('p_prescription') // ADDED: Saving prescription
+                prescription: get('p_prescription')
             },
             checklist: checklist,
-            // Keep existing arrays
             medicine: pOld?.medicine || {stock:[], logs:[]},
             ttv: pOld?.ttv || [],
             visits: pOld?.visits || [],
             crisis: pOld?.crisis || { bpss: [] },
             program: pOld?.program || {},
-            counseling: pOld?.counseling || []
+            counseling: pOld?.counseling || [],
+            daily_progress: pOld?.daily_progress || [] // NEW
         };
         
         if(id) this.data.patients[this.data.patients.findIndex(x=>x.id===id)] = newP;
@@ -520,7 +572,6 @@ const app = {
         if(!id) this.renderDashboard(); else this.renderPatientDetail();
     },
 
-    // 2. STOCK MODAL
     modalStock(id, index = null) {
         const p = this.data.patients.find(x => x.id === id);
         const s = index !== null ? p.medicine.stock[index] : null;
@@ -573,8 +624,48 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
         Swal.fire({icon:'success', title:'Tercatat', timer:1000, showConfirmButton:false});
     },
+    
+    // --- 3. FITUR BARU: EDIT & DELETE LOG OBAT (OTOMATIS BALIKIN STOK) ---
+    modalEditLog(id, logIndex) {
+        const p = this.data.patients.find(x => x.id === id);
+        const log = p.medicine.logs[logIndex];
+        
+        this.openModal(`
+            <h3 class="font-bold text-center mb-4">Edit Log Minum</h3>
+            <p class="text-xs text-slate-500 mb-1">Nama Obat (Tidak bisa diubah demi stok)</p>
+            <input class="input-modern mb-3 bg-slate-100" value="${log.name}" disabled>
+            <p class="text-xs text-slate-500 mb-1">Waktu</p>
+            <input id="el_time" class="input-modern mb-3" value="${log.time}">
+            <p class="text-xs text-slate-500 mb-1">PJ</p>
+            <input id="el_pj" class="input-modern mb-4" value="${log.pj}">
+            <button onclick="app.saveEditLog('${id}', ${logIndex})" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">UPDATE LOG</button>
+        `);
+    },
+    saveEditLog(id, logIndex) {
+        const p = this.data.patients.find(x => x.id === id);
+        p.medicine.logs[logIndex].time = document.getElementById('el_time').value;
+        p.medicine.logs[logIndex].pj = document.getElementById('el_pj').value;
+        this.closeModal(); this.saveDB(); this.renderPatientDetail();
+    },
+    deleteMedLog(id, logIndex) {
+        Swal.fire({title:'Hapus Log & Kembalikan Stok?', text:'Stok obat akan bertambah 1.', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r => {
+            if(r.isConfirmed) {
+                const p = this.data.patients.find(x => x.id === id);
+                const log = p.medicine.logs[logIndex];
+                
+                // Cari stok obat yang namanya sama, lalu kurangi 'used' (artinya stok nambah)
+                const stockItem = p.medicine.stock.find(s => s.name === log.name);
+                if(stockItem && stockItem.used > 0) {
+                    stockItem.used--; 
+                }
+                
+                p.medicine.logs.splice(logIndex, 1);
+                this.saveDB(); this.renderPatientDetail();
+                Swal.fire('Terhapus', 'Log dihapus dan stok dikembalikan.', 'success');
+            }
+        });
+    },
 
-    // 3. TTV MODAL
     modalTTV(id, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const t = index !== null ? p.ttv[index] : null;
@@ -608,14 +699,20 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 4. VISIT & COUNSELING MODAL
+    // --- MODAL SIGN (Digunakan Visit, Konseling, DAN PROGRES HARIAN) ---
     modalSign(id, type, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
-        const arr = type === 'visit' ? p.visits : p.counseling;
+        // Tentukan array tujuan berdasarkan tipe
+        let arr;
+        if(type === 'visit') arr = p.visits || (p.visits=[]);
+        else if(type === 'counseling') arr = p.counseling || (p.counseling=[]);
+        else arr = p.daily_progress || (p.daily_progress=[]); // NEW for daily
+
         const v = index !== null ? arr[index] : null;
+        const title = type === 'visit' ? 'VISIT DOKTER' : (type === 'counseling' ? 'KONSELING' : 'PROGRES HARIAN');
         
         this.openModal(`
-            <h3 class="font-bold mb-4 uppercase">${index!==null?'Edit':'Input'} ${type}</h3>
+            <h3 class="font-bold mb-4 uppercase">${index!==null?'Edit':'Input'} ${title}</h3>
             <div class="space-y-3">
                 ${v ? `<div class="text-xs text-center text-slate-400">Foto & TTD Lama tersimpan. Upload/TTD baru untuk mengganti.</div>` : ''}
                 <div class="border-dashed border-2 p-4 text-center rounded-xl bg-slate-50"><input type="file" id="v_photo"><p class="text-xs">Upload Foto Kegiatan</p></div>
@@ -635,7 +732,11 @@ const app = {
     },
     async saveSign(id, type, index) {
         const p = this.data.patients.find(x=>x.id===id);
-        const arr = type === 'visit' ? (p.visits||(p.visits=[])) : (p.counseling||(p.counseling=[]));
+        let arr;
+        if(type === 'visit') arr = p.visits || (p.visits=[]);
+        else if(type === 'counseling') arr = p.counseling || (p.counseling=[]);
+        else arr = p.daily_progress || (p.daily_progress=[]); // NEW
+
         const f = document.getElementById('v_photo').files[0];
         let photo = 'https://via.placeholder.com/150';
         if(f) photo = await this.toBase64(f);
@@ -650,7 +751,6 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 5. CRISIS MODAL
     modalCrisis(id, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const b = index !== null ? p.crisis.bpss[index] : null;
@@ -675,19 +775,51 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 6. PROGRAM MODAL
+    // --- 2. MODAL PROGRAM (UPDATED: Detail Paket + Tanggal) ---
     modalProgram(id) {
+        const p = this.data.patients.find(x => x.id === id);
+        const prog = p.program || {};
+        
+        // Setup dropdown paket dengan detail
         this.openModal(`
-            <select id="pr_dur" class="input-modern mb-4">
-                <option value="7 Hari">Paket 7 Hari</option>
-                <option value="14 Hari">Paket 14 Hari</option>
-                <option value="1 Bulan">Paket 1 Bulan</option>
-                <option value="2 Bulan">Paket 2 Bulan</option>
-                <option value="3 Bulan">Paket 3 Bulan</option>
+            <h3 class="font-bold mb-4 text-center">PENGATURAN PAKET PROGRAM</h3>
+            <label class="text-xs font-bold text-slate-500">Pilih Paket</label>
+            <select id="pr_select" class="input-modern mb-3" onchange="app.updateProgramDesc()">
+                <option value="Reguler|0|Program standar">Pilih Paket...</option>
+                <option value="Detox 7 Hari|7|Fokus pada detoksifikasi fisik dan stabilisasi awal." ${prog.name==='Detox 7 Hari'?'selected':''}>Detox 7 Hari</option>
+                <option value="Recovery 14 Hari|14|Program pemulihan intensif 2 minggu." ${prog.name==='Recovery 14 Hari'?'selected':''}>Recovery 14 Hari</option>
+                <option value="Primary 1 Bulan|30|Program utama stabilisasi perilaku dan emosi." ${prog.name==='Primary 1 Bulan'?'selected':''}>Primary 1 Bulan</option>
+                <option value="Advanced 2 Bulan|60|Program lanjutan pengembangan diri." ${prog.name==='Advanced 2 Bulan'?'selected':''}>Advanced 2 Bulan</option>
+                <option value="Re-Entry 3 Bulan|90|Persiapan kembali ke masyarakat." ${prog.name==='Re-Entry 3 Bulan'?'selected':''}>Re-Entry 3 Bulan</option>
             </select>
-            <select id="pr_type" class="input-modern mb-4"><option>Reguler</option><option>VIP</option></select>
-            <button onclick="app.saveProgram('${id}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">UPDATE PROGRAM</button>
+            
+            <label class="text-xs font-bold text-slate-500">Keterangan Program (Otomatis)</label>
+            <input id="pr_desc" class="input-modern mb-3 bg-slate-100" value="${prog.desc||''}" readonly>
+            
+            <label class="text-xs font-bold text-slate-500">Tanggal Mulai</label>
+            <input id="pr_start" type="date" class="input-modern mb-6" value="${prog.startDate||''}">
+
+            <button onclick="app.saveProgram('${id}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN PERUBAHAN</button>
         `);
+    },
+    updateProgramDesc() {
+        const val = document.getElementById('pr_select').value.split('|');
+        if(val.length > 1) document.getElementById('pr_desc').value = val[2];
+    },
+    saveProgram(id) {
+        const val = document.getElementById('pr_select').value.split('|');
+        const startDate = document.getElementById('pr_start').value;
+        if(val.length < 2 || !startDate) return Swal.fire('Error', 'Pilih paket dan tanggal mulai!', 'error');
+
+        const p = this.data.patients.find(x => x.id === id);
+        p.program = {
+            name: val[0],
+            days: parseInt(val[1]),
+            desc: val[2],
+            startDate: startDate,
+            duration: val[1] + " Hari"
+        };
+        this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
     // --- UTILS & HELPERS ---
@@ -732,16 +864,23 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus Pasien?', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderDashboard();}})},
 
     // ============================================================
-    // EXPORT LOGIC (WORD & EXCEL - Includes Prescription)
+    // EXPORT LOGIC (WORD & EXCEL - OPTIMIZED COMPLETE)
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x=>x.id===id);
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } = docx;
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
         const b64Blob = (b64) => { try{ return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) }catch(e){return null} };
         const addImg = (b64, w=100, h=100) => { const d=b64Blob(b64); if(d) children.push(new Paragraph({children:[new ImageRun({data:d, transformation:{width:w, height:h}})]})); };
 
         const c = p.checklist || {};
         const checkText = `Urine: ${c.urine?'Positif ('+c.urine_note+')':'Negatif'} | Fiksasi: ${c.fix?'Ya ('+c.fix_note+')':'Tidak'} | Injeksi: ${c.inj?'Ya ('+c.inj_note+')':'Tidak'}`;
+
+        // 2. Info Program di Word
+        let progInfo = "Belum Ada Program";
+        if(p.program?.name) {
+             const diff = p.program.startDate ? Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1 : 0;
+             progInfo = `${p.program.name} (${p.program.desc}) - Mulai: ${p.program.startDate} - Hari ke: ${diff}`;
+        }
 
         const children = [
             new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }),
@@ -752,10 +891,9 @@ const app = {
             new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`),
             new Paragraph(`Status: ${p.reg.status || '-'} | Pekerjaan: ${p.reg.job || '-'}`),
             new Paragraph(`Penanggung Jawab: ${p.reg.guardian}`),
-            new Paragraph(`Riwayat Penyakit: ${p.reg.history || '-'}`),
+            new Paragraph(`Program Saat Ini: ${progInfo}`), // Added Program Info
             new Paragraph(`Diagnosa: ${p.diagnosis.plan}`),
             new Paragraph(`Checklist Medis: ${checkText}`),
-            // ADDED: Prescription in Word
             new Paragraph({ text: "Resep Obat Dokter:", bold: true }),
             new Paragraph(p.diagnosis.prescription || '-'),
             new Paragraph({ text: "" }),
@@ -769,7 +907,40 @@ const app = {
         children.push(new Paragraph({ text: "III. DATA TTV & GDS", heading: HeadingLevel.HEADING_2 }));
         (p.ttv || []).forEach(t => children.push(new Paragraph(`${t.time}: TD ${t.td}, Nadi ${t.nadi}, GDS ${t.gds}, TB/BB ${t.tb}/${t.bb}`)));
 
-        // VISIT & KONSELING
+        // 4. BPSS TABLE & CHART PLACEHOLDER
+        children.push(new Paragraph({ text: "IV. DATA KRISIS (BPSS)", heading: HeadingLevel.HEADING_2 }));
+        const bpssRows = [
+            new TableRow({ children: [
+                new TableCell({children:[new Paragraph({text:"Hari", bold:true})]}),
+                new TableCell({children:[new Paragraph({text:"Bio", bold:true})]}),
+                new TableCell({children:[new Paragraph({text:"Psy", bold:true})]}),
+                new TableCell({children:[new Paragraph({text:"Soc", bold:true})]}),
+                new TableCell({children:[new Paragraph({text:"Spi", bold:true})]}),
+                new TableCell({children:[new Paragraph({text:"Total", bold:true})]})
+            ]})
+        ];
+        (p.crisis?.bpss || []).forEach((b, i) => {
+            bpssRows.push(new TableRow({ children: [
+                new TableCell({children:[new Paragraph(`Hari ${i+1}`)]}),
+                new TableCell({children:[new Paragraph(b.bio.toString())]}),
+                new TableCell({children:[new Paragraph(b.psy.toString())]}),
+                new TableCell({children:[new Paragraph(b.soc.toString())]}),
+                new TableCell({children:[new Paragraph(b.spi.toString())]}),
+                new TableCell({children:[new Paragraph(b.total.toString())]})
+            ]}));
+        });
+        children.push(new Table({ rows: bpssRows }));
+        
+        // Try capture chart
+        try {
+            const chartCanvas = document.getElementById('crisisChart');
+            if(chartCanvas) {
+                children.push(new Paragraph({text: "Grafik Radar BPSS Terkini:", spacing:{before:200}}));
+                addImg(chartCanvas.toDataURL(), 400, 250);
+            }
+        } catch(e) {}
+
+        // VISIT, KONSELING, DAN 5. PROGRES HARIAN
         const addSection = (title, arr, label) => {
             children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2 }));
             (arr || []).forEach(v => {
@@ -780,8 +951,9 @@ const app = {
                 children.push(new Paragraph("--------------------------------"));
             });
         };
-        addSection("IV. VISIT DOKTER", p.visits, "Dokter");
-        addSection("V. KONSELING", p.counseling, "Konselor");
+        addSection("V. VISIT DOKTER", p.visits, "Dokter");
+        addSection("VI. KONSELING", p.counseling, "Konselor");
+        addSection("VII. PROGRES HARIAN", p.daily_progress, "Petugas"); // Added Progres Harian
 
         const doc = new Document({ sections: [{ children }] });
         const blob = await Packer.toBlob(doc);
@@ -794,14 +966,15 @@ const app = {
         const wb = XLSX.utils.book_new();
         const c = p.checklist || {};
 
+        // 2. Program masuk Excel
         const bio = [{ 
             Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, 
             Status: p.reg.status, Riwayat_Penyakit: p.reg.history,
+            Program_Paket: p.program?.name, Program_Mulai: p.program?.startDate,
             Diagnosa: p.diagnosis.plan, 
             Urine: c.urine?'YA':'TDK', Urine_Ket: c.urine_note, 
             Fiksasi: c.fix?'YA':'TDK', Fiks_Ket: c.fix_note, 
             Injeksi: c.inj?'YA':'TDK', Inj_Ket: c.inj_note,
-            // ADDED: Prescription in Excel
             Resep_Dokter: p.diagnosis.prescription 
         }];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata");
@@ -812,14 +985,17 @@ const app = {
         const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, GDS:t.gds, TB:t.tb, BB:t.bb}));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV");
 
+        // 5. Progres Harian masuk Excel
         const allVisits = [
             ...(p.visits||[]).map(v=>({Tipe:'Dokter', Waktu:v.time, Note:v.note})),
-            ...(p.counseling||[]).map(c=>({Tipe:'Konseling', Waktu:c.time, Note:c.note}))
+            ...(p.counseling||[]).map(c=>({Tipe:'Konseling', Waktu:c.time, Note:c.note})),
+            ...(p.daily_progress||[]).map(d=>({Tipe:'Progres Harian', Waktu:d.time, Note:d.note}))
         ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allVisits), "Visit_Konseling");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allVisits), "Log_Kegiatan");
         
+        // 4. BPSS masuk Excel
         const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "BPSS_Score");
 
         XLSX.writeFile(wb, `Data_${p.reg.name}.xlsx`);
     }
