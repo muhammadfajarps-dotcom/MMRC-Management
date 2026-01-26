@@ -1,16 +1,14 @@
 // ============================================================
-// 1. KONFIGURASI FIREBASE (MMRC-STOCK1999)
+// 1. KONFIGURASI FIREBASE
 // ============================================================
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
   authDomain: "mmrc-stock1999.firebaseapp.com",
-  databaseURL: "https://mmrc-stock1999-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "mmrc-stock1999",
   storageBucket: "mmrc-stock1999.firebasestorage.app",
   messagingSenderId: "486588564272",
-  appId: "1:486588564272:web:308b276a53401a738ebef5",
-  measurementId: "G-4218HRWRTC"
+  appId: "1:486588564272:web:b0e06dcef08ab7618ebef5",
+  measurementId: "G-WJJQRYDYPF"
 };
 
 // INITIALIZE FIREBASE
@@ -26,31 +24,34 @@ const app = {
     data: { patients: [] }, 
     currentPage: 'dashboard',
     signaturePad: null,
-    chartInstances: {}, // Untuk grafik BPSS agar tidak error
+    chartInstances: {}, // Simpan instance chart agar tidak tumpuk
 
-    // --- LOGIKA SIMPAN DATA (PERBAIKAN UTAMA DISINI) ---
+    // --- LOGIKA SIMPAN (PERBAIKAN UTAMA) ---
     async saveDB() {
         try {
-            // 1. Simpan ke Local Storage (Penyimpanan Utama agar cepat)
+            // 1. Simpan ke Local Storage DULUAN (Supaya UI Instan/Cepat)
             const jsonStr = JSON.stringify(this.data);
             localStorage.setItem('MMRC_DATABASE', jsonStr);
             
-            // 2. Simpan ke Firebase (Backup Cloud)
-            // Kita biarkan jalan di background tanpa menunggu (agar UI tidak macet)
-            db.ref('mmrc_data').set(this.data).then(() => {
-                console.log("✅ Cloud Synced");
-            }).catch(e => {
-                console.warn("⚠️ Cloud Offline (Data aman di Local):", e);
-            });
+            // 2. Simpan ke Firebase (Internet) di background
+            // Kita gunakan await agar memastikan data terkirim, tapi user sudah merasa tersimpan karena local storage
+            await db.ref('mmrc_data').set(this.data);
+            console.log("✅ Data Tersinkron ke Cloud");
         } catch (err) {
             console.error("Save Error:", err);
-            Swal.fire('Memori Penuh', 'Gagal menyimpan ke browser.', 'error');
+            // Jika internet mati, data tetap aman di Local Storage
+            Swal.fire({
+                icon: 'warning',
+                title: 'Offline Mode',
+                text: 'Data disimpan di memori perangkat karena internet gangguan.',
+                timer: 2000, showConfirmButton: false
+            });
         }
     },
 
     // --- LOAD DATA ---
     loadDB() {
-        // Ambil dari Local Storage dulu (Supaya langsung muncul)
+        // Ambil dari Local Storage (Agar pas dibuka langsung muncul)
         const local = localStorage.getItem('MMRC_DATABASE');
         if (local) {
             try { 
@@ -64,9 +65,10 @@ const app = {
         db.ref('mmrc_data').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData) {
-                // Cek agar tidak ganggu saat user lagi ngetik
+                // Cek agar tidak ganggu saat user lagi ngetik di modal
                 const isModalOpen = !document.getElementById('modal-container').classList.contains('hidden');
                 
+                // Hanya update jika data beda DAN modal sedang tertutup
                 if (JSON.stringify(this.data) !== JSON.stringify(cloudData) && !isModalOpen) {
                     this.data = cloudData;
                     if(!this.data.patients) this.data.patients = [];
@@ -108,7 +110,6 @@ const app = {
         const container = document.getElementById('main-content');
         if (!container) return;
         
-        // Router Sederhana
         switch (this.currentPage) {
             case 'dashboard': this.viewDashboard(container); break;
             case 'medicine': this.viewMedicine(container); break;
@@ -121,7 +122,7 @@ const app = {
     },
 
     // ============================================================
-    // MENU 1: DASHBOARD & REGISTRASI (FIX SIMPAN)
+    // MENU 1: DASHBOARD
     // ============================================================
     viewDashboard(container) {
         container.innerHTML = `
@@ -146,7 +147,7 @@ const app = {
                                 <div class="text-[11px] space-y-1 text-slate-600">
                                     <p><b>Usia:</b> ${p.reg.ttl} (${p.reg.age} Thn)</p>
                                     <p><b>Pekerjaan:</b> ${p.reg.job}</p>
-                                    <p><b>Alamat:</b> ${p.reg.addr}</p>
+                                    <p><b>Wali:</b> ${p.reg.guardian}</p>
                                     <p class="text-red-500 bg-red-50 p-1 rounded mt-1"><b>Spotcheck:</b> ${p.reg.spotcheck}</p>
                                 </div>
                             </div>
@@ -179,26 +180,24 @@ const app = {
     modalAddPatient(editId = null) {
         const p = editId ? this.data.patients.find(x => x.id === editId) : null;
         document.getElementById('modal-title').innerText = editId ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN BARU";
-        
         const val = (v) => v || '';
         const chk = (v) => v ? 'checked' : '';
 
-        // PERBAIKAN: Ganti FORM menjadi DIV biasa agar tidak ada trigger submit reload
-        // Tombol SIMPAN menggunakan type="button" dan onclick
+        // PERBAIKAN: Menggunakan DIV biasa (bukan FORM) agar tidak auto-submit reload halaman
         document.getElementById('modal-body').innerHTML = `
-            <div id="form-input-patient" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div id="form-patient" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="space-y-3">
                     <p class="font-bold text-xs border-b pb-1 text-teal-700 uppercase">1. Biodata</p>
                     <div class="border border-dashed border-slate-300 p-2 rounded-xl text-center">
                         <input id="fp_photo" type="file" class="text-[10px] w-full">
-                        <p class="text-[9px] text-slate-400 mt-1">*Upload Foto Wajah</p>
+                        <p class="text-[9px] text-slate-400 mt-1">*Upload Foto</p>
                     </div>
                     <input id="fp_name" value="${val(p?.reg?.name)}" placeholder="Nama Lengkap" class="input-field" required>
                     <div class="grid grid-cols-2 gap-2">
                         <input id="fp_ttl" value="${val(p?.reg?.ttl)}" placeholder="TTL" class="input-field">
                         <input id="fp_age" value="${val(p?.reg?.age)}" type="number" placeholder="Usia" class="input-field">
                     </div>
-                    <input id="fp_status" value="${val(p?.reg?.status)}" placeholder="Status Pernikahan" class="input-field">
+                    <input id="fp_status" value="${val(p?.reg?.status)}" placeholder="Status Nikah" class="input-field">
                     <input id="fp_edu" value="${val(p?.reg?.edu)}" placeholder="Pendidikan" class="input-field">
                     <input id="fp_job" value="${val(p?.reg?.job)}" placeholder="Pekerjaan" class="input-field">
                     <input id="fp_addr" value="${val(p?.reg?.addr)}" placeholder="Alamat" class="input-field">
@@ -238,7 +237,7 @@ const app = {
     },
 
     async savePatient(editId) {
-        // VALIDASI MANUAL
+        // VALIDASI
         const getName = document.getElementById('fp_name').value;
         if (!getName) return Swal.fire('Error', 'Nama Pasien Wajib Diisi', 'error');
 
@@ -279,7 +278,7 @@ const app = {
                     inj: getChk('fp_inj'), urine: getChk('fp_urine'), fiksasi: getChk('fp_fix'),
                     rx_name: getVal('fp_rx'), rx_qty: getVal('fp_qty')
                 },
-                // Bawaan data lama atau init baru
+                // PERBAIKAN: Pertahankan data lama jika edit
                 medicine: editId ? this.data.patients.find(x => x.id === editId).medicine : { stock: [], logs: [] },
                 ttv: editId ? this.data.patients.find(x => x.id === editId).ttv : [],
                 visits: editId ? this.data.patients.find(x => x.id === editId).visits : [],
@@ -297,7 +296,7 @@ const app = {
                 this.data.patients.push(pData);
             }
 
-            // Simpan & Render
+            // SIMPAN
             await this.saveDB();
             this.closeModal();
             this.render();
@@ -491,7 +490,7 @@ const app = {
         const ctx = document.getElementById(`chart-${p.id}`);
         if(!ctx || !p.crisis?.bpss?.length) return;
 
-        // FIX "KLIK IKUTAN": Hancurkan chart lama sebelum buat baru
+        // FIX CHART GLITCH: Hapus chart lama sebelum gambar baru
         if (this.chartInstances[p.id]) {
             this.chartInstances[p.id].destroy();
         }
@@ -499,7 +498,7 @@ const app = {
         this.chartInstances[p.id] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // LABEL H-1, H-2...
+                labels: p.crisis.bpss.map((_, i) => `H-${i+1}`), // Label H-1, H-2...
                 datasets: [{ 
                     label: 'Skor BPSS', 
                     data: p.crisis.bpss.map(b => b.eval), 
@@ -511,7 +510,7 @@ const app = {
                 maintainAspectRatio: false,
                 scales: {
                     y: { 
-                        beginAtZero: true, min: 0, max: 25, // SKALA Y 0-25
+                        beginAtZero: true, min: 0, max: 25, // SKALA 0-25
                         title: { display: true, text: 'Score (0-25)' }
                     }
                 }
@@ -542,7 +541,7 @@ const app = {
         this.closeModal(); this.render(); await this.saveDB();
     },
 
-    // --- SISANYA (TTV, VISIT, PROGRAM, DLL) SUDAH DENGAN TOMBOL TYPE=BUTTON ---
+    // --- OTHER PAGES (Fix Button Type) ---
     viewTTV(container) {
         container.innerHTML = this.data.patients.map(p => `
             <div class="bg-white p-6 rounded-3xl border mb-6 shadow-sm search-item">
@@ -617,20 +616,14 @@ const app = {
     
     async exportToWord() {
         if (!this.data.patients.length) return Swal.fire('Info', 'Data kosong.', 'info');
-        const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, ImageRun } = docx;
-        const b64toBlob = (b64) => {
-            if(!b64 || !b64.includes('base64,')) return null;
-            try { return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)); } catch(e) { return null; }
-        };
-        const children = [new Paragraph("LAPORAN MMRC")];
-        for (const p of this.data.patients) {
-            const profile = b64toBlob(p.reg.photo);
+        // Simple DOCX logic
+        const { Document, Packer, Paragraph, TextRun } = docx;
+        const children = [new Paragraph({children:[new TextRun({text:"LAPORAN MMRC", bold:true, size:32})]})];
+        this.data.patients.forEach(p => {
             children.push(new Paragraph(""));
-            children.push(new Paragraph(`PASIEN: ${p.reg.name}`));
-            if(profile) children.push(new Paragraph({children:[new ImageRun({data:profile, transformation:{width:100,height:100}})]}));
-            // Simplified table for word export example
-            children.push(new Table({rows:[new TableRow({children:[new TableCell({children:[new Paragraph("Diagnosa")]}), new TableCell({children:[new Paragraph(p.diagnosis.plan||"-")]})]})], width:{size:100,type:WidthType.PERCENTAGE}}));
-        }
+            children.push(new Paragraph({children:[new TextRun({text: `Nama: ${p.reg.name}`, bold:true})]}));
+            children.push(new Paragraph(`Diagnosa: ${p.diagnosis.entry_diag}`));
+        });
         const doc = new Document({sections:[{children}]});
         const blob = await Packer.toBlob(doc);
         const url = window.URL.createObjectURL(blob);
