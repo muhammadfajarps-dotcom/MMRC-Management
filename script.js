@@ -487,28 +487,81 @@ const app = {
     async savePatient(id) {
         const get = (id) => document.getElementById(id).value;
         const pOld = id ? this.data.patients.find(x => x.id === id) : null;
+        
         let photo = pOld?.reg.photo || 'https://via.placeholder.com/150';
         const file = document.getElementById('p_photo').files[0];
         if(file) photo = await this.toBase64(file);
 
+        // --- LOGIC PERBAIKAN DETOX ---
+        // Jika pasien baru (tidak ada id) DAN sedang di menu Detox, set program default
+        let defaultProgram = {};
+        if (!id && this.currentCategory === 'detox') {
+            defaultProgram = {
+                name: 'Stabilisasi (Detox) - Pending',
+                days: 7,
+                startDate: new Date().toISOString().split('T')[0],
+                desc: 'Menunggu pengaturan program detail.'
+            };
+        }
+        // -----------------------------
+
         const newP = {
             id: id || 'P-' + Date.now(),
-            reg: { name: get('p_name'), age: get('p_age'), ttl: get('p_ttl'), status: get('p_status'), history: get('p_history'), job: get('p_job'), guardian: get('p_guard'), addr: pOld?.reg.addr||'-', photo, timestamp: pOld?.reg.timestamp || new Date().toLocaleString() },
-            diagnosis: { dr_name: get('m_dr'), plan: get('m_plan'), prescription: get('p_prescription') },
-            checklist: { urine: document.getElementById('chk_urine').checked, urine_note: get('note_urine'), fix: document.getElementById('chk_fix').checked, fix_note: get('note_fix'), inj: document.getElementById('chk_inj').checked, inj_note: get('note_inj') },
+            reg: {
+                name: get('p_name'),
+                age: get('p_age'),
+                ttl: get('p_ttl'),
+                status: get('p_status'),
+                history: get('p_history'),
+                job: get('p_job'),
+                guardian: get('p_guard'),
+                addr: pOld?.reg.addr||'-',
+                photo,
+                timestamp: pOld?.reg.timestamp || new Date().toLocaleString()
+            },
+            diagnosis: {
+                dr_name: get('m_dr'),
+                plan: get('m_plan'),
+                prescription: get('p_prescription')
+            },
+            checklist: {
+                urine: document.getElementById('chk_urine').checked,
+                urine_note: get('note_urine'),
+                fix: document.getElementById('chk_fix').checked,
+                fix_note: get('note_fix'),
+                inj: document.getElementById('chk_inj').checked,
+                inj_note: get('note_inj')
+            },
+            // Gunakan defaultProgram jika pOld.program kosong
+            program: pOld?.program || defaultProgram, 
+            
             medicine: pOld?.medicine || {stock:[], logs:[]},
             ttv: pOld?.ttv || [],
             visits: pOld?.visits || [],
             crisis: pOld?.crisis || { bpss: [] },
-            program: pOld?.program || {},
             counseling: pOld?.counseling || [],
             daily_progress: pOld?.daily_progress || [],
-            screening: pOld?.screening || [], 
-            conclusi: pOld?.conclusi || [], 
-            assessment: pOld?.assessment || [], 
-            plan_therapy: pOld?.plan_therapy || [], 
-            termination: pOld?.termination || [] 
+            screening: pOld?.screening || [],
+            conclusi: pOld?.conclusi || [],
+            assessment: pOld?.assessment || [],
+            plan_therapy: pOld?.plan_therapy || [],
+            termination: pOld?.termination || []
         };
+
+        if(id) {
+            const idx = this.data.patients.findIndex(x=>x.id===id);
+            this.data.patients[idx] = newP;
+        } else {
+            this.data.patients.push(newP);
+        }
+
+        this.closeModal();
+        this.saveDB();
+        
+        // Render ulang list sesuai kategori saat ini
+        if(!id) this.renderPatientList(this.currentCategory);
+        else this.renderPatientDetail();
+    },
         
         if(id) this.data.patients[this.data.patients.findIndex(x=>x.id===id)] = newP;
         else this.data.patients.push(newP);
@@ -668,38 +721,68 @@ const app = {
         `);
     },
     saveStock(id, index) {
-        const p=this.data.patients.find(x=>x.id===id); if(!p.medicine) p.medicine={stock:[],logs:[]};
-        
-        // Simpan nilai 'used' lama jika mode edit, atau 0 jika baru
-        const prevUsed = index !== null ? p.medicine.stock[index].used : 0;
-        
-        const data={
-            name:document.getElementById('s_name').value, 
-            init:Number(document.getElementById('s_init').value), 
-            used: prevUsed, 
-            date_in: document.getElementById('s_date_in').value,
-            daily_dose: Number(document.getElementById('s_daily').value)
+        const p = this.data.patients.find(x => x.id === id);
+        const name = document.getElementById('s_name').value;
+        const init = parseInt(document.getElementById('s_init').value);
+        const date_in = document.getElementById('s_date_in').value;
+        const daily_dose = parseInt(document.getElementById('s_daily').value);
+
+        if (!name || isNaN(init)) return Swal.fire('Error', 'Nama dan Jumlah Obat wajib diisi!', 'error');
+
+        // Jika edit, pertahankan jumlah 'used' (terpakai). Jika baru, set 0.
+        const currentUsed = index !== null ? p.medicine.stock[index].used : 0;
+
+        const data = {
+            name,
+            init,
+            used: currentUsed || 0, // PENTING: Default 0 agar tidak NaN
+            date_in,
+            daily_dose
         };
 
-        if(!data.name || !data.init) return Swal.fire('Error', 'Nama dan Jumlah wajib diisi', 'error');
-        
-        if(index!==null) p.medicine.stock[index]=data; else p.medicine.stock.push(data);
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
+        if(!p.medicine) p.medicine = {stock:[], logs:[]};
+        if(!p.medicine.stock) p.medicine.stock = [];
+
+        if (index !== null) {
+            p.medicine.stock[index] = data; // Update
+        } else {
+            p.medicine.stock.push(data); // Baru
+        }
+
+        this.closeModal();
+        this.saveDB();
+        this.renderPatientDetail();
     },
 
     // 2. FITUR CATAT (RECORD) TERHUBUNG KE STOK
-    modalUseMed(id, idx) {
+    modalUseMed(id, index) {
         const p = this.data.patients.find(x => x.id === id);
-        const medName = p.medicine.stock[idx].name;
+        const s = p.medicine.stock[index];
+        const sisa = s.init - s.used;
+
+        if (sisa <= 0) return Swal.fire('Stok Habis', 'Obat ini sudah habis (0).', 'error');
+
         this.openModal(`
-            <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
-            <p class="text-center text-sm mb-4 text-brand-600 font-bold bg-brand-50 py-2 rounded border border-brand-100">${medName}</p>
-            <input id="u_pj" class="input-modern mb-2" placeholder="Nama PJ (Perawat/Staff)" autofocus>
-            <textarea id="u_note" class="input-modern mb-4 h-20" placeholder="Catatan (Misal: Diminum setelah makan)"></textarea>
-            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
+            <h3 class="font-bold text-center mb-2 text-brand-700">CATAT MINUM OBAT</h3>
+            <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mb-4 text-center">
+                <h4 class="font-black text-xl text-emerald-800">${s.name}</h4>
+                <p class="text-xs font-bold text-emerald-600 mt-1">Sisa Stok Saat Ini: <span class="text-lg">${sisa}</span></p>
+            </div>
+            <div class="mb-3">
+                <label class="text-[10px] font-bold text-slate-500 uppercase">Petugas (PJ)</label>
+                <input id="u_pj" class="input-modern" placeholder="Nama Anda...">
+            </div>
+            <div class="mb-6">
+                <label class="text-[10px] font-bold text-slate-500 uppercase">Catatan (Opsional)</label>
+                <input id="u_note" class="input-modern" placeholder="Cth: Pagi / Siang / Malam">
+            </div>
+            <button onclick="app.saveUseMed('${id}', ${index})" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow hover:bg-emerald-700 transition transform active:scale-95">
+                <i class="fas fa-check-circle mr-2"></i> KONFIRMASI MINUM (-1 STOK)
+            </button>
         `);
-        setTimeout(() => document.getElementById('u_pj').focus(), 100);
     },
+        setTimeout(() => document.getElementById('u_pj').focus(), 100);
+
     execUseMed(id, idx) {
         const pj = document.getElementById('u_pj').value;
         const note = document.getElementById('u_note').value;
@@ -753,31 +836,31 @@ const app = {
     deleteMedLog(id, i) {
         Swal.fire({
             title: 'Hapus Log?',
-            text: "Stok obat akan dikembalikan (+1).",
+            text: "Stok obat akan dikembalikan (+1) ke stok dengan nama yang sama.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Hapus & Kembalikan Stok',
+            confirmButtonText: 'Ya, Hapus',
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
                 const p = this.data.patients.find(x => x.id === id);
                 const log = p.medicine.logs[i];
                 
-                // Cari stok yang namanya sama dengan log
+                // Cari stok dengan nama yang sama untuk dikembalikan
                 const stockItem = p.medicine.stock.find(s => s.name === log.name);
                 
-                // OTOMATISASI: Kembalikan stok (used - 1) jika ketemu
+                // Kembalikan stok (kurangi usage)
                 if (stockItem && stockItem.used > 0) {
                     stockItem.used--; 
                 }
-                
-                // Hapus baris log
+
+                // Hapus log
                 p.medicine.logs.splice(i, 1);
                 
                 this.saveDB();
                 this.renderPatientDetail();
-                Swal.fire('Terhapus', 'Data dihapus & stok dikembalikan.', 'success');
+                Swal.fire('Dihapus', 'Data log dihapus & stok dikembalikan.', 'success');
             }
         });
     },
