@@ -20,53 +20,110 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 const db = typeof firebase !== 'undefined' ? firebase.database() : null;
 
 // ============================================================
-// MAIN APPLICATION LOGIC (OPTIMIZED V14.0)
+// MAIN APPLICATION LOGIC (V15.0 - OPTIMIZED & PERSISTENT)
 // ============================================================
 const app = {
     data: { patients: [] },
     activePatientId: null,
     activeTab: 'biodata',
-    currentCategory: 'rehab', // 'detox' or 'rehab'
+    currentCategory: 'rehab', // Default
     signaturePad: null,
     chartInstance: null,
     saveTimeout: null,
+    isRestoring: false, // Flag untuk proses restore session
 
     init() {
-        console.log("MMRC System V14.0 - Optimized & Stable");
-        // this.loadDB(); // Uncomment if auto-load is needed on startup
+        console.log("MMRC System V15.0 - Persistent Session Active");
+        this.checkSession(); // Cek apakah user sudah login sebelumnya
     },
 
-    // --- DATABASE OPTIMIZATION ---
+    // --- 3. FITUR ANTI LOGOUT SAAT REFRESH ---
+    checkSession() {
+        const session = localStorage.getItem('MMRC_SESSION');
+        if (session === 'LOGGED_IN') {
+            // Bypass login screen
+            document.getElementById('auth-layer').classList.add('hidden');
+            document.getElementById('app-layer').classList.remove('hidden');
+            this.isRestoring = true;
+            this.loadDB(); // Load data dan kembalikan tampilan terakhir
+        }
+    },
+
+    saveState(viewType, detailId = null) {
+        // Simpan posisi terakhir user (Dashboard/List/Detail)
+        const state = {
+            view: viewType, // 'dashboard', 'list', 'detail'
+            category: this.currentCategory,
+            id: detailId,
+            tab: this.activeTab
+        };
+        localStorage.setItem('MMRC_LAST_STATE', JSON.stringify(state));
+    },
+
+    restoreLastView() {
+        const lastState = localStorage.getItem('MMRC_LAST_STATE');
+        if (lastState && this.data.patients.length > 0) {
+            const state = JSON.parse(lastState);
+            this.currentCategory = state.category || 'rehab';
+            
+            if (state.view === 'detail' && state.id) {
+                // Cek apakah pasien masih ada di database
+                const exists = this.data.patients.find(p => p.id === state.id);
+                if (exists) {
+                    this.activePatientId = state.id;
+                    this.activeTab = state.tab || 'biodata';
+                    this.renderPatientDetail();
+                } else {
+                    this.renderPatientList(this.currentCategory);
+                }
+            } else if (state.view === 'list') {
+                this.renderPatientList(this.currentCategory);
+            } else {
+                this.renderDashboard();
+            }
+        } else {
+            this.renderDashboard();
+        }
+        this.isRestoring = false;
+    },
+
+    // --- DATABASE MANAGER ---
     saveDB() {
-        // Debounce save to prevent flooding database on rapid edits
+        // Debounce: Tunggu 500ms setelah ketikan terakhir baru simpan (agar ringan)
         if (this.saveTimeout) clearTimeout(this.saveTimeout);
         this.saveTimeout = setTimeout(() => {
             try {
-                localStorage.setItem('MMRC_DATA_V14', JSON.stringify(this.data));
+                localStorage.setItem('MMRC_DATA_V15', JSON.stringify(this.data));
                 if(db) db.ref('mmrc_data').set(this.data);
             } catch(e) { console.error("Save failed:", e); }
         }, 500);
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V14');
+        // 1. Load Cepat dari Local Storage dulu
+        const local = localStorage.getItem('MMRC_DATA_V15');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
+        // Jika sedang restore session, langsung render dari data lokal dulu biar cepat
+        if (this.isRestoring) this.restoreLastView();
+
+        // 2. Load Realtime dari Firebase
         if(db) {
             db.ref('mmrc_data').on('value', snap => {
                 const val = snap.val();
-                // Only update if modal is closed to prevent input interruption
+                // Update hanya jika modal tertutup (supaya input user tidak ter-reset saat ngetik)
                 if(val && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = val;
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V14', JSON.stringify(this.data));
+                    localStorage.setItem('MMRC_DATA_V15', JSON.stringify(this.data));
                     
-                    // Smooth Refresh
-                    requestAnimationFrame(() => {
+                    // Refresh tampilan saat ini agar data sinkron
+                    if (!this.isRestoring) {
                         if(this.activePatientId) this.renderPatientDetail();
-                        else this.renderDashboard();
-                    });
+                        else if(document.getElementById('page-title').innerText.includes('DASHBOARD')) this.renderDashboard();
+                        else this.renderPatientList(this.currentCategory);
+                    }
                 }
             });
         }
@@ -76,6 +133,7 @@ const app = {
         const u = document.getElementById('login-user').value;
         const p = document.getElementById('login-pass').value;
         if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+            localStorage.setItem('MMRC_SESSION', 'LOGGED_IN'); // Simpan sesi
             document.getElementById('auth-layer').classList.add('hidden');
             document.getElementById('app-layer').classList.remove('hidden');
             this.loadDB();
@@ -83,13 +141,21 @@ const app = {
         } else Swal.fire('Error', 'Login Gagal', 'error');
     },
 
+    logout() {
+        localStorage.removeItem('MMRC_SESSION');
+        localStorage.removeItem('MMRC_LAST_STATE');
+        location.reload();
+    },
+
     // ============================================================
     // 1. DASHBOARD UTAMA
     // ============================================================
     renderDashboard() {
         this.activePatientId = null;
+        this.saveState('dashboard'); // Simpan posisi
+
         document.getElementById('page-title').innerText = "DASHBOARD UTAMA";
-        document.getElementById('header-actions').innerHTML = '';
+        document.getElementById('header-actions').innerHTML = `<button onclick="app.logout()" class="text-xs text-red-500 font-bold hover:underline">LOGOUT</button>`;
 
         const container = document.getElementById('main-content');
         
@@ -127,7 +193,8 @@ const app = {
     renderPatientList(category) {
         this.currentCategory = category; 
         this.activePatientId = null;
-        
+        this.saveState('list'); // Simpan posisi
+
         const title = category === 'detox' ? "UNIT STABILISASI (DETOX)" : "UNIT REHABILITASI";
         const themeColor = category === 'detox' ? 'text-rose-600' : 'text-brand-600';
         
@@ -200,11 +267,13 @@ const app = {
     },
 
     // ============================================================
-    // 3. PATIENT DETAIL (OPTIMIZED TABS & UI)
+    // 3. PATIENT DETAIL
     // ============================================================
     renderPatientDetail() {
         const p = this.data.patients.find(x => x.id === this.activePatientId);
         if(!p) return this.renderPatientList(this.currentCategory);
+        
+        this.saveState('detail', p.id); // Simpan posisi detail pasien
 
         document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
         
@@ -244,7 +313,6 @@ const app = {
                 {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'}
             ];
         } else {
-            // ORDERED AS REQUESTED
             tabs = [
                 {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
                 {id: 'program', icon: 'fa-list-check', label: 'Program'},
@@ -291,7 +359,7 @@ const app = {
         if(this.activeTab === 'crisis') this.renderChart(p);
     },
 
-    switchTab(tabId) { this.activeTab = tabId; this.renderPatientDetail(); },
+    switchTab(tabId) { this.activeTab = tabId; this.saveState('detail', this.activePatientId); this.renderPatientDetail(); },
 
     getTabContent(p, tab) {
         const searchInput = `<div class="absolute top-6 right-6"><input onkeyup="app.searchTable(this)" placeholder="Cari..." class="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-1 ring-brand-200"></div>`;
@@ -320,6 +388,7 @@ const app = {
             `;
         }
 
+        // --- OPTIMIZED MEDICINE TAB ---
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
@@ -333,8 +402,10 @@ const app = {
                         <button onclick="app.delSubItem('medicine.stock', ${i})" class="w-8 h-8 rounded-full bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center"><i class="fas fa-trash"></i></button>
                     </div></div>`;
             }).join('') || '<p class="text-center text-xs text-slate-400">Kosong</p>';
+            
             const logHtml = (p.medicine?.logs || []).map((l, i) => `
                 <tr class="border-b hover:bg-slate-50 text-xs"><td class="py-2 pl-2 text-slate-500">${l.time}</td><td class="py-2 font-bold">${l.name}</td><td class="py-2">${l.pj}</td><td class="text-right pr-2 flex justify-end gap-2"><button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-400"><i class="fas fa-pen"></i></button><button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+            
             return `${searchInput}<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4"><div class="lg:col-span-1 border-r pr-4"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-brand-800">STOK OBAT</h4><button onclick="app.modalStock('${p.id}')" class="text-[10px] bg-brand-600 text-white px-2 py-1 rounded font-bold">+ STOK</button></div><div class="max-h-[500px] overflow-y-auto pr-1">${stockHtml}</div></div><div class="lg:col-span-2"><h4 class="font-bold text-brand-800 mb-4">LOG MINUM OBAT</h4><div class="bg-white border rounded-xl overflow-hidden"><table class="w-full text-left"><thead class="bg-slate-50 text-[10px]"><tr><th class="p-2">Waktu</th><th>Obat</th><th>PJ</th><th class="text-right p-2">Aksi</th></tr></thead><tbody>${logHtml}</tbody></table></div></div></div>`;
         }
 
@@ -378,7 +449,7 @@ const app = {
     },
 
     // ============================================================
-    // MODALS & SAVING LOGIC (Optimized)
+    // MODALS & SAVING LOGIC
     // ============================================================
 
     modalPatient(id = null) {
@@ -564,6 +635,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
+    // --- OPTIMIZED MEDICINE LOGIC ---
     modalStock(id, index=null) {
         const p=this.data.patients.find(x=>x.id===id); const s=index!==null?p.medicine.stock[index]:null;
         this.openModal(`<h3 class="font-bold mb-3">Stok Obat</h3><input id="s_name" class="input-modern mb-2" value="${s?.name||''}" placeholder="Nama"><input id="s_init" type="number" class="input-modern mb-2" value="${s?.init||''}" placeholder="Jml Awal"><input id="s_used" type="number" class="input-modern mb-2" value="${s?.used||0}" placeholder="Terpakai"><input id="s_exp" type="date" class="input-modern mb-3" value="${s?.exp||''}"><button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">SIMPAN</button>`);
@@ -579,8 +651,12 @@ const app = {
     },
     execUseMed(id, idx) {
         const p=this.data.patients.find(x=>x.id===id);
+        if(!p.medicine) p.medicine = {stock:[], logs:[]}; // Safety check
         if(p.medicine.stock[idx].init - p.medicine.stock[idx].used <= 0) return Swal.fire('Habis','','error');
-        p.medicine.stock[idx].used++; p.medicine.logs.unshift({time:new Date().toLocaleString(), name:p.medicine.stock[idx].name, pj:document.getElementById('u_pj').value});
+        
+        p.medicine.stock[idx].used++; 
+        p.medicine.logs.unshift({time:new Date().toLocaleString(), name:p.medicine.stock[idx].name, pj:document.getElementById('u_pj').value});
+        
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
     modalEditLog(id, i) {
@@ -596,6 +672,8 @@ const app = {
         const s=p.medicine.stock.find(x=>x.name===log.name); if(s && s.used>0) s.used--;
         p.medicine.logs.splice(i,1); this.saveDB(); this.renderPatientDetail();
     },
+    
+    // --- TTV & CRISIS ---
     modalTTV(id, i=null) {
         const t = i!==null ? this.data.patients.find(x=>x.id===id).ttv[i] : null;
         this.openModal(`<div class="grid grid-cols-2 gap-2"><input id="t_td" class="input-modern" placeholder="TD" value="${t?.td||''}"><input id="t_nadi" class="input-modern" placeholder="Nadi" value="${t?.nadi||''}"><input id="t_rr" class="input-modern" placeholder="RR" value="${t?.rr||''}"><input id="t_tb" class="input-modern" placeholder="TB" value="${t?.tb||''}"><input id="t_bb" class="input-modern" placeholder="BB" value="${t?.bb||''}"><input id="t_gds" class="input-modern" placeholder="GDS" value="${t?.gds||''}"><button onclick="app.saveTTV('${id}',${i})" class="col-span-2 bg-brand-600 text-white py-2 rounded">SIMPAN</button></div>`);
@@ -638,17 +716,14 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderPatientList(this.currentCategory);}})},
 
     // ============================================================
-    // 4. POWERFUL EXPORT LOGIC (OPTIMIZED & SAFE)
+    // 4. POWERFUL EXPORT LOGIC
     // ============================================================
     async exportToWord(id) {
         try {
             const p = this.data.patients.find(x=>x.id===id);
             if (!p) throw new Error("Data pasien tidak ditemukan");
 
-            // Ensure Docx library is loaded
-            if (typeof docx === 'undefined') {
-                throw new Error("Library Word belum termuat. Coba refresh halaman.");
-            }
+            if (typeof docx === 'undefined') throw new Error("Library Word belum termuat. Coba refresh halaman.");
 
             const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun, WidthType, BorderStyle } = docx;
             
@@ -659,28 +734,21 @@ const app = {
                 } catch(e) { return null } 
             };
             
-            // Helper: Create Section with Note, Photo, Sign
             const createDetailSection = (title, dataArr) => {
-                const rows = [
-                    new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })
-                ];
-                
+                const rows = [new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })];
                 if(!dataArr || dataArr.length === 0) {
                     rows.push(new Paragraph({text: "(Data Kosong)", italic: true}));
                     return rows;
                 }
-
                 dataArr.forEach(item => {
                     const itemChildren = [
                         new Paragraph({ text: `Waktu: ${item.time} | PJ: ${item.pj}`, bold: true }),
                         new Paragraph({ text: item.note, spacing:{after:100} })
                     ];
-
                     if(item.photo) {
                         const imgData = b64Blob(item.photo);
                         if(imgData) itemChildren.push(new Paragraph({children:[new ImageRun({data:imgData, transformation:{width:150, height:100}})]}));
                     }
-
                     if(item.sign) {
                         const signData = b64Blob(item.sign);
                         if(signData) {
@@ -688,7 +756,6 @@ const app = {
                              itemChildren.push(new Paragraph({children:[new ImageRun({data:signData, transformation:{width:100, height:50}})]}));
                         }
                     }
-                    
                     itemChildren.push(new Paragraph({ text: "__________________________________________________________________________________", color: "CCCCCC" }));
                     rows.push(...itemChildren);
                 });
@@ -696,11 +763,8 @@ const app = {
             };
 
             const children = [];
-
-            // --- I. BIODATA & PROGRAM ---
             children.push(new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }));
             children.push(new Paragraph({ text: `Dicetak pada: ${new Date().toLocaleString()}`, alignment: "center", spacing:{after:300} }));
-            
             children.push(new Paragraph({ text: "I. IDENTITAS & PROGRAM", heading: HeadingLevel.HEADING_2 }));
             children.push(new Paragraph(`Nama Lengkap: ${p.reg.name}`));
             children.push(new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`));
@@ -710,69 +774,27 @@ const app = {
             children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
             children.push(new Paragraph({text:""}));
             
-            // --- II. MEDICINE TABLE ---
             children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
-            const medRows = [
-                new TableRow({ children: [
-                    new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })
-                ]})
-            ];
+            const medRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }), new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })]})];
             (p.medicine?.logs || []).forEach(l => {
-                medRows.push(new TableRow({ children: [
-                     new TableCell({ children: [new Paragraph(l.time)] }),
-                     new TableCell({ children: [new Paragraph(l.name)] }),
-                     new TableCell({ children: [new Paragraph(l.pj)] }),
-                ]}));
+                medRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(l.time)] }), new TableCell({ children: [new Paragraph(l.name)] }), new TableCell({ children: [new Paragraph(l.pj)] }),]}));
             });
             children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
             
-            // --- III. TTV & GDS TABLE ---
             children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-            const ttvRows = [
-                new TableRow({ children: [
-                    new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })
-                ]})
-            ];
+            const ttvRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }), new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })]})];
             (p.ttv || []).forEach(t => {
-                ttvRows.push(new TableRow({ children: [
-                     new TableCell({ children: [new Paragraph(t.time)] }),
-                     new TableCell({ children: [new Paragraph(t.td)] }),
-                     new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }),
-                     new TableCell({ children: [new Paragraph(t.gds)] }),
-                ]}));
+                ttvRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(t.time)] }), new TableCell({ children: [new Paragraph(t.td)] }), new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }), new TableCell({ children: [new Paragraph(t.gds)] }),]}));
             });
             children.push(new Table({ rows: ttvRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
 
-            // --- IV. BPSS SCORE TABLE ---
             children.push(new Paragraph({ text: "IV. SKOR BPSS (CRISIS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-            const bpssRows = [
-                new TableRow({ children: [
-                    new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }),
-                    new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })
-                ]})
-            ];
+            const bpssRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })]})];
             (p.crisis?.bpss || []).forEach((b, i) => {
-                bpssRows.push(new TableRow({ children: [
-                     new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }),
-                     new TableCell({ children: [new Paragraph(String(b.bio))] }),
-                     new TableCell({ children: [new Paragraph(String(b.psy))] }),
-                     new TableCell({ children: [new Paragraph(String(b.soc))] }),
-                     new TableCell({ children: [new Paragraph(String(b.spi))] }),
-                     new TableCell({ children: [new Paragraph(String(b.total))] }),
-                ]}));
+                bpssRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }), new TableCell({ children: [new Paragraph(String(b.bio))] }), new TableCell({ children: [new Paragraph(String(b.psy))] }), new TableCell({ children: [new Paragraph(String(b.soc))] }), new TableCell({ children: [new Paragraph(String(b.spi))] }), new TableCell({ children: [new Paragraph(String(b.total))] }),]}));
             });
             children.push(new Table({ rows: bpssRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
 
-            // --- V - X. DETAILED SECTIONS WITH PHOTOS & SIGNS ---
             children.push(...createDetailSection("V. ASSESSMENT", p.assessment));
             children.push(...createDetailSection("VI. RENCANA TERAPI", p.plan_therapy));
             children.push(...createDetailSection("VII. VISIT DOKTER", p.visits));
@@ -797,27 +819,18 @@ const app = {
 
             const wb = XLSX.utils.book_new();
             
-            // 1. Biodata & Program
-            const bio = [{ 
-                Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, 
-                Program: p.program?.name, StartDate: p.program?.startDate,
-                Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription 
-            }];
+            const bio = [{ Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, Program: p.program?.name, StartDate: p.program?.startDate, Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription }];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
 
-            // 2. Medicine
             const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
 
-            // 3. TTV
             const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
 
-            // 4. BPSS
             const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
 
-            // 5. Detailed Logs (Combined or Separated) - Separated for clarity
             const mapLog = (arr) => (arr||[]).map(x=>({Waktu:x.time, PJ:x.pj, Catatan:x.note, AdaFoto:x.photo?'Ya':'Tidak', AdaTTD:x.sign?'Ya':'Tidak'}));
             
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.assessment)), "Assessment");
