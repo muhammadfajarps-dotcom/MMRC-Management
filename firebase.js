@@ -1,3 +1,17 @@
+// FIREBASE CONFIG
+var firebaseConfig = {
+  apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
+  authDomain: "PROJECT_ID.firebaseapp.com",
+  projectId: "PROJECT_ID",
+  databaseURL: "https://PROJECT_ID.firebaseio.com",
+  appId: "APP_ID"
+};
+
+// INIT FIREBASE
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+
 <!-- firebase.js -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
