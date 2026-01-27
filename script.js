@@ -1,16 +1,14 @@
 // ============================================================
-// CONFIGURATION (MMRC V15.2 - MEDICINE SYNC OPTIMIZED)
+// CONFIGURATION (MMRC V15.3 - AUTO EST & SESSION FIX)
 // ============================================================
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
   authDomain: "mmrc-stock1999.firebaseapp.com",
-  databaseURL: "https://mmrc-stock1999-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "mmrc-stock1999",
   storageBucket: "mmrc-stock1999.firebasestorage.app",
   messagingSenderId: "486588564272",
-  appId: "1:486588564272:web:308b276a53401a738ebef5",
-  measurementId: "G-4218HRWRTC"
+  appId: "1:486588564272:web:b0e06dcef08ab7618ebef5",
+  measurementId: "G-WJJQRYDYPF"
 };
 
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
@@ -32,20 +30,44 @@ const app = {
     isRestoring: false,
 
     init() {
-        console.log("MMRC System V15.2 - Medicine Sync Optimized");
+        console.log("MMRC System V15.3 - Session & Medicine Logic");
         this.checkSession();
     },
 
+    // --- FITUR KEAMANAN: LOGIN ULANG SAAT KELUAR (SESSION STORAGE) ---
     checkSession() {
-        const session = localStorage.getItem('MMRC_SESSION');
+        // Menggunakan sessionStorage agar hilang saat browser/tab ditutup
+        const session = sessionStorage.getItem('MMRC_SESSION');
         if (session === 'LOGGED_IN') {
             document.getElementById('auth-layer').classList.add('hidden');
             document.getElementById('app-layer').classList.remove('hidden');
             this.isRestoring = true;
             this.loadDB();
+        } else {
+            document.getElementById('auth-layer').classList.remove('hidden');
+            document.getElementById('app-layer').classList.add('hidden');
         }
     },
 
+    login() {
+        const u = document.getElementById('login-user').value;
+        const p = document.getElementById('login-pass').value;
+        if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
+            sessionStorage.setItem('MMRC_SESSION', 'LOGGED_IN'); // Session Storage
+            document.getElementById('auth-layer').classList.add('hidden');
+            document.getElementById('app-layer').classList.remove('hidden');
+            this.loadDB();
+            this.renderDashboard();
+        } else Swal.fire('Error', 'Login Gagal', 'error');
+    },
+
+    logout() {
+        sessionStorage.removeItem('MMRC_SESSION');
+        localStorage.removeItem('MMRC_LAST_STATE');
+        location.reload();
+    },
+
+    // --- STATE & DB HANDLING ---
     saveState(viewType, detailId = null) {
         const state = {
             view: viewType,
@@ -115,24 +137,6 @@ const app = {
                 }
             });
         }
-    },
-
-    login() {
-        const u = document.getElementById('login-user').value;
-        const p = document.getElementById('login-pass').value;
-        if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-            localStorage.setItem('MMRC_SESSION', 'LOGGED_IN');
-            document.getElementById('auth-layer').classList.add('hidden');
-            document.getElementById('app-layer').classList.remove('hidden');
-            this.loadDB();
-            this.renderDashboard();
-        } else Swal.fire('Error', 'Login Gagal', 'error');
-    },
-
-    logout() {
-        localStorage.removeItem('MMRC_SESSION');
-        localStorage.removeItem('MMRC_LAST_STATE');
-        location.reload();
     },
 
     // ============================================================
@@ -330,14 +334,29 @@ const app = {
             `;
         }
 
-        // --- OPTIMIZED & SYNCHRONIZED MEDICINE TAB ---
+        // --- FITUR ESTIMASI HABIS & SINKRONISASI STOK ---
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
                 const isLow = sisa < 7;
+                
+                // KALKULASI ESTIMASI HABIS
+                let estInfo = '<span class="text-[9px] text-slate-400">Set Tgl Masuk & Dosis utk Estimasi</span>';
+                if(s.date_in && s.daily_dose && s.daily_dose > 0) {
+                    const dateInObj = new Date(s.date_in);
+                    const daysToEmpty = Math.floor(s.init / s.daily_dose);
+                    dateInObj.setDate(dateInObj.getDate() + daysToEmpty);
+                    const estStr = dateInObj.toLocaleDateString('id-ID', {day: 'numeric', month:'short'});
+                    estInfo = `<span class="text-[10px] text-brand-600 font-bold bg-brand-50 px-1 rounded">Est. Habis: ${estStr}</span>`;
+                }
+
                 return `<div class="p-3 rounded-xl border ${isLow ? 'stock-low' : 'bg-slate-50 border-slate-200'} relative search-row mb-3 flex justify-between items-center transition-all">
                     ${isLow ? '<div class="stock-badge">STOK < 7</div>' : ''}
-                    <div><p class="font-bold text-sm ${isLow ? 'text-red-700' : 'text-slate-800'}">${s.name}</p><p class="text-[10px] text-slate-500">Sisa: <b class="text-lg">${sisa}</b> / ${s.init}</p></div>
+                    <div>
+                        <p class="font-bold text-sm ${isLow ? 'text-red-700' : 'text-slate-800'}">${s.name}</p>
+                        <p class="text-[10px] text-slate-500 mb-1">Sisa: <b class="text-lg text-slate-800">${sisa}</b> / ${s.init}</p>
+                        ${estInfo}
+                    </div>
                     <div class="flex gap-1">
                         <button onclick="app.modalUseMed('${p.id}', ${i})" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:text-white flex items-center justify-center" title="Catat Minum"><i class="fas fa-check"></i></button>
                         <button onclick="app.modalStock('${p.id}', ${i})" class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center" title="Edit Stok"><i class="fas fa-pen"></i></button>
@@ -590,20 +609,60 @@ const app = {
     },
 
     // ============================================================
-    // FIXED MEDICINE LOGIC (CATAT, EDIT, DELETE & SYNC)
+    // FIXED MEDICINE LOGIC (AUTO USE & ESTIMATION)
     // ============================================================
+    
+    // 1. TAMBAH/EDIT STOK (Dengan Tanggal Masuk & Dosis)
     modalStock(id, index=null) {
         const p=this.data.patients.find(x=>x.id===id); const s=index!==null?p.medicine.stock[index]:null;
-        this.openModal(`<h3 class="font-bold mb-3">Stok Obat</h3><input id="s_name" class="input-modern mb-2" value="${s?.name||''}" placeholder="Nama"><input id="s_init" type="number" class="input-modern mb-2" value="${s?.init||''}" placeholder="Jml Awal"><input id="s_used" type="number" class="input-modern mb-2" value="${s?.used||0}" placeholder="Terpakai (Otomatis)"><input id="s_exp" type="date" class="input-modern mb-3" value="${s?.exp||''}"><button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">SIMPAN</button>`);
+        const today = new Date().toISOString().split('T')[0];
+        this.openModal(`
+            <h3 class="font-bold mb-3">Stok Obat</h3>
+            <input id="s_name" class="input-modern mb-2" value="${s?.name||''}" placeholder="Nama Obat">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500">Jumlah Awal</label>
+                    <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500">Terpakai (Auto)</label>
+                    <input id="s_used" type="number" class="input-modern bg-slate-100 text-slate-500 cursor-not-allowed" value="${s?.used||0}" readonly title="Gunakan tombol Check/Log untuk menambah">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500">Tgl Masuk</label>
+                    <input id="s_date_in" type="date" class="input-modern" value="${s?.date_in || today}">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500">Dosis (Biji/Hari)</label>
+                    <input id="s_daily" type="number" class="input-modern" value="${s?.daily_dose || ''}" placeholder="Cth: 3">
+                </div>
+            </div>
+            <input id="s_exp" type="date" class="input-modern mb-3" value="${s?.exp||''}">
+            <button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">SIMPAN</button>
+        `);
     },
     saveStock(id, index) {
         const p=this.data.patients.find(x=>x.id===id); if(!p.medicine) p.medicine={stock:[],logs:[]};
-        const data={name:document.getElementById('s_name').value, init:Number(document.getElementById('s_init').value), used:Number(document.getElementById('s_used').value), exp:document.getElementById('s_exp').value};
+        
+        // Ambil data yang ada sebelumnya untuk 'used' agar tidak reset, karena fieldnya readonly
+        const prevUsed = index !== null ? p.medicine.stock[index].used : 0;
+        
+        const data={
+            name:document.getElementById('s_name').value, 
+            init:Number(document.getElementById('s_init').value), 
+            used: prevUsed, 
+            exp:document.getElementById('s_exp').value,
+            date_in: document.getElementById('s_date_in').value,
+            daily_dose: Number(document.getElementById('s_daily').value)
+        };
+        
         if(index!==null) p.medicine.stock[index]=data; else p.medicine.stock.push(data);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 1. FITUR CATAT (RECORD) - OPTIMIZED
+    // 2. FITUR CATAT (RECORD) - PENGURANGAN STOK OTOMATIS
     modalUseMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         const medName = p.medicine.stock[idx].name;
@@ -640,7 +699,7 @@ const app = {
         Swal.fire({icon:'success', title:'Tercatat', timer:800, showConfirmButton:false});
     },
 
-    // 2. FITUR EDIT LOG
+    // 3. FITUR EDIT LOG
     modalEditLog(id, i) {
         const l = this.data.patients.find(x=>x.id===id).medicine.logs[i];
         this.openModal(`
@@ -661,7 +720,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 3. FITUR HAPUS & SYNC STOK (LOGIC INTI)
+    // 4. FITUR HAPUS & SYNC STOK (LOGIC INTI)
     deleteMedLog(id, i) {
         Swal.fire({
             title: 'Hapus Log?',
