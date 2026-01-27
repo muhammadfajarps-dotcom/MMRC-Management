@@ -13,6 +13,11 @@ const firebaseConfig = {
   measurementId: "G-4218HRWRTC"
 };
 
+// INIT FIREBASE
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+
 if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = typeof firebase !== 'undefined' ? firebase.database() : null;
 
