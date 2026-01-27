@@ -758,8 +758,9 @@ const app = {
     modalUseMed(id, index) {
         const p = this.data.patients.find(x => x.id === id);
         const s = p.medicine.stock[index];
-        const sisa = s.init - s.used;
+        const sisa = s.init - (s.used || 0); // Pastikan s.used ada, jika tidak anggap 0
 
+        // Cegah jika stok 0
         if (sisa <= 0) return Swal.fire('Stok Habis', 'Obat ini sudah habis (0).', 'error');
 
         this.openModal(`
@@ -770,7 +771,7 @@ const app = {
             </div>
             <div class="mb-3">
                 <label class="text-[10px] font-bold text-slate-500 uppercase">Petugas (PJ)</label>
-                <input id="u_pj" class="input-modern" placeholder="Nama Anda...">
+                <input id="u_pj" class="input-modern" placeholder="Nama Anda..." autofocus>
             </div>
             <div class="mb-6">
                 <label class="text-[10px] font-bold text-slate-500 uppercase">Catatan (Opsional)</label>
@@ -781,6 +782,48 @@ const app = {
             </button>
         `);
     },
+
+    // 2. Menyimpan Data (Mengurangi Stok & Catat Log)
+    saveUseMed(id, index) {
+        const pj = document.getElementById('u_pj').value;
+        const note = document.getElementById('u_note').value;
+        
+        if(!pj) return Swal.fire('Gagal', 'Nama Petugas (PJ) wajib diisi!', 'error');
+
+        const p = this.data.patients.find(x => x.id === id);
+        const stockItem = p.medicine.stock[index];
+
+        // Validasi Stok lagi sebelum simpan
+        if ((stockItem.init - (stockItem.used || 0)) <= 0) {
+            return Swal.fire('Error', 'Stok obat tidak cukup!', 'error');
+        }
+
+        // LOGIKA UTAMA: Tambah counter 'used' (terpakai)
+        stockItem.used = (stockItem.used || 0) + 1;
+
+        // Simpan ke Log Riwayat
+        if(!p.medicine.logs) p.medicine.logs = [];
+        p.medicine.logs.unshift({
+            time: new Date().toLocaleString('id-ID'),
+            name: stockItem.name,
+            pj: pj,
+            note: note
+        });
+
+        this.closeModal(); // Tutup modal
+        this.saveDB();     // Simpan ke Firebase/Local
+        this.renderPatientDetail(); // Refresh tampilan
+        
+        // Notifikasi Sukses
+        Swal.fire({
+            icon: 'success', 
+            title: 'Berhasil', 
+            text: 'Stok berkurang 1', 
+            timer: 1000, 
+            showConfirmButton: false
+        });
+    },
+
         setTimeout(() => document.getElementById('u_pj').focus(), 100);
 
     execUseMed(id, idx) {
