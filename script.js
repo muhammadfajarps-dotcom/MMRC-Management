@@ -331,129 +331,207 @@ const app = {
 
     switchTab(tabId) { this.activeTab = tabId; this.saveState('detail', this.activePatientId); this.renderPatientDetail(); },
 
+    // ============================================================
+    // FUNGSI TAMPILAN TAB (VERSI STABIL & PERBAIKAN)
+    // ============================================================
     getTabContent(p, tab) {
-        const searchInput = `<div class="absolute top-6 right-6"><input onkeyup="app.searchTable(this)" placeholder="Cari..." class="bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-1 ring-brand-200"></div>`;
+        // Helper untuk menangani data kosong
         const v = (val) => val || '-';
-
-        if(tab === 'biodata') {
-            const check = p.checklist || {};
+        
+        // 1. TAB BIODATA
+        if (tab === 'biodata') {
             return `
-                <h3 class="font-bold text-lg text-brand-800 mb-6 border-b pb-2">Informasi Lengkap Pasien</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400 uppercase">TTL</span><div class="font-bold text-slate-700">${v(p.reg.ttl)}</div></div>
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400 uppercase">Usia</span><div class="font-bold text-slate-700">${v(p.reg.age)} Tahun</div></div>
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400 uppercase">Status</span><div class="font-bold text-slate-700">${v(p.reg.status)}</div></div>
-                    <div class="p-4 bg-slate-50 rounded-xl border"><span class="block text-xs font-bold text-slate-400 uppercase">PJ</span><div class="font-bold text-slate-700">${v(p.reg.guardian)}</div></div>
-                    <div class="p-4 bg-slate-50 rounded-xl border col-span-2"><span class="block text-xs font-bold text-slate-400 uppercase">Riwayat</span><div class="text-slate-700 mt-1">${v(p.reg.history)}</div></div>
-                    <div class="p-4 bg-slate-50 rounded-xl border col-span-2"><span class="block text-xs font-bold text-slate-400 uppercase">Diagnosa</span><div class="text-slate-700 mt-1">${v(p.diagnosis.plan)}</div></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-fade-in">
+                <div class="p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Tempat, Tgl Lahir</span>
+                    <div class="font-bold text-slate-700 text-lg">${v(p.reg.ttl)}</div>
                 </div>
-                <h4 class="font-bold text-sm text-brand-600 uppercase mb-3">Checklist Medis</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div class="p-3 border rounded-xl ${check.urine?'bg-yellow-50 border-yellow-200':''}"><p class="font-bold text-xs mb-1">Tes Urine</p><p class="text-sm">${check.urine ? '✅ ' + check.urine_note : '❌ Tidak'}</p></div>
-                    <div class="p-3 border rounded-xl ${check.fix?'bg-red-50 border-red-200':''}"><p class="font-bold text-xs mb-1">Fiksasi</p><p class="text-sm">${check.fix ? '✅ ' + check.fix_note : '❌ Tidak'}</p></div>
-                    <div class="p-3 border rounded-xl ${check.inj?'bg-blue-50 border-blue-200':''}"><p class="font-bold text-xs mb-1">Injeksi</p><p class="text-sm">${check.inj ? '✅ ' + check.inj_note : '❌ Tidak'}</p></div>
+                <div class="p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Penanggung Jawab (PJ)</span>
+                    <div class="font-bold text-slate-700 text-lg">${v(p.reg.guardian)}</div>
                 </div>
-                <div class="p-4 bg-white border border-slate-200 rounded-xl shadow-sm mb-6"><p class="font-bold text-xs text-brand-600 uppercase mb-2"><i class="fas fa-file-prescription mr-2"></i>RESEP OBAT DOKTER</p><p class="text-slate-700 text-sm whitespace-pre-line">${v(p.diagnosis.prescription)}</p></div>
-                <button onclick="app.modalPatient('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-bold shadow hover:bg-brand-700">EDIT BIODATA</button>
-            `;
+                <div class="col-span-1 md:col-span-2 p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Riwayat Penggunaan</span>
+                    <div class="mt-1 text-slate-700 leading-relaxed font-medium">${v(p.reg.history)}</div>
+                </div>
+                <div class="col-span-1 md:col-span-2 mt-2">
+                    <button onclick="app.modalPatient('${p.id}')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow hover:bg-slate-900 transition">
+                        <i class="fas fa-edit mr-2"></i> EDIT BIODATA PASIEN
+                    </button>
+                </div>
+            </div>`;
+        }
+        
+        // 2. TAB PROGRAM
+        if (tab === 'program') {
+            const prog = p.program || {};
+            return `
+            <div class="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 animate-fade-in h-[300px]">
+                <div class="bg-white p-4 rounded-full shadow-sm mb-4"><i class="fas fa-clipboard-list text-4xl text-brand-600"></i></div>
+                <h2 class="text-2xl font-black text-slate-700 mb-1">${prog.name || 'BELUM DIATUR'}</h2>
+                <p class="text-slate-500 mb-6 font-medium">${prog.desc || 'Pasien ini belum memiliki paket program.'}</p>
+                <button onclick="app.modalProgram('${p.id}')" class="bg-brand-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-brand-700 hover:shadow-xl transition transform hover:-translate-y-1">
+                    <i class="fas fa-cog mr-2"></i> ATUR PROGRAM
+                </button>
+            </div>`;
         }
 
-        // --- 1. MEDICINE FINAL OVERHAUL (V17.0) ---
-        // Dibagi 2 Menu: STOK OBAT & CATATAN PENGGUNAAN
-        // Otomatisasi Estimasi Habis + Link Hapus Log ke Stok
-        if(tab === 'medicine') {
-            const stockHtml = (p.medicine?.stock || []).map((s, i) => {
-                const sisa = s.init - s.used;
-                const isLow = sisa < 7;
-                
-                // 3. Otomatisasi Estimasi Habis (Tgl Masuk + (Jumlah / Dosis))
-                let estInfo = '<span class="text-[9px] text-slate-400 italic">Set Dosis per Hari</span>';
-                if(s.date_in && s.daily_dose && s.daily_dose > 0) {
-                    const dateInObj = new Date(s.date_in);
-                    const daysToEmpty = Math.floor(s.init / s.daily_dose);
-                    dateInObj.setDate(dateInObj.getDate() + daysToEmpty);
-                    const estStr = dateInObj.toLocaleDateString('id-ID', {day: 'numeric', month:'short', year:'2-digit'});
+        // 3. TAB MEDICINE (OBAT) - Dengan Reminder & Invoice
+        if (tab === 'medicine') {
+            // Pastikan array stock & logs ada
+            const stocks = p.medicine?.stock || [];
+            const logs = p.medicine?.logs || [];
+
+            // Generate HTML Tabel Stok
+            let stockHtml = '';
+            if (stocks.length === 0) {
+                stockHtml = `<tr><td colspan="4" class="text-center p-8 text-slate-400 italic bg-slate-50 rounded-lg">Belum ada stok obat yang diinput.</td></tr>`;
+            } else {
+                stockHtml = stocks.map((s, i) => {
+                    const sisa = parseInt(s.init) - (parseInt(s.used) || 0);
+                    const isLow = sisa < 7;
                     
-                    // Warna merah jika estimasi sudah lewat atau sisa sedikit
-                    const isExpired = new Date() > dateInObj;
-                    const colorClass = isExpired || isLow ? 'text-red-600 bg-red-50' : 'text-brand-700 bg-brand-50';
-                    estInfo = `<span class="text-[10px] ${colorClass} px-2 py-0.5 rounded font-bold">${estStr}</span>`;
-                }
+                    // Style Kondisional
+                    const rowClass = isLow ? 'bg-red-50 border-l-4 border-l-red-500' : 'border-b hover:bg-slate-50';
+                    const textClass = isLow ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold';
+                    const warning = isLow ? '<i class="fas fa-exclamation-triangle text-red-500 mr-1 animate-pulse" title="Stok Menipis"></i>' : '';
+                    const alertText = isLow ? '<div class="text-[9px] text-red-500 font-bold uppercase mt-1">RESTOCK SEGERA!</div>' : '';
 
-                return `
-                <tr class="border-b hover:bg-slate-50 text-xs search-row">
-                    <td class="p-3">${s.date_in || '-'}</td>
-                    <td class="p-3">${estInfo}</td>
-                    <td class="p-3 font-bold text-slate-700">${s.name}</td>
-                    <td class="p-3 text-center">
-                        <span class="text-slate-400 text-[10px] mr-1">Awal: ${s.init}</span>
-                        <span class="font-bold text-sm ${isLow ? 'text-red-600' : 'text-emerald-600'}">${sisa}</span>
-                    </td>
-                    <td class="p-3 text-right flex justify-end gap-1">
-                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 shadow-sm text-[10px]" title="Catat Minum"><i class="fas fa-check mr-1"></i> MINUM</button>
-                        <button onclick="app.modalStock('${p.id}', ${i})" class="bg-slate-100 text-slate-600 p-1 rounded hover:bg-slate-200"><i class="fas fa-pen"></i></button>
-                        <button onclick="app.delSubItem('medicine.stock', ${i})" class="bg-red-50 text-red-500 p-1 rounded hover:bg-red-100"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            }).join('') || '<tr><td colspan="5" class="text-center p-6 text-xs text-slate-400 italic">Belum ada stok obat masuk.</td></tr>';
-            
-            const logHtml = (p.medicine?.logs || []).map((l, i) => `
-                <tr class="border-b hover:bg-slate-50 text-xs search-row">
-                    <td class="p-3 text-slate-500">${l.time}</td>
-                    <td class="p-3 font-bold text-brand-700">${l.name}</td>
-                    <td class="p-3">${l.pj}</td>
-                    <td class="p-3 italic text-slate-600">${l.note || '-'}</td>
-                    <td class="p-3 text-right flex justify-end gap-2">
-                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded"><i class="fas fa-pen"></i></button>
-                        <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-500 hover:bg-red-50 p-1 rounded" title="Hapus & Balikin Stok"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('') || '<tr><td colspan="5" class="text-center p-6 text-xs text-slate-400 italic">Belum ada catatan penggunaan.</td></tr>';
-            
+                    return `
+                    <tr class="${rowClass} transition duration-200">
+                        <td class="p-3 align-middle">
+                            <div class="font-bold text-xs text-slate-700">${s.date_in}</div>
+                            <div class="text-[10px] text-slate-400 bg-white px-1 rounded inline-block border border-slate-100 mt-1">Inv: ${s.invoice_date || '-'}</div>
+                        </td>
+                        <td class="p-3 align-middle">
+                            <div class="font-bold text-sm text-slate-800">${warning} ${s.name}</div>
+                            ${alertText}
+                        </td>
+                        <td class="p-3 text-center align-middle">
+                            <span class="${textClass} text-lg">${sisa}</span>
+                        </td>
+                        <td class="p-3 text-right align-middle">
+                            <div class="flex justify-end gap-1">
+                                <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg shadow hover:bg-emerald-700 text-[10px] font-bold tracking-wide transition"><i class="fas fa-pills mr-1"></i> MINUM</button>
+                                <button onclick="app.modalStock('${p.id}', ${i})" class="bg-slate-200 text-slate-600 p-1.5 rounded-lg hover:bg-slate-300 transition"><i class="fas fa-pen"></i></button>
+                                <button onclick="app.delSubItem('medicine.stock', ${i})" class="text-red-300 hover:text-red-600 p-1.5 transition"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // Generate HTML Tabel Log
+            let logHtml = '';
+            if (logs.length === 0) {
+                logHtml = `<tr><td colspan="5" class="text-center p-8 text-slate-400 italic">Belum ada riwayat minum obat.</td></tr>`;
+            } else {
+                logHtml = logs.map((l, i) => `
+                <tr class="border-b last:border-0 hover:bg-slate-50 transition text-xs">
+                    <td class="p-3 text-slate-500 font-mono">${l.time}</td>
+                    <td class="p-3 font-bold text-slate-700">${l.name}</td>
+                    <td class="p-3"><span class="bg-brand-50 text-brand-700 px-2 py-1 rounded font-bold text-[10px] uppercase tracking-wider">${l.pj}</span></td>
+                    <td class="p-3 italic text-slate-500">${l.note || '-'}</td>
+                    <td class="p-3 text-right"><button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-slate-300 hover:text-red-500 transition"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('');
+            }
+
             return `
-                ${searchInput}
-                <div class="space-y-8 mt-4">
-                    <div class="border rounded-2xl bg-white overflow-hidden shadow-sm">
-                        <div class="bg-gradient-to-r from-slate-50 to-white p-4 border-b flex justify-between items-center">
-                            <h4 class="font-bold text-brand-800 text-sm flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600"><i class="fas fa-boxes"></i></div> STOK OBAT</h4>
-                            <button onclick="app.modalStock('${p.id}')" class="bg-brand-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow hover:bg-brand-700 transition transform hover:-translate-y-0.5"><i class="fas fa-plus mr-1"></i> INPUT OBAT MASUK</button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-3">Waktu Masuk</th>
-                                        <th class="p-3">Est. Habis (Auto)</th>
-                                        <th class="p-3">Jenis Obat</th>
-                                        <th class="p-3 text-center">Jumlah (Sisa)</th>
-                                        <th class="text-right p-3">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">${stockHtml}</tbody>
-                            </table>
-                        </div>
+            <div class="space-y-6 animate-fade-in">
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                        <h4 class="font-black text-slate-700 text-xs uppercase tracking-wider"><i class="fas fa-boxes mr-2"></i> Stok & Invoice</h4>
+                        <button onclick="app.modalStock('${p.id}')" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand-700 transition flex items-center gap-2">
+                            <i class="fas fa-plus"></i> STOK BARU
+                        </button>
                     </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-3 w-24">Tanggal</th>
+                                    <th class="p-3">Nama Obat</th>
+                                    <th class="p-3 text-center w-16">Sisa</th>
+                                    <th class="p-3 text-right w-32">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">${stockHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
 
-                    <div class="border rounded-2xl bg-white overflow-hidden shadow-sm">
-                        <div class="bg-gradient-to-r from-slate-50 to-white p-4 border-b">
-                            <h4 class="font-bold text-brand-800 text-sm flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600"><i class="fas fa-history"></i></div> CATATAN PENGGUNAAN OBAT</h4>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-3">Waktu</th>
-                                        <th class="p-3">Nama Obat</th>
-                                        <th class="p-3">PJ</th>
-                                        <th class="p-3">Catatan</th>
-                                        <th class="text-right p-3">Edit/Hapus</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">${logHtml}</tbody>
-                            </table>
-                        </div>
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                        <h4 class="font-black text-slate-700 text-xs uppercase tracking-wider"><i class="fas fa-history mr-2"></i> Log Riwayat Minum</h4>
                     </div>
-                </div>`;
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <table class="w-full text-left">
+                            <tbody class="divide-y divide-slate-100">${logHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
         }
+
+        // 4. TAB LAINNYA (GENERIC & MAPPER)
+        // Kita gunakan mapping object agar lebih stabil daripada if/else bertingkat
+        const mapArr = {
+            'ttv': 'ttv',
+            'daily': 'daily_progress',
+            'visit': 'visits',
+            'plan': 'plan_therapy',
+            'terminasi': 'termination',
+            'assessment': 'assessment',
+            'counseling': 'counseling',
+            'screening': 'screening',
+            'conclusi': 'conclusi'
+        };
+
+        const arrName = mapArr[tab];
+
+        // Jika tab ditemukan di mapping
+        if (arrName) {
+            const dataArr = p[arrName] || [];
+            
+            // Generate HTML List Item
+            const listHtml = dataArr.length === 0 
+                ? '<div class="text-center p-12 text-slate-300 font-bold border-2 border-dashed border-slate-200 rounded-xl">BELUM ADA DATA</div>' 
+                : dataArr.map((x, i) => `
+                    <div class="p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:shadow-md transition flex justify-between items-start gap-4 mb-3 animate-fade-in">
+                        <div class="text-sm text-slate-600 w-full">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="bg-brand-50 text-brand-700 px-2 py-1 rounded text-[10px] font-bold border border-brand-100 uppercase">
+                                    <i class="far fa-clock mr-1"></i> ${x.time}
+                                </span>
+                                <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <i class="far fa-user mr-1"></i> ${x.pj || 'Admin'}
+                                </span>
+                            </div>
+                            <p class="leading-relaxed whitespace-pre-wrap text-slate-700 font-medium border-l-2 border-brand-200 pl-3">${x.note || JSON.stringify(x)}</p>
+                        </div>
+                        <button onclick="app.delSubItem('${arrName}', ${i})" class="text-slate-300 hover:text-red-500 p-2 transition" title="Hapus Data">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `).join('');
+
+            return `
+            <div class="animate-fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-black text-xl uppercase text-slate-700 border-b-4 border-brand-200 inline-block pb-1 tracking-tight">
+                        DATA ${tab.replace(/_/g, ' ')}
+                    </h4>
+                    <button onclick="app.modalSimpleNote('${p.id}', '${arrName}')" class="bg-brand-600 text-white px-5 py-2.5 rounded-full text-xs font-bold hover:bg-brand-700 shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center gap-2">
+                        <i class="fas fa-plus-circle"></i> INPUT DATA
+                    </button>
+                </div>
+                <div>${listHtml}</div>
+            </div>`;
+        }
+
+        // Default jika tab tidak dikenali
+        return `<div class="p-10 text-center text-red-500 font-bold">Error: Tab '${tab}' tidak ditemukan.</div>`;
+    },
 
         if(tab === 'ttv') {
             return `${searchInput}<div class="flex justify-between items-center mb-4 mt-2"><h4 class="font-bold text-brand-800">DATA TTV</h4><button onclick="app.modalTTV('${p.id}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold">+ INPUT</button></div><div class="overflow-x-auto rounded-xl border border-slate-200"><table class="w-full text-xs text-left"><thead class="bg-slate-50"><tr><th class="p-3">Waktu</th><th>TD</th><th>Nadi/RR</th><th>TB/BB</th><th>GDS</th><th class="text-right p-3">Aksi</th></tr></thead><tbody class="divide-y">${(p.ttv||[]).map((t,i)=>`<tr class="hover:bg-slate-50 search-row"><td class="p-3">${t.time}</td><td class="p-3 font-bold">${t.td}</td><td class="p-3">${t.nadi}/${t.rr}</td><td class="p-3">${t.tb}/${t.bb}</td><td class="p-3">${t.gds}</td><td class="p-3 text-right"><button onclick="app.modalTTV('${p.id}',${i})" class="text-blue-500 mr-2"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('ttv',${i})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`;
@@ -721,66 +799,185 @@ const app = {
     
     // 1. INPUT STOK OBAT + DOSIS HARIAN (Untuk Otomatisasi Estimasi Habis)
     modalStock(id, index=null) {
-        const p=this.data.patients.find(x=>x.id===id); const s=index!==null?p.medicine.stock[index]:null;
-        const today = new Date().toISOString().split('T')[0];
+        const p = this.data.patients.find(x => x.id === id);
+        const s = index !== null ? p.medicine.stock[index] : null;
         
         this.openModal(`
-            <h3 class="font-bold mb-3 text-center text-brand-700">INPUT OBAT MASUK</h3>
-            <div class="mb-3">
-                <label class="text-[10px] font-bold text-slate-500 uppercase">Jenis / Nama Obat</label>
-                <input id="s_name" class="input-modern" value="${s?.name||''}" placeholder="Contoh: Paracetamol">
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-3">
+            <h3 class="font-bold text-center mb-4 text-brand-700">KELOLA STOK OBAT</h3>
+            
+            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Nama Obat</label>
+            <input id="s_name" class="input-modern mb-2" placeholder="Nama Obat (Cth: Risperidone)" value="${s?.name||''}">
+            
+            <div class="grid grid-cols-2 gap-2 mb-2">
                 <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase">Jumlah Masuk</label>
-                    <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Jumlah (Qty)</label>
+                    <input id="s_init" type="number" class="input-modern" placeholder="0" value="${s?.init||''}">
                 </div>
                 <div>
-                     <label class="text-[10px] font-bold text-slate-500 uppercase">Tgl Masuk</label>
-                    <input id="s_date_in" type="date" class="input-modern" value="${s?.date_in || today}">
+                     <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Tgl Masuk (Opname)</label>
+                     <input id="s_date_in" type="date" class="input-modern" value="${s?.date_in || new Date().toISOString().split('T')[0]}">
                 </div>
             </div>
-            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                <label class="text-[10px] font-bold text-blue-800 uppercase"><i class="fas fa-calculator mr-1"></i> Dosis per Hari (Wajib)</label>
-                <p class="text-[9px] text-blue-600 mb-1">Digunakan untuk menghitung otomatis tanggal habis.</p>
-                <input id="s_daily" type="number" class="input-modern border-blue-200" value="${s?.daily_dose || ''}" placeholder="Contoh: 3 (3x sehari)">
+
+            <div class="mb-6">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Tanggal Invoice / Faktur</label>
+                <input id="s_invoice" type="date" class="input-modern" value="${s?.invoice_date || ''}">
+                <p class="text-[10px] text-slate-400 ml-1">*Kosongkan jika tidak ada faktur baru</p>
             </div>
-            <button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-brand-700">SIMPAN STOK</button>
+
+            <button onclick="app.saveStock('${id}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow hover:bg-brand-700 transition">
+                <i class="fas fa-save mr-2"></i> SIMPAN DATA
+            </button>
         `);
     },
     saveStock(id, index) {
-        const p=this.data.patients.find(x=>x.id===id); if(!p.medicine) p.medicine={stock:[],logs:[]};
+        const p = this.data.patients.find(x => x.id === id);
+        const name = document.getElementById('s_name').value;
+        const init = parseInt(document.getElementById('s_init').value);
+        const date_in = document.getElementById('s_date_in').value;
         
-        // Simpan nilai 'used' lama jika mode edit, atau 0 jika baru
-        const prevUsed = index !== null ? p.medicine.stock[index].used : 0;
-        
-        const data={
-            name:document.getElementById('s_name').value, 
-            init:Number(document.getElementById('s_init').value), 
-            used: prevUsed, 
-            date_in: document.getElementById('s_date_in').value,
-            daily_dose: Number(document.getElementById('s_daily').value)
+        // AMBIL DATA INVOICE
+        const invoice_date = document.getElementById('s_invoice').value;
+
+        if (!name || isNaN(init)) return Swal.fire('Error', 'Nama dan Jumlah Obat wajib diisi!', 'error');
+
+        // Pertahankan data 'used' (terpakai) jika sedang edit
+        const currentUsed = index !== null ? (p.medicine.stock[index].used || 0) : 0;
+
+        const data = {
+            name,
+            init,
+            date_in,
+            invoice_date, // Simpan tanggal invoice
+            used: currentUsed
         };
 
-        if(!data.name || !data.init) return Swal.fire('Error', 'Nama dan Jumlah wajib diisi', 'error');
-        
-        if(index!==null) p.medicine.stock[index]=data; else p.medicine.stock.push(data);
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
+        if(!p.medicine) p.medicine = {stock:[], logs:[]};
+        if(!p.medicine.stock) p.medicine.stock = [];
+
+        if (index !== null) {
+            p.medicine.stock[index] = data; // Update
+        } else {
+            p.medicine.stock.push(data); // Baru
+        }
+
+        this.closeModal();
+        this.saveDB();
+        this.renderPatientDetail();
+        Swal.fire('Tersimpan', 'Data stok berhasil diperbarui.', 'success');
+    },
+    // 2. FITUR CATAT (RECORD) TERHUBUNG KE STOK
+    modalUseMed(id, index) {
+        const p = this.data.patients.find(x => x.id === id);
+        const s = p.medicine.stock[index];
+
+        // Hitung sisa stok secara real-time
+        // Menggunakan (s.used || 0) untuk antisipasi data lama yang belum punya field 'used'
+        const sisa = parseInt(s.init) - (parseInt(s.used) || 0);
+
+        // VALIDASI: Jika stok habis, hentikan proses dan beri peringatan
+        if (sisa <= 0) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Stok Habis!',
+                text: `Obat ${s.name} sudah tidak tersedia (0). Harap input stok baru.`,
+                confirmButtonColor: '#ef4444'
+            });
+        }
+
+        // TAMPILKAN MODAL
+        this.openModal(`
+            <div class="text-center mb-6">
+                <div class="bg-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 animate-pulse">
+                    <i class="fas fa-pills text-3xl text-emerald-600"></i>
+                </div>
+                <h3 class="font-black text-xl text-slate-700 uppercase">Konfirmasi Minum</h3>
+                <p class="text-sm text-slate-500">Catat pengurangan stok obat harian</p>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mb-5 shadow-sm">
+                <h4 class="font-bold text-lg text-emerald-800 text-center mb-1">${s.name}</h4>
+                <div class="flex justify-center items-baseline gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Sisa Stok:</span>
+                    <span class="text-3xl font-black text-emerald-600">${sisa}</span>
+                </div>
+            </div>
+
+            <form onsubmit="event.preventDefault(); app.saveUseMed('${id}', ${index})">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Nama Petugas (PJ) <span class="text-red-500">*</span></label>
+                        <input id="u_pj" class="input-modern w-full" placeholder="Ketik nama Anda..." required autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Waktu / Catatan (Opsional)</label>
+                        <input id="u_note" class="input-modern w-full" placeholder="Cth: Pagi / Siang / Malam">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all transform active:scale-95 mt-6 flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> KONFIRMASI (KURANGI 1)
+                </button>
+            </form>
+        `);
+
+        // UX: Otomatis arahkan kursor mengetik ke kolom PJ
+        setTimeout(() => {
+            const el = document.getElementById('u_pj');
+            if(el) el.focus();
+        }, 100);
     },
 
-    // 2. FITUR CATAT (RECORD) TERHUBUNG KE STOK
-    modalUseMed(id, idx) {
+    // 2. LOGIKA PENYIMPANAN DATA
+    saveUseMed(id, index) {
+        // Ambil nilai dari form
+        const pj = document.getElementById('u_pj').value;
+        const note = document.getElementById('u_note').value;
+        
+        // Validasi input kosong
+        if(!pj.trim()) return Swal.fire('Gagal', 'Nama Petugas wajib diisi!', 'warning');
+
         const p = this.data.patients.find(x => x.id === id);
-        const medName = p.medicine.stock[idx].name;
-        this.openModal(`
-            <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
-            <p class="text-center text-sm mb-4 text-brand-600 font-bold bg-brand-50 py-2 rounded border border-brand-100">${medName}</p>
-            <input id="u_pj" class="input-modern mb-2" placeholder="Nama PJ (Perawat/Staff)" autofocus>
-            <textarea id="u_note" class="input-modern mb-4 h-20" placeholder="Catatan (Misal: Diminum setelah makan)"></textarea>
-            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
-        `);
-        setTimeout(() => document.getElementById('u_pj').focus(), 100);
+        const s = p.medicine.stock[index];
+
+        // Validasi Stok (Double Check sebelum simpan)
+        const currentSisa = parseInt(s.init) - (parseInt(s.used) || 0);
+        if (currentSisa <= 0) {
+            return Swal.fire('Error', 'Gagal menyimpan. Stok obat sudah habis!', 'error');
+        }
+
+        // --- PROSES UTAMA ---
+        // 1. Tambah jumlah terpakai (used)
+        s.used = (parseInt(s.used) || 0) + 1;
+
+        // 2. Buat objek Log
+        const newLog = {
+            time: new Date().toLocaleString('id-ID'), // Format waktu lokal
+            name: s.name,
+            pj: pj,
+            note: note || '-'
+        };
+
+        // 3. Masukkan ke riwayat (unshift = paling atas)
+        if(!p.medicine.logs) p.medicine.logs = [];
+        p.medicine.logs.unshift(newLog);
+
+        // --- SIMPAN & REFRESH ---
+        this.closeModal();       // Tutup modal
+        this.saveDB();           // Simpan ke database
+        this.renderPatientDetail(); // Refresh tampilan tabel
+
+        // Notifikasi Sukses Kecil
+        Swal.fire({
+            icon: 'success',
+            title: 'Tercatat!',
+            text: `Stok ${s.name} berkurang 1.`,
+            timer: 1500,
+            showConfirmButton: false,
+            backdrop: `rgba(0,0,0,0.4)`
+        });
     },
+  
     execUseMed(id, idx) {
         const pj = document.getElementById('u_pj').value;
         const note = document.getElementById('u_note').value;
