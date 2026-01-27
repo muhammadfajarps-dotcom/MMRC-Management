@@ -13,9 +13,15 @@ const firebaseConfig = {
   measurementId: "G-4218HRWRTC"
 };
 
-if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+// Initialize Firebase safely
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = typeof firebase !== 'undefined' ? firebase.database() : null;
 
+// ============================================================
+// MAIN APPLICATION LOGIC (OPTIMIZED V14.0)
+// ============================================================
 const app = {
     data: { patients: [] },
     activePatientId: null,
@@ -23,31 +29,44 @@ const app = {
     currentCategory: 'rehab', // 'detox' or 'rehab'
     signaturePad: null,
     chartInstance: null,
+    saveTimeout: null,
 
     init() {
-        console.log("MMRC System V13.0 - Optimized Menu & Export");
+        console.log("MMRC System V14.0 - Optimized & Stable");
+        // this.loadDB(); // Uncomment if auto-load is needed on startup
     },
 
+    // --- DATABASE OPTIMIZATION ---
     saveDB() {
-        try {
-            localStorage.setItem('MMRC_DATA_V13', JSON.stringify(this.data));
-            if(db) db.ref('mmrc_data').set(this.data);
-        } catch(e) { console.error("Save failed", e); }
+        // Debounce save to prevent flooding database on rapid edits
+        if (this.saveTimeout) clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            try {
+                localStorage.setItem('MMRC_DATA_V14', JSON.stringify(this.data));
+                if(db) db.ref('mmrc_data').set(this.data);
+            } catch(e) { console.error("Save failed:", e); }
+        }, 500);
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V13');
+        const local = localStorage.getItem('MMRC_DATA_V14');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
         if(db) {
             db.ref('mmrc_data').on('value', snap => {
-                if(snap.val() && document.getElementById('modal-container').classList.contains('hidden')) {
-                    this.data = snap.val();
+                const val = snap.val();
+                // Only update if modal is closed to prevent input interruption
+                if(val && document.getElementById('modal-container').classList.contains('hidden')) {
+                    this.data = val;
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V13', JSON.stringify(this.data));
-                    if(this.activePatientId) this.renderPatientDetail();
-                    else this.renderDashboard();
+                    localStorage.setItem('MMRC_DATA_V14', JSON.stringify(this.data));
+                    
+                    // Smooth Refresh
+                    requestAnimationFrame(() => {
+                        if(this.activePatientId) this.renderPatientDetail();
+                        else this.renderDashboard();
+                    });
                 }
             });
         }
@@ -181,7 +200,7 @@ const app = {
     },
 
     // ============================================================
-    // 3. PATIENT DETAIL (REORDERED TABS & FEATURES)
+    // 3. PATIENT DETAIL (OPTIMIZED TABS & UI)
     // ============================================================
     renderPatientDetail() {
         const p = this.data.patients.find(x => x.id === this.activePatientId);
@@ -212,7 +231,6 @@ const app = {
 
         const container = document.getElementById('main-content');
         
-        // --- 1. REORDERED TABS AS REQUESTED ---
         let tabs = [];
         if (this.currentCategory === 'detox') {
             tabs = [
@@ -226,8 +244,7 @@ const app = {
                 {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'}
             ];
         } else {
-            // URUTAN SESUAI PERMINTAAN:
-            // Biodata -> Program -> Assessment -> Rencana Terapi -> Visit Dokter -> Medicine -> TTV -> Terminasi
+            // ORDERED AS REQUESTED
             tabs = [
                 {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
                 {id: 'program', icon: 'fa-list-check', label: 'Program'},
@@ -237,7 +254,6 @@ const app = {
                 {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
                 {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
                 {id: 'terminasi', icon: 'fa-flag-checkered', label: 'Terminasi'}, 
-                // Sisa menu
                 {id: 'counseling', icon: 'fa-comments', label: 'Konseling'},
                 {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'},
                 {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'}
@@ -347,7 +363,6 @@ const app = {
         }
 
         if(tab === 'crisis') {
-            // --- UPDATED CRISIS VIEW WITH EDIT BUTTON ---
             return `<div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full"><div><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-brand-800">DATA HARIAN (BPSS)</h4><button onclick="app.modalCrisis('${p.id}')" class="bg-brand-600 text-white px-3 py-1 rounded text-xs font-bold">+ INPUT SKOR</button></div><div class="h-64 border rounded-xl p-2 bg-slate-50"><canvas id="crisisChart"></canvas></div></div><div><h4 class="font-bold text-brand-800 mb-4">LOG SKOR</h4><div class="border rounded-xl bg-white overflow-hidden max-h-80 overflow-y-auto"><table class="w-full text-xs"><thead class="bg-slate-50"><tr><th class="p-2 text-left">Hari</th><th>Detail (B-P-S-Sp)</th><th>Total</th><th class="text-right p-2">Aksi</th></tr></thead><tbody>${(p.crisis?.bpss||[]).map((b,i)=>`<tr class="border-b search-row hover:bg-slate-50"><td class="p-2 text-xs font-bold">Hari-${i+1}</td><td class="p-2 text-xs"><span class="text-blue-600">B:${b.bio}</span> <span class="text-purple-600">P:${b.psy}</span> <span class="text-orange-600">S:${b.soc}</span> <span class="text-green-600">Sp:${b.spi}</span></td><td class="p-2 font-black text-center text-brand-700">${b.total}</td><td class="text-right p-2 flex justify-end gap-2"><button onclick="app.modalCrisis('${p.id}',${i})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('crisis.bpss',${i})" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div></div>`;
         }
 
@@ -363,7 +378,7 @@ const app = {
     },
 
     // ============================================================
-    // MODALS & SAVING LOGIC
+    // MODALS & SAVING LOGIC (Optimized)
     // ============================================================
 
     modalPatient(id = null) {
@@ -418,6 +433,7 @@ const app = {
         else this.data.patients.push(newP);
         
         this.closeModal(); this.saveDB();
+        
         if(!id) this.renderPatientList(this.currentCategory); else this.renderPatientDetail();
     },
 
@@ -498,7 +514,6 @@ const app = {
         });
     },
 
-    // 3. GENERIC MODALS
     modalSign(id, arrName, index = null) {
         const p = this.data.patients.find(x=>x.id===id);
         const arr = p[arrName] || [];
@@ -591,8 +606,6 @@ const app = {
         if(i!==null) p.ttv[i]=d; else p.ttv.unshift(d);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
-    
-    // --- UPDATED CRISIS MODAL (EDIT SUPPORT) ---
     modalCrisis(id, i=null) {
         const b = i!==null ? this.data.patients.find(x=>x.id===id).crisis.bpss[i] : null;
         this.openModal(`<h3 class="font-bold text-center mb-2">${i!==null?'EDIT':'INPUT'} BPSS</h3><div class="grid grid-cols-2 gap-2"><input id="c_bio" type="number" class="input-modern" placeholder="Bio" value="${b?.bio||''}"><input id="c_psy" type="number" class="input-modern" placeholder="Psy" value="${b?.psy||''}"><input id="c_soc" type="number" class="input-modern" placeholder="Soc" value="${b?.soc||''}"><input id="c_spi" type="number" class="input-modern" placeholder="Spi" value="${b?.spi||''}"><button onclick="app.saveCrisis('${id}',${i})" class="col-span-2 bg-brand-600 text-white py-2 rounded">SIMPAN</button></div>`);
@@ -605,6 +618,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
+    // UTILS
     renderChart(p) {
         const ctx = document.getElementById('crisisChart'); if(!ctx || !p.crisis?.bpss?.length) return;
         const last = p.crisis.bpss[p.crisis.bpss.length-1];
@@ -624,177 +638,199 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderPatientList(this.currentCategory);}})},
 
     // ============================================================
-    // 4. POWERFUL EXPORT LOGIC (WORD & EXCEL)
+    // 4. POWERFUL EXPORT LOGIC (OPTIMIZED & SAFE)
     // ============================================================
     async exportToWord(id) {
-        const p = this.data.patients.find(x=>x.id===id);
-        const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun, WidthType, BorderStyle } = docx;
-        
-        const b64Blob = (b64) => { try{ return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) }catch(e){return null} };
-        
-        // Helper: Create Section with Note, Photo, Sign
-        const createDetailSection = (title, dataArr) => {
-            const rows = [
-                new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })
-            ];
-            
-            if(!dataArr || dataArr.length === 0) {
-                rows.push(new Paragraph({text: "(Data Kosong)", italic: true}));
-                return rows;
+        try {
+            const p = this.data.patients.find(x=>x.id===id);
+            if (!p) throw new Error("Data pasien tidak ditemukan");
+
+            // Ensure Docx library is loaded
+            if (typeof docx === 'undefined') {
+                throw new Error("Library Word belum termuat. Coba refresh halaman.");
             }
 
-            dataArr.forEach(item => {
-                const itemChildren = [
-                    new Paragraph({ text: `Waktu: ${item.time} | PJ: ${item.pj}`, bold: true }),
-                    new Paragraph({ text: item.note, spacing:{after:100} })
+            const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun, WidthType, BorderStyle } = docx;
+            
+            const b64Blob = (b64) => { 
+                try {
+                    if (!b64 || !b64.includes('base64,')) return null;
+                    return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) 
+                } catch(e) { return null } 
+            };
+            
+            // Helper: Create Section with Note, Photo, Sign
+            const createDetailSection = (title, dataArr) => {
+                const rows = [
+                    new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })
                 ];
-
-                if(item.photo) {
-                    const imgData = b64Blob(item.photo);
-                    if(imgData) itemChildren.push(new Paragraph({children:[new ImageRun({data:imgData, transformation:{width:150, height:100}})]}));
-                }
-
-                if(item.sign) {
-                    const signData = b64Blob(item.sign);
-                    if(signData) {
-                         itemChildren.push(new Paragraph({text: "Tanda Tangan:", size: 16}));
-                         itemChildren.push(new Paragraph({children:[new ImageRun({data:signData, transformation:{width:100, height:50}})]}));
-                    }
-                }
                 
-                // Add separator
-                itemChildren.push(new Paragraph({ text: "__________________________________________________________________________________", color: "CCCCCC" }));
-                rows.push(...itemChildren);
+                if(!dataArr || dataArr.length === 0) {
+                    rows.push(new Paragraph({text: "(Data Kosong)", italic: true}));
+                    return rows;
+                }
+
+                dataArr.forEach(item => {
+                    const itemChildren = [
+                        new Paragraph({ text: `Waktu: ${item.time} | PJ: ${item.pj}`, bold: true }),
+                        new Paragraph({ text: item.note, spacing:{after:100} })
+                    ];
+
+                    if(item.photo) {
+                        const imgData = b64Blob(item.photo);
+                        if(imgData) itemChildren.push(new Paragraph({children:[new ImageRun({data:imgData, transformation:{width:150, height:100}})]}));
+                    }
+
+                    if(item.sign) {
+                        const signData = b64Blob(item.sign);
+                        if(signData) {
+                             itemChildren.push(new Paragraph({text: "Tanda Tangan:", size: 16}));
+                             itemChildren.push(new Paragraph({children:[new ImageRun({data:signData, transformation:{width:100, height:50}})]}));
+                        }
+                    }
+                    
+                    itemChildren.push(new Paragraph({ text: "__________________________________________________________________________________", color: "CCCCCC" }));
+                    rows.push(...itemChildren);
+                });
+                return rows;
+            };
+
+            const children = [];
+
+            // --- I. BIODATA & PROGRAM ---
+            children.push(new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }));
+            children.push(new Paragraph({ text: `Dicetak pada: ${new Date().toLocaleString()}`, alignment: "center", spacing:{after:300} }));
+            
+            children.push(new Paragraph({ text: "I. IDENTITAS & PROGRAM", heading: HeadingLevel.HEADING_2 }));
+            children.push(new Paragraph(`Nama Lengkap: ${p.reg.name}`));
+            children.push(new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`));
+            children.push(new Paragraph(`Status: ${p.reg.status || '-'} | Pekerjaan: ${p.reg.job || '-'}`));
+            children.push(new Paragraph(`Penanggung Jawab: ${p.reg.guardian || '-'}`));
+            children.push(new Paragraph(`Program Saat Ini: ${p.program?.name || 'Belum Ada'} (${p.program?.days || 0} Hari)`));
+            children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
+            children.push(new Paragraph({text:""}));
+            
+            // --- II. MEDICINE TABLE ---
+            children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
+            const medRows = [
+                new TableRow({ children: [
+                    new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })
+                ]})
+            ];
+            (p.medicine?.logs || []).forEach(l => {
+                medRows.push(new TableRow({ children: [
+                     new TableCell({ children: [new Paragraph(l.time)] }),
+                     new TableCell({ children: [new Paragraph(l.name)] }),
+                     new TableCell({ children: [new Paragraph(l.pj)] }),
+                ]}));
             });
-            return rows;
-        };
+            children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+            
+            // --- III. TTV & GDS TABLE ---
+            children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
+            const ttvRows = [
+                new TableRow({ children: [
+                    new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })
+                ]})
+            ];
+            (p.ttv || []).forEach(t => {
+                ttvRows.push(new TableRow({ children: [
+                     new TableCell({ children: [new Paragraph(t.time)] }),
+                     new TableCell({ children: [new Paragraph(t.td)] }),
+                     new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }),
+                     new TableCell({ children: [new Paragraph(t.gds)] }),
+                ]}));
+            });
+            children.push(new Table({ rows: ttvRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
 
-        const children = [];
+            // --- IV. BPSS SCORE TABLE ---
+            children.push(new Paragraph({ text: "IV. SKOR BPSS (CRISIS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
+            const bpssRows = [
+                new TableRow({ children: [
+                    new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }),
+                    new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })
+                ]})
+            ];
+            (p.crisis?.bpss || []).forEach((b, i) => {
+                bpssRows.push(new TableRow({ children: [
+                     new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }),
+                     new TableCell({ children: [new Paragraph(String(b.bio))] }),
+                     new TableCell({ children: [new Paragraph(String(b.psy))] }),
+                     new TableCell({ children: [new Paragraph(String(b.soc))] }),
+                     new TableCell({ children: [new Paragraph(String(b.spi))] }),
+                     new TableCell({ children: [new Paragraph(String(b.total))] }),
+                ]}));
+            });
+            children.push(new Table({ rows: bpssRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
 
-        // --- I. BIODATA & PROGRAM ---
-        children.push(new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }));
-        children.push(new Paragraph({ text: `Dicetak pada: ${new Date().toLocaleString()}`, alignment: "center", spacing:{after:300} }));
-        
-        children.push(new Paragraph({ text: "I. IDENTITAS & PROGRAM", heading: HeadingLevel.HEADING_2 }));
-        children.push(new Paragraph(`Nama Lengkap: ${p.reg.name}`));
-        children.push(new Paragraph(`TTL: ${p.reg.ttl} | Usia: ${p.reg.age} Th`));
-        children.push(new Paragraph(`Status: ${p.reg.status} | Pekerjaan: ${p.reg.job}`));
-        children.push(new Paragraph(`Penanggung Jawab: ${p.reg.guardian}`));
-        children.push(new Paragraph(`Program Saat Ini: ${p.program?.name || 'Belum Ada'} (${p.program?.days || 0} Hari)`));
-        children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
-        children.push(new Paragraph({text:""}));
-        
-        // --- II. MEDICINE TABLE ---
-        children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
-        const medRows = [
-            new TableRow({ children: [
-                new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })
-            ]})
-        ];
-        (p.medicine?.logs || []).forEach(l => {
-            medRows.push(new TableRow({ children: [
-                 new TableCell({ children: [new Paragraph(l.time)] }),
-                 new TableCell({ children: [new Paragraph(l.name)] }),
-                 new TableCell({ children: [new Paragraph(l.pj)] }),
-            ]}));
-        });
-        children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-        
-        // --- III. TTV & GDS TABLE ---
-        children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-        const ttvRows = [
-            new TableRow({ children: [
-                new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })
-            ]})
-        ];
-        (p.ttv || []).forEach(t => {
-            ttvRows.push(new TableRow({ children: [
-                 new TableCell({ children: [new Paragraph(t.time)] }),
-                 new TableCell({ children: [new Paragraph(t.td)] }),
-                 new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }),
-                 new TableCell({ children: [new Paragraph(t.gds)] }),
-            ]}));
-        });
-        children.push(new Table({ rows: ttvRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+            // --- V - X. DETAILED SECTIONS WITH PHOTOS & SIGNS ---
+            children.push(...createDetailSection("V. ASSESSMENT", p.assessment));
+            children.push(...createDetailSection("VI. RENCANA TERAPI", p.plan_therapy));
+            children.push(...createDetailSection("VII. VISIT DOKTER", p.visits));
+            children.push(...createDetailSection("VIII. KONSELING", p.counseling));
+            children.push(...createDetailSection("IX. PROGRES HARIAN", p.daily_progress));
+            children.push(...createDetailSection("X. TERMINASI", p.termination));
 
-        // --- IV. BPSS SCORE TABLE ---
-        children.push(new Paragraph({ text: "IV. SKOR BPSS (CRISIS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-        const bpssRows = [
-            new TableRow({ children: [
-                new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }),
-                new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })
-            ]})
-        ];
-        (p.crisis?.bpss || []).forEach((b, i) => {
-            bpssRows.push(new TableRow({ children: [
-                 new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }),
-                 new TableCell({ children: [new Paragraph(String(b.bio))] }),
-                 new TableCell({ children: [new Paragraph(String(b.psy))] }),
-                 new TableCell({ children: [new Paragraph(String(b.soc))] }),
-                 new TableCell({ children: [new Paragraph(String(b.spi))] }),
-                 new TableCell({ children: [new Paragraph(String(b.total))] }),
-            ]}));
-        });
-        children.push(new Table({ rows: bpssRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-
-        // --- V - X. DETAILED SECTIONS WITH PHOTOS & SIGNS ---
-        children.push(...createDetailSection("V. ASSESSMENT", p.assessment));
-        children.push(...createDetailSection("VI. RENCANA TERAPI", p.plan_therapy));
-        children.push(...createDetailSection("VII. VISIT DOKTER", p.visits));
-        children.push(...createDetailSection("VIII. KONSELING", p.counseling));
-        children.push(...createDetailSection("IX. PROGRES HARIAN", p.daily_progress));
-        children.push(...createDetailSection("X. TERMINASI", p.termination));
-
-        const doc = new Document({ sections: [{ children }] });
-        const blob = await Packer.toBlob(doc);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = `Laporan_Lengkap_${p.reg.name}.docx`; a.click();
+            const doc = new Document({ sections: [{ children }] });
+            const blob = await Packer.toBlob(doc);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `Laporan_Lengkap_${p.reg.name}.docx`; a.click();
+        } catch (err) {
+            Swal.fire("Error Export", "Gagal membuat dokumen Word. Pastikan data lengkap.", "error");
+            console.error(err);
+        }
     },
 
     exportToExcel(id) {
-        const p = this.data.patients.find(x=>x.id===id);
-        const wb = XLSX.utils.book_new();
-        
-        // 1. Biodata & Program
-        const bio = [{ 
-            Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, 
-            Program: p.program?.name, StartDate: p.program?.startDate,
-            Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription 
-        }];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
+        try {
+            const p = this.data.patients.find(x=>x.id===id);
+            if (!p) throw new Error("Pasien tidak ditemukan");
 
-        // 2. Medicine
-        const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
+            const wb = XLSX.utils.book_new();
+            
+            // 1. Biodata & Program
+            const bio = [{ 
+                Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, 
+                Program: p.program?.name, StartDate: p.program?.startDate,
+                Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription 
+            }];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
 
-        // 3. TTV
-        const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
+            // 2. Medicine
+            const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
 
-        // 4. BPSS
-        const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
+            // 3. TTV
+            const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
 
-        // 5. Detailed Logs (Combined or Separated) - Separated for clarity
-        const mapLog = (arr) => (arr||[]).map(x=>({Waktu:x.time, PJ:x.pj, Catatan:x.note, AdaFoto:x.photo?'Ya':'Tidak', AdaTTD:x.sign?'Ya':'Tidak'}));
-        
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.assessment)), "Assessment");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.plan_therapy)), "Rencana_Terapi");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.visits)), "Visit_Dokter");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.counseling)), "Konseling");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.daily_progress)), "Progres_Harian");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.termination)), "Terminasi");
+            // 4. BPSS
+            const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
 
-        XLSX.writeFile(wb, `Laporan_Lengkap_${p.reg.name}.xlsx`);
+            // 5. Detailed Logs (Combined or Separated) - Separated for clarity
+            const mapLog = (arr) => (arr||[]).map(x=>({Waktu:x.time, PJ:x.pj, Catatan:x.note, AdaFoto:x.photo?'Ya':'Tidak', AdaTTD:x.sign?'Ya':'Tidak'}));
+            
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.assessment)), "Assessment");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.plan_therapy)), "Rencana_Terapi");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.visits)), "Visit_Dokter");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.counseling)), "Konseling");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.daily_progress)), "Progres_Harian");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.termination)), "Terminasi");
+
+            XLSX.writeFile(wb, `Laporan_Lengkap_${p.reg.name}.xlsx`);
+        } catch (err) {
+            Swal.fire("Error Export", "Gagal membuat Excel. Silakan coba lagi.", "error");
+        }
     }
 };
 
