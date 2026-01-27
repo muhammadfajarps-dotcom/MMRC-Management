@@ -163,44 +163,80 @@ const app = {
     },
 
     renderPatientList(category) {
-        this.currentCategory = category; 
+        this.currentCategory = category;
         this.activePatientId = null;
         this.saveState('list');
+
+        // Atur Judul Halaman
         const title = category === 'detox' ? "UNIT STABILISASI (DETOX)" : "UNIT REHABILITASI";
         const themeColor = category === 'detox' ? 'text-rose-600' : 'text-brand-600';
+        
         document.getElementById('page-title').innerHTML = `<span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / <span class="${themeColor}">${title}</span>`;
+        
+        // Atur Header Action
         document.getElementById('header-actions').innerHTML = `
             <button onclick="app.renderDashboard()" class="mr-2 bg-slate-200 text-slate-600 w-8 h-8 rounded-full hover:bg-slate-300 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
             <input id="dash-search" onkeyup="app.searchDashboard()" placeholder="Cari Pasien..." class="bg-slate-100 rounded-full px-4 py-2 text-xs font-bold w-48 md:w-64 outline-none focus:ring-2 ring-brand-100">
             <button onclick="app.modalPatient()" class="bg-brand-600 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-brand-700 shadow flex items-center gap-2"><i class="fas fa-plus"></i> PASIEN BARU</button>
         `;
+
+        // --- LOGIKA PEMINDAHAN OTOMATIS (FILTER) ---
         const filteredPatients = this.data.patients.filter(p => {
-            const prog = (p.program?.name || '').toLowerCase();
-            if(category === 'detox') return prog.includes('detox');
-            else return !prog.includes('detox');
+            const progName = (p.program?.name || '').toLowerCase();
+            const isProgramDetox = progName.includes('detox');
+            
+            // Hitung hari berjalan
+            let dayRunning = 0;
+            if (p.program?.startDate) {
+                const start = new Date(p.program.startDate);
+                const now = new Date();
+                const diffTime = Math.abs(now - start);
+                dayRunning = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            }
+
+            if (category === 'detox') {
+                // Tampil di DETOX jika: Programnya Detox DAN Masih <= 7 Hari
+                return isProgramDetox && dayRunning <= 7;
+            } else {
+                // Tampil di REHAB jika: Program BUKAN Detox ATAU (Program Detox TAPI Sudah > 7 Hari)
+                return !isProgramDetox || (isProgramDetox && dayRunning > 7);
+            }
         });
+        // ---------------------------------------------
+
         const container = document.getElementById('main-content');
         if(!filteredPatients.length) {
             container.innerHTML = `<div class="text-center mt-20 text-slate-400"><i class="fas fa-folder-open text-4xl mb-4 opacity-30"></i><p>Belum ada pasien di unit ini.</p></div>`;
             return;
         }
+
         const grid = document.createElement('div');
         grid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in";
+
         filteredPatients.forEach(p => {
             const card = document.createElement('div');
+            
+            // Hitung Hari untuk Label
+            let diff = 0;
+            if(p.program?.startDate) {
+                 diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+            }
+
+            // Visual: Jika pasien Detox nyasar ke Rehab karena sudah > 7 hari, beri warna peringatan
             let stripeColor = category === 'detox' ? 'bg-rose-500' : 'bg-brand-600';
             let progLabel = p.program?.name || 'Belum Set Program';
-            let statusBadge = '';
-            if(p.program?.startDate && p.program?.days) {
-                const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
-                progLabel += ` (Hari ${diff}/${p.program.days})`;
-                if(category === 'detox' && diff >= 7) {
-                    stripeColor = 'bg-emerald-500';
-                    statusBadge = `<div class="mt-2 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded inline-block border border-emerald-200 shadow-sm animate-pulse">✅ SIAP TRANSISI KE REHAB</div>`;
-                }
+            
+            // Jika dia pasien Detox tapi muncul di Rehab (karena lewat 7 hari)
+            if (category === 'rehab' && (p.program?.name || '').toLowerCase().includes('detox')) {
+                stripeColor = 'bg-yellow-500'; // Warna Kuning (Pindahan)
+                progLabel = `SELESAI DETOX (Hari ke-${diff})`;
+            } else {
+                if(p.program?.days) progLabel += ` (Hari ${diff}/${p.program.days})`;
             }
+
             card.className = "bg-white p-5 rounded-3xl border border-slate-100 card-hover cursor-pointer search-item relative overflow-hidden group";
             card.onclick = (e) => { if(!e.target.closest('button')) app.openPatient(p.id); };
+            
             card.innerHTML = `
                 <div class="absolute top-0 left-0 w-2 h-full ${stripeColor}"></div>
                 <div class="flex items-center gap-4 mb-4 pl-4">
@@ -208,16 +244,15 @@ const app = {
                     <div>
                         <h3 class="font-extrabold text-slate-800 text-lg leading-tight">${p.reg.name}</h3>
                         <p class="text-xs text-slate-500 font-semibold">${p.reg.age} Th • ${progLabel}</p>
-                        ${statusBadge}
                     </div>
                 </div>
                 <div class="pl-4 border-t pt-3 flex justify-end gap-2">
                     <button onclick="app.modalPatient('${p.id}')" class="px-3 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-bold"><i class="fas fa-pen"></i></button>
                     <button onclick="app.deletePatient('${p.id}')" class="px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-bold"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
+                </div>`;
             grid.appendChild(card);
         });
+
         container.innerHTML = '';
         container.appendChild(grid);
     },
@@ -487,35 +522,81 @@ const app = {
     async savePatient(id) {
         const get = (id) => document.getElementById(id).value;
         const pOld = id ? this.data.patients.find(x => x.id === id) : null;
+        
         let photo = pOld?.reg.photo || 'https://via.placeholder.com/150';
         const file = document.getElementById('p_photo').files[0];
         if(file) photo = await this.toBase64(file);
 
+        // --- LOGIKA KHUSUS DETOX ---
+        // Jika pasien baru (id kosong) DAN sedang di menu 'detox'
+        // Kita paksa set programnya jadi Detox 7 Hari mulai HARI INI.
+        let defaultProgram = pOld?.program || {};
+        
+        if (!id && this.currentCategory === 'detox') {
+            defaultProgram = {
+                name: 'Stabilisasi (Detox)', // Nama mengandung kata 'Detox'
+                days: 7,                     // Durasi 7 Hari
+                startDate: new Date().toISOString().split('T')[0], // Tanggal Hari Ini
+                desc: 'Program otomatis 7 hari.'
+            };
+        }
+        // ---------------------------
+
         const newP = {
             id: id || 'P-' + Date.now(),
-            reg: { name: get('p_name'), age: get('p_age'), ttl: get('p_ttl'), status: get('p_status'), history: get('p_history'), job: get('p_job'), guardian: get('p_guard'), addr: pOld?.reg.addr||'-', photo, timestamp: pOld?.reg.timestamp || new Date().toLocaleString() },
-            diagnosis: { dr_name: get('m_dr'), plan: get('m_plan'), prescription: get('p_prescription') },
-            checklist: { urine: document.getElementById('chk_urine').checked, urine_note: get('note_urine'), fix: document.getElementById('chk_fix').checked, fix_note: get('note_fix'), inj: document.getElementById('chk_inj').checked, inj_note: get('note_inj') },
+            reg: {
+                name: get('p_name'),
+                age: get('p_age'),
+                ttl: get('p_ttl'),
+                status: get('p_status'),
+                history: get('p_history'),
+                job: get('p_job'),
+                guardian: get('p_guard'),
+                addr: '-', // Default
+                photo,
+                timestamp: pOld?.reg.timestamp || new Date().toLocaleString()
+            },
+            diagnosis: {
+                dr_name: get('m_dr'),
+                plan: get('m_plan'),
+                prescription: get('p_prescription')
+            },
+            checklist: {
+                urine: document.getElementById('chk_urine').checked,
+                urine_note: get('note_urine'),
+                fix: document.getElementById('chk_fix').checked,
+                fix_note: get('note_fix'),
+                inj: document.getElementById('chk_inj').checked,
+                inj_note: get('note_inj')
+            },
+            
+            program: defaultProgram, // Menggunakan logika detox diatas
+            
+            // Pertahankan data lama jika ada
             medicine: pOld?.medicine || {stock:[], logs:[]},
             ttv: pOld?.ttv || [],
             visits: pOld?.visits || [],
-            crisis: pOld?.crisis || { bpss: [] },
-            program: pOld?.program || {},
             counseling: pOld?.counseling || [],
             daily_progress: pOld?.daily_progress || [],
-            screening: pOld?.screening || [], 
-            conclusi: pOld?.conclusi || [], 
-            assessment: pOld?.assessment || [], 
-            plan_therapy: pOld?.plan_therapy || [], 
-            termination: pOld?.termination || [] 
+            screening: pOld?.screening || [],
+            conclusi: pOld?.conclusi || [],
+            assessment: pOld?.assessment || [],
+            plan_therapy: pOld?.plan_therapy || [],
+            termination: pOld?.termination || []
         };
+
+        if(id) {
+            const idx = this.data.patients.findIndex(x=>x.id===id);
+            this.data.patients[idx] = newP;
+        } else {
+            this.data.patients.push(newP);
+        }
+
+        this.closeModal();
+        this.saveDB();
         
-        if(id) this.data.patients[this.data.patients.findIndex(x=>x.id===id)] = newP;
-        else this.data.patients.push(newP);
-        
-        this.closeModal(); this.saveDB();
-        
-        if(!id) this.renderPatientList(this.currentCategory); else this.renderPatientDetail();
+        // Render ulang agar pasien langsung muncul
+        this.renderPatientList(this.currentCategory);
     },
 
     modalProgram(id, isSync = false) {
