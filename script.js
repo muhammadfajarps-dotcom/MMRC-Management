@@ -1,5 +1,5 @@
 // ============================================================
-// CONFIGURATION
+// CONFIGURATION (MMRC V15.2 - MEDICINE SYNC OPTIMIZED)
 // ============================================================
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -19,7 +19,7 @@ if (typeof firebase !== 'undefined' && !firebase.apps.length) {
 const db = typeof firebase !== 'undefined' ? firebase.database() : null;
 
 // ============================================================
-// MAIN APPLICATION LOGIC (V15.1 - MEDICINE SYNC FIXED)
+// MAIN APPLICATION LOGIC
 // ============================================================
 const app = {
     data: { patients: [] },
@@ -32,7 +32,7 @@ const app = {
     isRestoring: false,
 
     init() {
-        console.log("MMRC System V15.1 - Medicine Sync Active");
+        console.log("MMRC System V15.2 - Medicine Sync Optimized");
         this.checkSession();
     },
 
@@ -351,7 +351,7 @@ const app = {
                     <td class="py-2 font-bold">${l.name}</td>
                     <td class="py-2">${l.pj}</td>
                     <td class="text-right pr-2 flex justify-end gap-2">
-                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded"><i class="fas fa-pen"></i></button>
+                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded" title="Edit Log"><i class="fas fa-pen"></i></button>
                         <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-500 hover:bg-red-50 p-1 rounded" title="Hapus & Kembalikan Stok"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>`).join('');
@@ -603,16 +603,18 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 1. FITUR CATAT (RECORD)
+    // 1. FITUR CATAT (RECORD) - OPTIMIZED
     modalUseMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         const medName = p.medicine.stock[idx].name;
         this.openModal(`
             <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
             <p class="text-center text-sm mb-4 text-brand-600 font-bold">${medName}</p>
-            <input id="u_pj" class="input-modern mb-4" placeholder="Nama PJ (Perawat/Staff)">
-            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-2 rounded-xl font-bold hover:bg-emerald-700">CATAT & KURANGI STOK</button>
+            <input id="u_pj" class="input-modern mb-4" placeholder="Nama PJ (Perawat/Staff)" autofocus>
+            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-2 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
         `);
+        // Fokus otomatis ke input PJ
+        setTimeout(() => document.getElementById('u_pj').focus(), 100);
     },
     execUseMed(id, idx) {
         const pj = document.getElementById('u_pj').value;
@@ -659,7 +661,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 3. FITUR HAPUS & SYNC STOK (PENTING)
+    // 3. FITUR HAPUS & SYNC STOK (LOGIC INTI)
     deleteMedLog(id, i) {
         Swal.fire({
             title: 'Hapus Log?',
