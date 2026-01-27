@@ -1,16 +1,14 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
   authDomain: "mmrc-stock1999.firebaseapp.com",
-  databaseURL: "https://mmrc-stock1999-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "mmrc-stock1999",
   storageBucket: "mmrc-stock1999.firebasestorage.app",
   messagingSenderId: "486588564272",
-  appId: "1:486588564272:web:308b276a53401a738ebef5",
-  measurementId: "G-4218HRWRTC"
+  appId: "1:486588564272:web:b0e06dcef08ab7618ebef5",
+  measurementId: "G-WJJQRYDYPF"
 };
 
 if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -25,18 +23,18 @@ const app = {
     chartInstance: null,
 
     init() {
-        console.log("MMRC System V12.0 - Auto Synchronization");
+        console.log("MMRC System V13.0 - Optimized Menu & Export");
     },
 
     saveDB() {
         try {
-            localStorage.setItem('MMRC_DATA_V12', JSON.stringify(this.data));
+            localStorage.setItem('MMRC_DATA_V13', JSON.stringify(this.data));
             if(db) db.ref('mmrc_data').set(this.data);
         } catch(e) { console.error("Save failed", e); }
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V12');
+        const local = localStorage.getItem('MMRC_DATA_V13');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
@@ -45,7 +43,7 @@ const app = {
                 if(snap.val() && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = snap.val();
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V12', JSON.stringify(this.data));
+                    localStorage.setItem('MMRC_DATA_V13', JSON.stringify(this.data));
                     if(this.activePatientId) this.renderPatientDetail();
                     else this.renderDashboard();
                 }
@@ -103,7 +101,7 @@ const app = {
     },
 
     // ============================================================
-    // 2. PATIENT LIST (FOLDER VIEW) - UPDATED FOR SYNC VISUALS
+    // 2. PATIENT LIST
     // ============================================================
     renderPatientList(category) {
         this.currentCategory = category; 
@@ -141,14 +139,12 @@ const app = {
             let progLabel = p.program?.name || 'Belum Set Program';
             let statusBadge = '';
             
-            // LOGIKA OTOMATISASI & STATUS
             if(p.program?.startDate && p.program?.days) {
                 const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
                 progLabel += ` (Hari ${diff}/${p.program.days})`;
 
-                // Cek jika DETOX SELESAI
                 if(category === 'detox' && diff >= 7) {
-                    stripeColor = 'bg-emerald-500'; // Berubah Hijau/Emas
+                    stripeColor = 'bg-emerald-500';
                     statusBadge = `<div class="mt-2 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded inline-block border border-emerald-200 shadow-sm animate-pulse">✅ SIAP TRANSISI KE REHAB</div>`;
                 }
             }
@@ -183,7 +179,7 @@ const app = {
     },
 
     // ============================================================
-    // 3. PATIENT DETAIL (AUTO SYNC BUTTON)
+    // 3. PATIENT DETAIL (REORDERED TABS & FEATURES)
     // ============================================================
     renderPatientDetail() {
         const p = this.data.patients.find(x => x.id === this.activePatientId);
@@ -192,12 +188,9 @@ const app = {
         document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
         
         let customActions = '';
-        
-        // LOGIKA TOMBOL SINKRONISASI OTOMATIS
         if(this.currentCategory === 'detox' && p.program?.startDate) {
             const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
             if(diff >= 7) {
-                // Munculkan tombol Sync jika sudah > 7 hari
                 customActions = `
                     <button onclick="app.modalProgram('${p.id}', true)" class="bg-gradient-to-r from-emerald-500 to-emerald-700 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg hover:shadow-emerald-200 hover:-translate-y-1 transition flex items-center gap-2 animate-bounce">
                         <i class="fas fa-sync-alt"></i> SINKRONISASI KE REHABILITASI
@@ -217,32 +210,35 @@ const app = {
 
         const container = document.getElementById('main-content');
         
-        // TABULASI MENU (SESUAI PERMINTAAN)
+        // --- 1. REORDERED TABS AS REQUESTED ---
         let tabs = [];
         if (this.currentCategory === 'detox') {
             tabs = [
                 {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
+                {id: 'program', icon: 'fa-list-check', label: 'Program'},
                 {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
                 {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
-                {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'},
                 {id: 'screening', icon: 'fa-search', label: 'Screening'}, 
                 {id: 'conclusi', icon: 'fa-clipboard-check', label: 'Conclusi'}, 
                 {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'},
-                {id: 'program', icon: 'fa-list-check', label: 'Program'}
+                {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'}
             ];
         } else {
+            // URUTAN SESUAI PERMINTAAN:
+            // Biodata -> Program -> Assessment -> Rencana Terapi -> Visit Dokter -> Medicine -> TTV -> Terminasi
             tabs = [
                 {id: 'biodata', icon: 'fa-id-card', label: 'Biodata'},
-                {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
-                {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
-                {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'},
-                {id: 'visit', icon: 'fa-user-md', label: 'Visit Dokter'},
-                {id: 'counseling', icon: 'fa-comments', label: 'Konseling'},
+                {id: 'program', icon: 'fa-list-check', label: 'Program'},
                 {id: 'assessment', icon: 'fa-file-medical-alt', label: 'Assessment'}, 
                 {id: 'plan', icon: 'fa-notes-medical', label: 'Rencana Terapi'}, 
+                {id: 'visit', icon: 'fa-user-md', label: 'Visit Dokter'},
+                {id: 'medicine', icon: 'fa-pills', label: 'Medicine'},
+                {id: 'ttv', icon: 'fa-stethoscope', label: 'TTV & GDS'},
                 {id: 'terminasi', icon: 'fa-flag-checkered', label: 'Terminasi'}, 
-                {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'},
-                {id: 'program', icon: 'fa-list-check', label: 'Program'}
+                // Sisa menu
+                {id: 'counseling', icon: 'fa-comments', label: 'Konseling'},
+                {id: 'daily', icon: 'fa-calendar-check', label: 'Progres Harian'},
+                {id: 'crisis', icon: 'fa-chart-pie', label: 'Crisis (BPSS)'}
             ];
         }
 
@@ -328,7 +324,6 @@ const app = {
             return `${searchInput}<div class="flex justify-between items-center mb-4 mt-2"><h4 class="font-bold text-brand-800">DATA TTV</h4><button onclick="app.modalTTV('${p.id}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold">+ INPUT</button></div><div class="overflow-x-auto rounded-xl border border-slate-200"><table class="w-full text-xs text-left"><thead class="bg-slate-50"><tr><th class="p-3">Waktu</th><th>TD</th><th>Nadi/RR</th><th>TB/BB</th><th>GDS</th><th class="text-right p-3">Aksi</th></tr></thead><tbody class="divide-y">${(p.ttv||[]).map((t,i)=>`<tr class="hover:bg-slate-50 search-row"><td class="p-3">${t.time}</td><td class="p-3 font-bold">${t.td}</td><td class="p-3">${t.nadi}/${t.rr}</td><td class="p-3">${t.tb}/${t.bb}</td><td class="p-3">${t.gds}</td><td class="p-3 text-right"><button onclick="app.modalTTV('${p.id}',${i})" class="text-blue-500 mr-2"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('ttv',${i})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div>`;
         }
 
-        // --- GENERAL NOTES (PJ + NOTE + SIGN) ---
         const signedTabs = ['visit', 'counseling', 'daily', 'assessment', 'plan', 'terminasi'];
         if(signedTabs.includes(tab)) {
             let dataArr, typeLabel, arrName;
@@ -339,10 +334,9 @@ const app = {
             else if(tab==='plan') { dataArr=p.plan_therapy; typeLabel="RENCANA TERAPI"; arrName='plan_therapy'; }
             else if(tab==='terminasi') { dataArr=p.termination; typeLabel="TERMINASI"; arrName='termination'; }
             
-            return `${searchInput}<div class="flex justify-between items-center mb-6 mt-2"><h4 class="font-bold text-brand-800">${typeLabel}</h4><button onclick="app.modalSign('${p.id}', '${arrName}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold">+ INPUT BARU</button></div><div class="grid grid-cols-1 gap-4">${(dataArr||[]).map((v, i) => `<div class="border rounded-2xl p-4 flex flex-col md:flex-row gap-4 hover:shadow-md transition bg-slate-50 search-row"><div class="flex-1"><div class="flex justify-between items-start"><h5 class="font-bold text-brand-800 text-sm">${v.time} <span class="text-slate-400 font-normal">| PJ: ${v.pj||'-'}</span></h5><div class="flex gap-2"><button onclick="app.modalSign('${p.id}', '${arrName}', ${i})" class="text-blue-500"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('${arrName}', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button></div></div><p class="text-xs text-slate-600 mt-2 italic bg-white p-2 rounded border border-slate-100">"${v.note}"</p><div class="mt-2 flex items-center justify-between"><span class="text-[9px] text-slate-400 font-bold uppercase">Signature:</span><img src="${v.sign}" class="h-6 opacity-70"></div></div></div>`).join('')}</div>`;
+            return `${searchInput}<div class="flex justify-between items-center mb-6 mt-2"><h4 class="font-bold text-brand-800">${typeLabel}</h4><button onclick="app.modalSign('${p.id}', '${arrName}')" class="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold">+ INPUT BARU</button></div><div class="grid grid-cols-1 gap-4">${(dataArr||[]).map((v, i) => `<div class="border rounded-2xl p-4 flex flex-col md:flex-row gap-4 hover:shadow-md transition bg-slate-50 search-row"><div class="flex-1"><div class="flex justify-between items-start"><h5 class="font-bold text-brand-800 text-sm">${v.time} <span class="text-slate-400 font-normal">| PJ: ${v.pj||'-'}</span></h5><div class="flex gap-2"><button onclick="app.modalSign('${p.id}', '${arrName}', ${i})" class="text-blue-500"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('${arrName}', ${i})" class="text-red-500"><i class="fas fa-trash"></i></button></div></div><p class="text-xs text-slate-600 mt-2 italic bg-white p-2 rounded border border-slate-100">"${v.note}"</p><div class="mt-2 flex items-center justify-between"><span class="text-[9px] text-slate-400 font-bold uppercase">Signature:</span><img src="${v.sign}" class="h-6 opacity-70"></div></div>${v.photo ? `<div class="w-full md:w-32 h-32 flex-shrink-0"><img src="${v.photo}" class="w-full h-full object-cover rounded-xl border cursor-pointer" onclick="Swal.fire({imageUrl: '${v.photo}', showConfirmButton:false})"></div>` : ''}</div>`).join('')}</div>`;
         }
 
-        // --- SIMPLE NOTES (PJ + NOTE ONLY) ---
         if(tab === 'screening' || tab === 'conclusi') {
             let dataArr = tab==='screening' ? p.screening : p.conclusi;
             let label = tab==='screening' ? 'SCREENING' : 'CONCLUSI';
@@ -351,7 +345,8 @@ const app = {
         }
 
         if(tab === 'crisis') {
-            return `<div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full"><div><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-brand-800">DATA HARIAN (BPSS)</h4><button onclick="app.modalCrisis('${p.id}')" class="bg-brand-600 text-white px-3 py-1 rounded text-xs font-bold">+ INPUT SKOR</button></div><div class="h-64 border rounded-xl p-2 bg-slate-50"><canvas id="crisisChart"></canvas></div></div><div><h4 class="font-bold text-brand-800 mb-4">LOG SKOR</h4><div class="border rounded-xl bg-white overflow-hidden max-h-80 overflow-y-auto"><table class="w-full text-xs"><thead class="bg-slate-50"><tr><th class="p-2 text-left">Hari</th><th>Detail (B-P-S-Sp)</th><th>Total</th><th class="text-right p-2">Aksi</th></tr></thead><tbody>${(p.crisis?.bpss||[]).map((b,i)=>`<tr class="border-b search-row hover:bg-slate-50"><td class="p-2 text-xs font-bold">Hari-${i+1}</td><td class="p-2 text-xs"><span class="text-blue-600">B:${b.bio}</span> <span class="text-purple-600">P:${b.psy}</span> <span class="text-orange-600">S:${b.soc}</span> <span class="text-green-600">Sp:${b.spi}</span></td><td class="p-2 font-black text-center text-brand-700">${b.total}</td><td class="text-right p-2"><button onclick="app.delSubItem('crisis.bpss',${i})" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div></div>`;
+            // --- UPDATED CRISIS VIEW WITH EDIT BUTTON ---
+            return `<div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full"><div><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-brand-800">DATA HARIAN (BPSS)</h4><button onclick="app.modalCrisis('${p.id}')" class="bg-brand-600 text-white px-3 py-1 rounded text-xs font-bold">+ INPUT SKOR</button></div><div class="h-64 border rounded-xl p-2 bg-slate-50"><canvas id="crisisChart"></canvas></div></div><div><h4 class="font-bold text-brand-800 mb-4">LOG SKOR</h4><div class="border rounded-xl bg-white overflow-hidden max-h-80 overflow-y-auto"><table class="w-full text-xs"><thead class="bg-slate-50"><tr><th class="p-2 text-left">Hari</th><th>Detail (B-P-S-Sp)</th><th>Total</th><th class="text-right p-2">Aksi</th></tr></thead><tbody>${(p.crisis?.bpss||[]).map((b,i)=>`<tr class="border-b search-row hover:bg-slate-50"><td class="p-2 text-xs font-bold">Hari-${i+1}</td><td class="p-2 text-xs"><span class="text-blue-600">B:${b.bio}</span> <span class="text-purple-600">P:${b.psy}</span> <span class="text-orange-600">S:${b.soc}</span> <span class="text-green-600">Sp:${b.spi}</span></td><td class="p-2 font-black text-center text-brand-700">${b.total}</td><td class="text-right p-2 flex justify-end gap-2"><button onclick="app.modalCrisis('${p.id}',${i})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pen"></i></button><button onclick="app.delSubItem('crisis.bpss',${i})" class="text-red-400"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div></div>`;
         }
 
         if(tab === 'program') {
@@ -424,13 +419,10 @@ const app = {
         if(!id) this.renderPatientList(this.currentCategory); else this.renderPatientDetail();
     },
 
-    // 2. MODAL PROGRAM (RESTRICTION LOGIC + SYNC TRIGGER)
-    // `isSync` param added to force open for synchronization
     modalProgram(id, isSync = false) {
         const p = this.data.patients.find(x => x.id === id);
         const prog = p.program || {};
         
-        // --- LOGIKA FILTER OPS PROGRAM (Point 5 & 6) ---
         let options = `<option value="">Pilih Paket...</option>`;
         if(this.currentCategory === 'detox') {
             options += `<option value="Detox 7 Hari|7|Fokus detoksifikasi fisik." ${prog.name==='Detox 7 Hari'?'selected':''}>Detox 7 Hari</option>`;
@@ -445,7 +437,6 @@ const app = {
             `;
         }
 
-        // If Syncing (Moving from Detox -> Rehab), force Rehab options
         if(isSync) {
             options = `
                 <option value="Recovery 14 Hari|14|Program awal pemulihan.">Recovery 14 Hari</option>
@@ -481,19 +472,13 @@ const app = {
 
         const p = this.data.patients.find(x => x.id === id);
         
-        // === RESTRICTION LOGIC (Point 7) ===
-        // Tidak bisa ganti ke Rehab jika masa Detox belum habis
         if(this.currentCategory === 'rehab' || (this.currentCategory==='detox' && !val[0].includes('Detox'))) {
             if(p.program?.name && p.program.name.includes('Detox') && p.program.startDate) {
                 const detoxStart = new Date(p.program.startDate);
                 const detoxEnd = new Date(detoxStart);
                 detoxEnd.setDate(detoxStart.getDate() + 7);
                 
-                // Allow if current date > detoxEnd
                 if(new Date() < detoxEnd) {
-                    // Cek lagi: Apakah kita sedang melakukan Sync (tombol khusus) atau edit manual?
-                    // Karena kita pakai fungsi yang sama, kita bisa cek logic: 
-                    // Jika user pilih paket rehab TAPI tanggal belum lewat -> Block.
                     return Swal.fire({
                         title: 'AKSES DITOLAK',
                         text: `Masa Detox (7 Hari) belum selesai! Pasien baru bisa masuk program Rehabilitasi setelah tanggal ${detoxEnd.toLocaleDateString('id-ID')}.`,
@@ -505,9 +490,7 @@ const app = {
 
         p.program = { name: val[0], days: parseInt(val[1]), desc: val[2], startDate: startDate };
         this.closeModal(); this.saveDB(); 
-        // Jika program berubah kategori, user harus kembali ke list atau dashboard
         Swal.fire({icon:'success', title:'Program Diperbarui', timer:1000, showConfirmButton:false}).then(() => {
-             // Smart Redirect: Jika paket Detox -> Stay in Detox. Jika Rehab -> Go Rehab.
              const isNowDetox = val[0].includes('Detox');
              app.renderPatientList(isNowDetox ? 'detox' : 'rehab');
         });
@@ -606,9 +589,11 @@ const app = {
         if(i!==null) p.ttv[i]=d; else p.ttv.unshift(d);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
+    
+    // --- UPDATED CRISIS MODAL (EDIT SUPPORT) ---
     modalCrisis(id, i=null) {
         const b = i!==null ? this.data.patients.find(x=>x.id===id).crisis.bpss[i] : null;
-        this.openModal(`<div class="grid grid-cols-2 gap-2"><input id="c_bio" type="number" class="input-modern" placeholder="Bio" value="${b?.bio||''}"><input id="c_psy" type="number" class="input-modern" placeholder="Psy" value="${b?.psy||''}"><input id="c_soc" type="number" class="input-modern" placeholder="Soc" value="${b?.soc||''}"><input id="c_spi" type="number" class="input-modern" placeholder="Spi" value="${b?.spi||''}"><button onclick="app.saveCrisis('${id}',${i})" class="col-span-2 bg-brand-600 text-white py-2 rounded">SIMPAN</button></div>`);
+        this.openModal(`<h3 class="font-bold text-center mb-2">${i!==null?'EDIT':'INPUT'} BPSS</h3><div class="grid grid-cols-2 gap-2"><input id="c_bio" type="number" class="input-modern" placeholder="Bio" value="${b?.bio||''}"><input id="c_psy" type="number" class="input-modern" placeholder="Psy" value="${b?.psy||''}"><input id="c_soc" type="number" class="input-modern" placeholder="Soc" value="${b?.soc||''}"><input id="c_spi" type="number" class="input-modern" placeholder="Spi" value="${b?.spi||''}"><button onclick="app.saveCrisis('${id}',${i})" class="col-span-2 bg-brand-600 text-white py-2 rounded">SIMPAN</button></div>`);
     },
     saveCrisis(id, i) {
         const p=this.data.patients.find(x=>x.id===id); if(!p.crisis) p.crisis={bpss:[]};
@@ -637,85 +622,177 @@ const app = {
     deletePatient(id) { Swal.fire({title:'Hapus?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{if(r.isConfirmed){this.data.patients=this.data.patients.filter(x=>x.id!==id); this.saveDB(); this.renderPatientList(this.currentCategory);}})},
 
     // ============================================================
-    // EXPORT LOGIC
+    // 4. POWERFUL EXPORT LOGIC (WORD & EXCEL)
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x=>x.id===id);
-        const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun } = docx;
+        const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun, WidthType, BorderStyle } = docx;
+        
         const b64Blob = (b64) => { try{ return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) }catch(e){return null} };
-        const addImg = (b64, w=100, h=100) => { const d=b64Blob(b64); if(d) children.push(new Paragraph({children:[new ImageRun({data:d, transformation:{width:w, height:h}})]})); };
+        
+        // Helper: Create Section with Note, Photo, Sign
+        const createDetailSection = (title, dataArr) => {
+            const rows = [
+                new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })
+            ];
+            
+            if(!dataArr || dataArr.length === 0) {
+                rows.push(new Paragraph({text: "(Data Kosong)", italic: true}));
+                return rows;
+            }
 
-        let progInfo = p.program?.name ? `${p.program.name} - Mulai: ${p.program.startDate}` : "Belum Ada Program";
-        const children = [
-            new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }),
-            new Paragraph({ text: `Dicetak: ${new Date().toLocaleString()}`, alignment: "center" }),
-            new Paragraph({ text: "I. BIODATA PRIBADI", heading: HeadingLevel.HEADING_2 }),
-            new Paragraph(`Nama: ${p.reg.name} | ID: ${p.id}`),
-            new Paragraph(`Program: ${progInfo}`),
-            new Paragraph(`Diagnosa: ${p.diagnosis.plan}`),
-            new Paragraph({ text: "Resep Dokter:", bold: true }),
-            new Paragraph(p.diagnosis.prescription || '-'),
-            new Paragraph({ text: "" }),
-        ];
+            dataArr.forEach(item => {
+                const itemChildren = [
+                    new Paragraph({ text: `Waktu: ${item.time} | PJ: ${item.pj}`, bold: true }),
+                    new Paragraph({ text: item.note, spacing:{after:100} })
+                ];
 
-        children.push(new Paragraph({ text: "II. LOG OBAT & TTV", heading: HeadingLevel.HEADING_2 }));
-        (p.medicine?.logs||[]).forEach(l=>children.push(new Paragraph(`${l.time} - ${l.name} (${l.pj})`)));
-        (p.ttv||[]).forEach(t=>children.push(new Paragraph(`${t.time} - TD:${t.td} GDS:${t.gds}`)));
+                if(item.photo) {
+                    const imgData = b64Blob(item.photo);
+                    if(imgData) itemChildren.push(new Paragraph({children:[new ImageRun({data:imgData, transformation:{width:150, height:100}})]}));
+                }
 
-        const addSec = (title, arr) => {
-            children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2 }));
-            (arr||[]).forEach(v => {
-                children.push(new Paragraph({text:`${v.time} (PJ: ${v.pj})`, bold:true}));
-                children.push(new Paragraph(v.note));
-                if(v.sign) { children.push(new Paragraph("TTD:")); addImg(v.sign, 80, 40); }
-                children.push(new Paragraph("---"));
+                if(item.sign) {
+                    const signData = b64Blob(item.sign);
+                    if(signData) {
+                         itemChildren.push(new Paragraph({text: "Tanda Tangan:", size: 16}));
+                         itemChildren.push(new Paragraph({children:[new ImageRun({data:signData, transformation:{width:100, height:50}})]}));
+                    }
+                }
+                
+                // Add separator
+                itemChildren.push(new Paragraph({ text: "__________________________________________________________________________________", color: "CCCCCC" }));
+                rows.push(...itemChildren);
             });
+            return rows;
         };
 
-        // Export data harus mencakup SEMUA data (Detox & Rehab)
-        addSec("III. SCREENING (DETOX)", p.screening);
-        addSec("IV. CONCLUSI (DETOX)", p.conclusi);
-        addSec("V. ASSESSMENT (REHAB)", p.assessment);
-        addSec("VI. RENCANA TERAPI (REHAB)", p.plan_therapy);
-        addSec("VII. TERMINASI (REHAB)", p.termination);
-        addSec("VIII. VISIT DOKTER", p.visits);
-        addSec("IX. KONSELING", p.counseling);
-        addSec("X. PROGRES HARIAN", p.daily_progress);
+        const children = [];
+
+        // --- I. BIODATA & PROGRAM ---
+        children.push(new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }));
+        children.push(new Paragraph({ text: `Dicetak pada: ${new Date().toLocaleString()}`, alignment: "center", spacing:{after:300} }));
+        
+        children.push(new Paragraph({ text: "I. IDENTITAS & PROGRAM", heading: HeadingLevel.HEADING_2 }));
+        children.push(new Paragraph(`Nama Lengkap: ${p.reg.name}`));
+        children.push(new Paragraph(`TTL: ${p.reg.ttl} | Usia: ${p.reg.age} Th`));
+        children.push(new Paragraph(`Status: ${p.reg.status} | Pekerjaan: ${p.reg.job}`));
+        children.push(new Paragraph(`Penanggung Jawab: ${p.reg.guardian}`));
+        children.push(new Paragraph(`Program Saat Ini: ${p.program?.name || 'Belum Ada'} (${p.program?.days || 0} Hari)`));
+        children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
+        children.push(new Paragraph({text:""}));
+        
+        // --- II. MEDICINE TABLE ---
+        children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
+        const medRows = [
+            new TableRow({ children: [
+                new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })
+            ]})
+        ];
+        (p.medicine?.logs || []).forEach(l => {
+            medRows.push(new TableRow({ children: [
+                 new TableCell({ children: [new Paragraph(l.time)] }),
+                 new TableCell({ children: [new Paragraph(l.name)] }),
+                 new TableCell({ children: [new Paragraph(l.pj)] }),
+            ]}));
+        });
+        children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+        
+        // --- III. TTV & GDS TABLE ---
+        children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
+        const ttvRows = [
+            new TableRow({ children: [
+                new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })
+            ]})
+        ];
+        (p.ttv || []).forEach(t => {
+            ttvRows.push(new TableRow({ children: [
+                 new TableCell({ children: [new Paragraph(t.time)] }),
+                 new TableCell({ children: [new Paragraph(t.td)] }),
+                 new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }),
+                 new TableCell({ children: [new Paragraph(t.gds)] }),
+            ]}));
+        });
+        children.push(new Table({ rows: ttvRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+
+        // --- IV. BPSS SCORE TABLE ---
+        children.push(new Paragraph({ text: "IV. SKOR BPSS (CRISIS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
+        const bpssRows = [
+            new TableRow({ children: [
+                new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }),
+                new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })
+            ]})
+        ];
+        (p.crisis?.bpss || []).forEach((b, i) => {
+            bpssRows.push(new TableRow({ children: [
+                 new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }),
+                 new TableCell({ children: [new Paragraph(String(b.bio))] }),
+                 new TableCell({ children: [new Paragraph(String(b.psy))] }),
+                 new TableCell({ children: [new Paragraph(String(b.soc))] }),
+                 new TableCell({ children: [new Paragraph(String(b.spi))] }),
+                 new TableCell({ children: [new Paragraph(String(b.total))] }),
+            ]}));
+        });
+        children.push(new Table({ rows: bpssRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+
+        // --- V - X. DETAILED SECTIONS WITH PHOTOS & SIGNS ---
+        children.push(...createDetailSection("V. ASSESSMENT", p.assessment));
+        children.push(...createDetailSection("VI. RENCANA TERAPI", p.plan_therapy));
+        children.push(...createDetailSection("VII. VISIT DOKTER", p.visits));
+        children.push(...createDetailSection("VIII. KONSELING", p.counseling));
+        children.push(...createDetailSection("IX. PROGRES HARIAN", p.daily_progress));
+        children.push(...createDetailSection("X. TERMINASI", p.termination));
 
         const doc = new Document({ sections: [{ children }] });
         const blob = await Packer.toBlob(doc);
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = `RekamMedis_${p.reg.name}.docx`; a.click();
+        const a = document.createElement("a"); a.href = url; a.download = `Laporan_Lengkap_${p.reg.name}.docx`; a.click();
     },
 
     exportToExcel(id) {
         const p = this.data.patients.find(x=>x.id===id);
         const wb = XLSX.utils.book_new();
-        const bio = [{ Nama: p.reg.name, Program: p.program?.name, Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription }];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata");
+        
+        // 1. Biodata & Program
+        const bio = [{ 
+            Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, 
+            Program: p.program?.name, StartDate: p.program?.startDate,
+            Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription 
+        }];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
 
+        // 2. Medicine
         const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Obat");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
 
-        const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, GDS:t.gds}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV");
+        // 3. TTV
+        const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
 
-        const logs = [
-            ...(p.screening||[]).map(x=>({...x, Tipe:'Screening'})), 
-            ...(p.conclusi||[]).map(x=>({...x, Tipe:'Conclusi'})),
-            ...(p.assessment||[]).map(x=>({...x, Tipe:'Assessment'})), 
-            ...(p.plan_therapy||[]).map(x=>({...x, Tipe:'Plan'})),
-            ...(p.termination||[]).map(x=>({...x, Tipe:'Terminasi'})),
-            ...(p.visits||[]).map(x=>({...x, Tipe:'Visit'})), 
-            ...(p.counseling||[]).map(x=>({...x, Tipe:'Konseling'})),
-            ...(p.daily_progress||[]).map(x=>({...x, Tipe:'Daily'}))
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logs.map(l=>({Tipe:l.Tipe, Waktu:l.time, PJ:l.pj, Note:l.note}))), "Log_Lengkap");
+        // 4. BPSS
+        const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
 
-        const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Total:b.total}));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "BPSS");
+        // 5. Detailed Logs (Combined or Separated) - Separated for clarity
+        const mapLog = (arr) => (arr||[]).map(x=>({Waktu:x.time, PJ:x.pj, Catatan:x.note, AdaFoto:x.photo?'Ya':'Tidak', AdaTTD:x.sign?'Ya':'Tidak'}));
+        
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.assessment)), "Assessment");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.plan_therapy)), "Rencana_Terapi");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.visits)), "Visit_Dokter");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.counseling)), "Konseling");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.daily_progress)), "Progres_Harian");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.termination)), "Terminasi");
 
-        XLSX.writeFile(wb, `Data_${p.reg.name}.xlsx`);
+        XLSX.writeFile(wb, `Laporan_Lengkap_${p.reg.name}.xlsx`);
     }
 };
 
