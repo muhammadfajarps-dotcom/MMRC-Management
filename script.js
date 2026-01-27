@@ -1,5 +1,5 @@
 // ============================================================
-// CONFIGURATION (MMRC V15.4 - LOG NOTE & CLEAN UI)
+// CONFIGURATION (MMRC V17.0 - MEDICINE AUTOMATION FINAL)
 // ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAyC3ZPW1XOciNwaJHOhkwSY8vFY1BRlz8",
@@ -30,11 +30,12 @@ const app = {
     isRestoring: false,
 
     init() {
-        console.log("MMRC System V15.4 - Final Log Optimization");
+        console.log("MMRC System V17.0 - Ready");
         this.checkSession();
     },
 
-    // --- SESSION & SECURITY ---
+    // --- 4. FITUR LOGIN ULANG SAAT KELUAR (STRICT SESSION) ---
+    // Menggunakan sessionStorage: Data hilang saat tab/browser ditutup.
     checkSession() {
         const session = sessionStorage.getItem('MMRC_SESSION');
         if (session === 'LOGGED_IN') {
@@ -43,6 +44,7 @@ const app = {
             this.isRestoring = true;
             this.loadDB();
         } else {
+            // Jika tidak ada session (baru buka/tutup browser), wajib login
             document.getElementById('auth-layer').classList.remove('hidden');
             document.getElementById('app-layer').classList.add('hidden');
         }
@@ -52,7 +54,7 @@ const app = {
         const u = document.getElementById('login-user').value;
         const p = document.getElementById('login-pass').value;
         if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-            sessionStorage.setItem('MMRC_SESSION', 'LOGGED_IN');
+            sessionStorage.setItem('MMRC_SESSION', 'LOGGED_IN'); // Set session aktif
             document.getElementById('auth-layer').classList.add('hidden');
             document.getElementById('app-layer').classList.remove('hidden');
             this.loadDB();
@@ -61,19 +63,14 @@ const app = {
     },
 
     logout() {
-        sessionStorage.removeItem('MMRC_SESSION');
+        sessionStorage.removeItem('MMRC_SESSION'); // Hapus session
         localStorage.removeItem('MMRC_LAST_STATE');
         location.reload();
     },
 
-    // --- STATE & DB HANDLING ---
+    // --- STATE & DB ---
     saveState(viewType, detailId = null) {
-        const state = {
-            view: viewType,
-            category: this.currentCategory,
-            id: detailId,
-            tab: this.activeTab
-        };
+        const state = { view: viewType, category: this.currentCategory, id: detailId, tab: this.activeTab };
         localStorage.setItem('MMRC_LAST_STATE', JSON.stringify(state));
     },
 
@@ -82,24 +79,16 @@ const app = {
         if (lastState && this.data.patients.length > 0) {
             const state = JSON.parse(lastState);
             this.currentCategory = state.category || 'rehab';
-            
             if (state.view === 'detail' && state.id) {
                 const exists = this.data.patients.find(p => p.id === state.id);
                 if (exists) {
                     this.activePatientId = state.id;
                     this.activeTab = state.tab || 'biodata';
                     this.renderPatientDetail();
-                } else {
-                    this.renderPatientList(this.currentCategory);
-                }
-            } else if (state.view === 'list') {
-                this.renderPatientList(this.currentCategory);
-            } else {
-                this.renderDashboard();
-            }
-        } else {
-            this.renderDashboard();
-        }
+                } else this.renderPatientList(this.currentCategory);
+            } else if (state.view === 'list') this.renderPatientList(this.currentCategory);
+            else this.renderDashboard();
+        } else this.renderDashboard();
         this.isRestoring = false;
     },
 
@@ -107,14 +96,14 @@ const app = {
         if (this.saveTimeout) clearTimeout(this.saveTimeout);
         this.saveTimeout = setTimeout(() => {
             try {
-                localStorage.setItem('MMRC_DATA_V15', JSON.stringify(this.data));
+                localStorage.setItem('MMRC_DATA_V17', JSON.stringify(this.data));
                 if(db) db.ref('mmrc_data').set(this.data);
             } catch(e) { console.error("Save failed:", e); }
         }, 500);
     },
 
     loadDB() {
-        const local = localStorage.getItem('MMRC_DATA_V15');
+        const local = localStorage.getItem('MMRC_DATA_V17');
         if(local) try { this.data = JSON.parse(local); } catch(e){}
         if(!this.data.patients) this.data.patients = [];
 
@@ -126,8 +115,7 @@ const app = {
                 if(val && document.getElementById('modal-container').classList.contains('hidden')) {
                     this.data = val;
                     if(!this.data.patients) this.data.patients = [];
-                    localStorage.setItem('MMRC_DATA_V15', JSON.stringify(this.data));
-                    
+                    localStorage.setItem('MMRC_DATA_V17', JSON.stringify(this.data));
                     if (!this.isRestoring) {
                         if(this.activePatientId) this.renderPatientDetail();
                         else if(document.getElementById('page-title').innerText.includes('DASHBOARD')) this.renderDashboard();
@@ -333,72 +321,101 @@ const app = {
             `;
         }
 
-        // --- FITUR MEDICINE (UPDATED V15.4) ---
+        // --- 1. MEDICINE FINAL OVERHAUL (V17.0) ---
+        // Dibagi 2 Menu: STOK OBAT & CATATAN PENGGUNAAN
+        // Otomatisasi Estimasi Habis + Link Hapus Log ke Stok
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
                 const isLow = sisa < 7;
                 
-                // KALKULASI ESTIMASI HABIS
-                let estInfo = '<span class="text-[9px] text-slate-400">Set Tgl Masuk & Dosis utk Estimasi</span>';
+                // 3. Otomatisasi Estimasi Habis (Tgl Masuk + (Jumlah / Dosis))
+                let estInfo = '<span class="text-[9px] text-slate-400 italic">Set Dosis per Hari</span>';
                 if(s.date_in && s.daily_dose && s.daily_dose > 0) {
                     const dateInObj = new Date(s.date_in);
                     const daysToEmpty = Math.floor(s.init / s.daily_dose);
                     dateInObj.setDate(dateInObj.getDate() + daysToEmpty);
-                    const estStr = dateInObj.toLocaleDateString('id-ID', {day: 'numeric', month:'short'});
-                    estInfo = `<span class="text-[10px] text-brand-600 font-bold bg-brand-50 px-1 rounded">Est. Habis: ${estStr}</span>`;
+                    const estStr = dateInObj.toLocaleDateString('id-ID', {day: 'numeric', month:'short', year:'2-digit'});
+                    
+                    // Warna merah jika estimasi sudah lewat atau sisa sedikit
+                    const isExpired = new Date() > dateInObj;
+                    const colorClass = isExpired || isLow ? 'text-red-600 bg-red-50' : 'text-brand-700 bg-brand-50';
+                    estInfo = `<span class="text-[10px] ${colorClass} px-2 py-0.5 rounded font-bold">${estStr}</span>`;
                 }
 
-                return `<div class="p-3 rounded-xl border ${isLow ? 'stock-low' : 'bg-slate-50 border-slate-200'} relative search-row mb-3 flex justify-between items-center transition-all">
-                    ${isLow ? '<div class="stock-badge">STOK < 7</div>' : ''}
-                    <div>
-                        <p class="font-bold text-sm ${isLow ? 'text-red-700' : 'text-slate-800'}">${s.name}</p>
-                        <p class="text-[10px] text-slate-500 mb-1">Sisa: <b class="text-lg text-slate-800">${sisa}</b> / ${s.init}</p>
-                        ${estInfo}
-                    </div>
-                    <div class="flex gap-1">
-                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:text-white flex items-center justify-center" title="Catat Minum"><i class="fas fa-check"></i></button>
-                        <button onclick="app.modalStock('${p.id}', ${i})" class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center" title="Edit Stok"><i class="fas fa-pen"></i></button>
-                        <button onclick="app.delSubItem('medicine.stock', ${i})" class="w-8 h-8 rounded-full bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center"><i class="fas fa-trash"></i></button>
-                    </div></div>`;
-            }).join('') || '<p class="text-center text-xs text-slate-400">Kosong</p>';
-            
-            // --- UPDATED LOG TABLE (Waktu, Obat, PJ, Catatan, Aksi) ---
-            const logHtml = (p.medicine?.logs || []).map((l, i) => `
-                <tr class="border-b hover:bg-slate-50 text-xs">
-                    <td class="py-3 pl-3 text-slate-500 whitespace-nowrap align-top">${l.time}</td>
-                    <td class="py-3 font-bold align-top text-brand-700">${l.name}</td>
-                    <td class="py-3 align-top">${l.pj}</td>
-                    <td class="py-3 align-top italic text-slate-600">${l.note || '-'}</td>
-                    <td class="text-right pr-3 py-3 flex justify-end gap-2 align-top">
-                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded" title="Edit Log"><i class="fas fa-pen"></i></button>
-                        <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-500 hover:bg-red-50 p-1 rounded" title="Hapus & Kembalikan Stok"><i class="fas fa-trash"></i></button>
+                return `
+                <tr class="border-b hover:bg-slate-50 text-xs search-row">
+                    <td class="p-3">${s.date_in || '-'}</td>
+                    <td class="p-3">${estInfo}</td>
+                    <td class="p-3 font-bold text-slate-700">${s.name}</td>
+                    <td class="p-3 text-center">
+                        <span class="text-slate-400 text-[10px] mr-1">Awal: ${s.init}</span>
+                        <span class="font-bold text-sm ${isLow ? 'text-red-600' : 'text-emerald-600'}">${sisa}</span>
                     </td>
-                </tr>`).join('');
+                    <td class="p-3 text-right flex justify-end gap-1">
+                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 shadow-sm text-[10px]" title="Catat Minum"><i class="fas fa-check mr-1"></i> MINUM</button>
+                        <button onclick="app.modalStock('${p.id}', ${i})" class="bg-slate-100 text-slate-600 p-1 rounded hover:bg-slate-200"><i class="fas fa-pen"></i></button>
+                        <button onclick="app.delSubItem('medicine.stock', ${i})" class="bg-red-50 text-red-500 p-1 rounded hover:bg-red-100"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="5" class="text-center p-6 text-xs text-slate-400 italic">Belum ada stok obat masuk.</td></tr>';
             
-            return `${searchInput}<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
-                <div class="lg:col-span-1 border-r pr-4">
-                    <div class="flex justify-between items-center mb-4"><h4 class="font-bold text-brand-800">STOK OBAT</h4><button onclick="app.modalStock('${p.id}')" class="text-[10px] bg-brand-600 text-white px-2 py-1 rounded font-bold">+ STOK</button></div>
-                    <div class="max-h-[500px] overflow-y-auto pr-1">${stockHtml}</div>
-                </div>
-                <div class="lg:col-span-2">
-                    <h4 class="font-bold text-brand-800 mb-4">LOG MINUM OBAT</h4>
-                    <div class="bg-white border rounded-xl overflow-hidden shadow-sm">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
-                                <tr>
-                                    <th class="p-3 w-1/6">Waktu</th>
-                                    <th class="p-3 w-1/5">Obat</th>
-                                    <th class="p-3 w-1/6">PJ</th>
-                                    <th class="p-3">Catatan</th>
-                                    <th class="text-right p-3 w-1/6">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">${logHtml}</tbody>
-                        </table>
+            const logHtml = (p.medicine?.logs || []).map((l, i) => `
+                <tr class="border-b hover:bg-slate-50 text-xs search-row">
+                    <td class="p-3 text-slate-500">${l.time}</td>
+                    <td class="p-3 font-bold text-brand-700">${l.name}</td>
+                    <td class="p-3">${l.pj}</td>
+                    <td class="p-3 italic text-slate-600">${l.note || '-'}</td>
+                    <td class="p-3 text-right flex justify-end gap-2">
+                        <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded"><i class="fas fa-pen"></i></button>
+                        <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-500 hover:bg-red-50 p-1 rounded" title="Hapus & Balikin Stok"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="5" class="text-center p-6 text-xs text-slate-400 italic">Belum ada catatan penggunaan.</td></tr>';
+            
+            return `
+                ${searchInput}
+                <div class="space-y-8 mt-4">
+                    <div class="border rounded-2xl bg-white overflow-hidden shadow-sm">
+                        <div class="bg-gradient-to-r from-slate-50 to-white p-4 border-b flex justify-between items-center">
+                            <h4 class="font-bold text-brand-800 text-sm flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600"><i class="fas fa-boxes"></i></div> STOK OBAT</h4>
+                            <button onclick="app.modalStock('${p.id}')" class="bg-brand-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow hover:bg-brand-700 transition transform hover:-translate-y-0.5"><i class="fas fa-plus mr-1"></i> INPUT OBAT MASUK</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-3">Waktu Masuk</th>
+                                        <th class="p-3">Est. Habis (Auto)</th>
+                                        <th class="p-3">Jenis Obat</th>
+                                        <th class="p-3 text-center">Jumlah (Sisa)</th>
+                                        <th class="text-right p-3">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">${stockHtml}</tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            </div>`;
+
+                    <div class="border rounded-2xl bg-white overflow-hidden shadow-sm">
+                        <div class="bg-gradient-to-r from-slate-50 to-white p-4 border-b">
+                            <h4 class="font-bold text-brand-800 text-sm flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600"><i class="fas fa-history"></i></div> CATATAN PENGGUNAAN OBAT</h4>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-3">Waktu</th>
+                                        <th class="p-3">Nama Obat</th>
+                                        <th class="p-3">PJ</th>
+                                        <th class="p-3">Catatan</th>
+                                        <th class="text-right p-3">Edit/Hapus</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">${logHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
         }
 
         if(tab === 'ttv') {
@@ -616,65 +633,68 @@ const app = {
     },
 
     // ============================================================
-    // FIXED MEDICINE LOGIC (REMOVED INPUT 'USED', ADDED NOTE)
+    // FIXED MEDICINE LOGIC (UPDATED V17.0)
     // ============================================================
     
-    // 1. TAMBAH/EDIT STOK (Updated V15.4: Input 'Terpakai' Dihapus)
+    // 1. INPUT STOK OBAT + DOSIS HARIAN (Untuk Otomatisasi Estimasi Habis)
     modalStock(id, index=null) {
         const p=this.data.patients.find(x=>x.id===id); const s=index!==null?p.medicine.stock[index]:null;
         const today = new Date().toISOString().split('T')[0];
         
-        // Input "Terpakai" dihapus agar user hanya menggunakan Log Minum Obat
         this.openModal(`
-            <h3 class="font-bold mb-3">Stok Obat</h3>
-            <input id="s_name" class="input-modern mb-2" value="${s?.name||''}" placeholder="Nama Obat">
-            <div class="mb-2">
-                <label class="text-[10px] font-bold text-slate-500">Jumlah Awal (Stok Fisik)</label>
-                <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
+            <h3 class="font-bold mb-3 text-center text-brand-700">INPUT OBAT MASUK</h3>
+            <div class="mb-3">
+                <label class="text-[10px] font-bold text-slate-500 uppercase">Jenis / Nama Obat</label>
+                <input id="s_name" class="input-modern" value="${s?.name||''}" placeholder="Contoh: Paracetamol">
             </div>
-            <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                    <label class="text-[10px] font-bold text-slate-500">Tgl Masuk</label>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">Jumlah Masuk</label>
+                    <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
+                </div>
+                <div>
+                     <label class="text-[10px] font-bold text-slate-500 uppercase">Tgl Masuk</label>
                     <input id="s_date_in" type="date" class="input-modern" value="${s?.date_in || today}">
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500">Dosis (Biji/Hari)</label>
-                    <input id="s_daily" type="number" class="input-modern" value="${s?.daily_dose || ''}" placeholder="Cth: 3">
-                </div>
             </div>
-            <label class="text-[10px] font-bold text-slate-500">Expired Date</label>
-            <input id="s_exp" type="date" class="input-modern mb-3" value="${s?.exp||''}">
-            <button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">SIMPAN</button>
+            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                <label class="text-[10px] font-bold text-blue-800 uppercase"><i class="fas fa-calculator mr-1"></i> Dosis per Hari (Wajib)</label>
+                <p class="text-[9px] text-blue-600 mb-1">Digunakan untuk menghitung otomatis tanggal habis.</p>
+                <input id="s_daily" type="number" class="input-modern border-blue-200" value="${s?.daily_dose || ''}" placeholder="Contoh: 3 (3x sehari)">
+            </div>
+            <button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-brand-700">SIMPAN STOK</button>
         `);
     },
     saveStock(id, index) {
         const p=this.data.patients.find(x=>x.id===id); if(!p.medicine) p.medicine={stock:[],logs:[]};
         
+        // Simpan nilai 'used' lama jika mode edit, atau 0 jika baru
         const prevUsed = index !== null ? p.medicine.stock[index].used : 0;
         
         const data={
             name:document.getElementById('s_name').value, 
             init:Number(document.getElementById('s_init').value), 
-            used: prevUsed, // Used value preserved, only modifiable via logs
-            exp:document.getElementById('s_exp').value,
+            used: prevUsed, 
             date_in: document.getElementById('s_date_in').value,
             daily_dose: Number(document.getElementById('s_daily').value)
         };
+
+        if(!data.name || !data.init) return Swal.fire('Error', 'Nama dan Jumlah wajib diisi', 'error');
         
         if(index!==null) p.medicine.stock[index]=data; else p.medicine.stock.push(data);
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 2. FITUR CATAT (RECORD) - ADDED NOTE FIELD
+    // 2. FITUR CATAT (RECORD) TERHUBUNG KE STOK
     modalUseMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         const medName = p.medicine.stock[idx].name;
         this.openModal(`
             <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
-            <p class="text-center text-sm mb-4 text-brand-600 font-bold">${medName}</p>
+            <p class="text-center text-sm mb-4 text-brand-600 font-bold bg-brand-50 py-2 rounded border border-brand-100">${medName}</p>
             <input id="u_pj" class="input-modern mb-2" placeholder="Nama PJ (Perawat/Staff)" autofocus>
             <textarea id="u_note" class="input-modern mb-4 h-20" placeholder="Catatan (Misal: Diminum setelah makan)"></textarea>
-            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-2 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
+            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
         `);
         setTimeout(() => document.getElementById('u_pj').focus(), 100);
     },
@@ -689,7 +709,7 @@ const app = {
         const stockItem = p.medicine.stock[idx];
         if(stockItem.init - stockItem.used <= 0) return Swal.fire('Stok Habis', 'Tidak bisa mencatat, stok 0.', 'error');
         
-        stockItem.used++; 
+        stockItem.used++; // Kurangi stok (dengan menambah used)
         p.medicine.logs.unshift({
             time: new Date().toLocaleString(), 
             name: stockItem.name, 
@@ -703,7 +723,7 @@ const app = {
         Swal.fire({icon:'success', title:'Tercatat', timer:800, showConfirmButton:false});
     },
 
-    // 3. FITUR EDIT LOG (UPDATED: EDIT NOTE)
+    // 3. FITUR EDIT LOG
     modalEditLog(id, i) {
         const l = this.data.patients.find(x=>x.id===id).medicine.logs[i];
         this.openModal(`
@@ -727,7 +747,7 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 4. FITUR HAPUS LOG (Sync Stok)
+    // 4. FITUR HAPUS LOG (TERHUBUNG KE STOK / REFUND STOCK)
     deleteMedLog(id, i) {
         Swal.fire({
             title: 'Hapus Log?',
@@ -735,7 +755,7 @@ const app = {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Hapus',
+            confirmButtonText: 'Ya, Hapus & Kembalikan Stok',
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -745,7 +765,7 @@ const app = {
                 // Cari stok yang namanya sama dengan log
                 const stockItem = p.medicine.stock.find(s => s.name === log.name);
                 
-                // SINKRONISASI: Kembalikan stok (used - 1)
+                // OTOMATISASI: Kembalikan stok (used - 1) jika ketemu
                 if (stockItem && stockItem.used > 0) {
                     stockItem.used--; 
                 }
