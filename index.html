@@ -70,5 +70,197 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx@7.8.0/build/index.min.js"></script>
     <script src="script.js"></script>
+    <script>
+    /* =========================================
+       SISTEM OTOMASI MMRC (FIXED LOGIC)
+       ========================================= */
+
+    // KUNCI DATABASE BROWSER
+    const DB_KEY = 'mmrc_stock_data_final';
+    const SESSION_KEY = 'mmrc_user_session';
+
+    // 1. SETUP DATA DEFAULT (SOLUSI BUG VIDEO)
+    // Jika data kosong, paksa Sisa = 8.
+    function ambilData() {
+        const dataTersimpan = localStorage.getItem(DB_KEY);
+        if (dataTersimpan) {
+            return JSON.parse(dataTersimpan);
+        } else {
+            // INI PERBAIKANNYA: Default Sisa harus 8, bukan 0.
+            return {
+                stokAwal: 8,
+                stokSisa: 8, 
+                logs: [] 
+            };
+        }
+    }
+
+    function simpanData(data) {
+        localStorage.setItem(DB_KEY, JSON.stringify(data));
+        renderTampilan(); // Update layar setiap kali simpan
+    }
+
+    // 2. CEK LOGIN (SECURITY)
+    function cekSesi() {
+        const sesi = sessionStorage.getItem(SESSION_KEY);
+        const overlay = document.getElementById('login-overlay');
+        
+        if (sesi === 'aktif') {
+            overlay.style.display = 'none'; // Sembunyikan login jika sudah masuk
+        } else {
+            overlay.style.display = 'flex'; // Munculkan login jika belum masuk
+        }
+    }
+
+    function login() {
+        sessionStorage.setItem(SESSION_KEY, 'aktif');
+        cekSesi();
+    }
+
+    function logout() {
+        if(confirm("Keluar dari aplikasi?")) {
+            sessionStorage.removeItem(SESSION_KEY);
+            location.reload(); 
+        }
+    }
+
+    // 3. FUNGSI RENDER (UPDATE TAMPILAN OTOMATIS)
+    function renderTampilan() {
+        const data = ambilData();
+
+        // Update Angka Stok di Card Merah
+        // Pastikan ID di HTML Anda: 'display-sisa' dan 'display-awal'
+        const elSisa = document.getElementById('display-sisa');
+        const elAwal = document.getElementById('display-awal');
+        const elTerpakai = document.getElementById('display-terpakai'); // Tambahan untuk field terpakai
+
+        if(elSisa) elSisa.innerText = data.stokSisa;
+        if(elAwal) elAwal.innerText = data.stokAwal;
+        
+        // Update Field "Terpakai (Auto)" di Form Edit (jika ada)
+        if(elTerpakai) elTerpakai.innerText = (data.stokAwal - data.stokSisa);
+
+        // Update Tabel Log Minum Obat
+        const areaLog = document.getElementById('log-list-wrapper');
+        if (areaLog) {
+            areaLog.innerHTML = ''; // Bersihkan dulu
+            
+            if (data.logs.length === 0) {
+                areaLog.innerHTML = '<div style="padding:15px; text-align:center; color:#94a3b8; font-style:italic;">Belum ada riwayat penggunaan.</div>';
+            } else {
+                // Loop data log (Log terbaru paling atas)
+                data.logs.slice().reverse().forEach((item, index) => {
+                    // Hitung index asli agar penghapusan akurat
+                    const indexAsli = data.logs.length - 1 - index;
+                    
+                    const rowHTML = `
+                        <div class="log-row">
+                            <div>${item.waktu}</div>
+                            <div style="font-weight:bold; color:#b91c1c;">${item.obat}</div>
+                            <div>${item.pj}</div>
+                            <div style="text-align: center;">
+                                <button class="btn-del" onclick="hapusLog(${indexAsli})">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    areaLog.innerHTML += rowHTML;
+                });
+            }
+        }
+    }
+
+    // 4. LOGIKA TOMBOL "MINUM" & MODAL
+    // Panggil fungsi ini di tombol Centang Hijau (HTML: onclick="bukaModal()")
+    function bukaModalMinum() {
+        const data = ambilData();
+        
+        // Validasi Stok Habis
+        if (data.stokSisa <= 0) {
+            alert("STOK HABIS! Tidak bisa mencatat penggunaan."); 
+            return;
+        }
+
+        // Tampilkan Modal
+        const modal = document.getElementById('modalMinum');
+        if(modal) {
+            modal.style.display = 'flex';
+            // Reset input form
+            const inputPJ = document.getElementById('inputPJ');
+            if(inputPJ) {
+                inputPJ.value = '';
+                inputPJ.focus();
+            }
+        }
+    }
+
+    function tutupModal() {
+        const modal = document.getElementById('modalMinum');
+        if(modal) modal.style.display = 'none';
+    }
+
+    // 5. PROSES CATAT (SINKRONISASI STOK BERKURANG)
+    // Panggil ini di tombol "CATAT & KURANGI STOK"
+    function simpanCatatan() {
+        const inputPJ = document.getElementById('inputPJ');
+        const namaPJ = inputPJ ? inputPJ.value : '';
+
+        if (!namaPJ) {
+            alert("Nama PJ wajib diisi!");
+            return;
+        }
+
+        let data = ambilData();
+
+        if (data.stokSisa > 0) {
+            // A. Kurangi Stok
+            data.stokSisa = data.stokSisa - 1;
+
+            // B. Buat Log Waktu
+            const now = new Date();
+            const formatWaktu = now.getDate() + '/' + (now.getMonth()+1) + '/' + now.getFullYear() + ' ' + 
+                                now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+            // C. Masukkan ke Log
+            data.logs.push({
+                waktu: formatWaktu,
+                obat: "REMITAL",
+                pj: namaPJ
+            });
+
+            // D. Simpan & Tutup
+            simpanData(data);
+            tutupModal();
+            
+            // Feedback ke user (opsional)
+            // alert("Berhasil dicatat. Stok berkurang -1");
+        }
+    }
+
+    // 6. PROSES HAPUS LOG (SINKRONISASI STOK KEMBALI)
+    function hapusLog(index) {
+        if(confirm("Hapus data ini? Stok obat akan dikembalikan (+1).")) {
+            let data = ambilData();
+
+            // A. Hapus log
+            data.logs.splice(index, 1);
+
+            // B. Kembalikan Stok (Cek agar tidak lebih dari Awal)
+            if (data.stokSisa < data.stokAwal) {
+                data.stokSisa = data.stokSisa + 1;
+            }
+
+            // C. Simpan
+            simpanData(data);
+        }
+    }
+
+    // --- JALANKAN SAAT HALAMAN DIBUKA ---
+    window.onload = function() {
+        cekSesi();       // Cek apakah user sudah login
+        renderTampilan(); // Tampilkan stok yang benar (8)
+    };
+                </script>
 </body>
 </html>
