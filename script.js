@@ -69,6 +69,18 @@ const app = {
         } else Swal.fire('Error', 'Login Gagal', 'error');
     },
 
+  auth.onAuthStateChanged(user => {
+  if (user) {
+    // SUDAH LOGIN
+    document.getElementById("auth-layer").classList.add("hidden");
+    document.getElementById("app-layer").classList.remove("hidden");
+  } else {
+    // BELUM LOGIN
+    document.getElementById("auth-layer").classList.remove("hidden");
+    document.getElementById("app-layer").classList.add("hidden");
+  }
+});
+
     // ============================================================
     // 1. DASHBOARD UTAMA
     // ============================================================
