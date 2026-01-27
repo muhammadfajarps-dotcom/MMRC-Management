@@ -769,18 +769,122 @@ const app = {
     },
 
     // 2. FITUR CATAT (RECORD) TERHUBUNG KE STOK
-    modalUseMed(id, idx) {
+    // ============================================================
+    // FITUR MINUM OBAT (OPTIMIZED)
+    // ============================================================
+
+    // 1. TAMPILAN POPUP KONFIRMASI
+    modalUseMed(id, index) {
         const p = this.data.patients.find(x => x.id === id);
-        const medName = p.medicine.stock[idx].name;
+        const s = p.medicine.stock[index];
+
+        // Hitung sisa stok secara real-time
+        // Menggunakan (s.used || 0) untuk antisipasi data lama yang belum punya field 'used'
+        const sisa = parseInt(s.init) - (parseInt(s.used) || 0);
+
+        // VALIDASI: Jika stok habis, hentikan proses dan beri peringatan
+        if (sisa <= 0) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Stok Habis!',
+                text: `Obat ${s.name} sudah tidak tersedia (0). Harap input stok baru.`,
+                confirmButtonColor: '#ef4444'
+            });
+        }
+
+        // TAMPILKAN MODAL
         this.openModal(`
-            <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
-            <p class="text-center text-sm mb-4 text-brand-600 font-bold bg-brand-50 py-2 rounded border border-brand-100">${medName}</p>
-            <input id="u_pj" class="input-modern mb-2" placeholder="Nama PJ (Perawat/Staff)" autofocus>
-            <textarea id="u_note" class="input-modern mb-4 h-20" placeholder="Catatan (Misal: Diminum setelah makan)"></textarea>
-            <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
+            <div class="text-center mb-6">
+                <div class="bg-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 animate-pulse">
+                    <i class="fas fa-pills text-3xl text-emerald-600"></i>
+                </div>
+                <h3 class="font-black text-xl text-slate-700 uppercase">Konfirmasi Minum</h3>
+                <p class="text-sm text-slate-500">Catat pengurangan stok obat harian</p>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mb-5 shadow-sm">
+                <h4 class="font-bold text-lg text-emerald-800 text-center mb-1">${s.name}</h4>
+                <div class="flex justify-center items-baseline gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Sisa Stok:</span>
+                    <span class="text-3xl font-black text-emerald-600">${sisa}</span>
+                </div>
+            </div>
+
+            <form onsubmit="event.preventDefault(); app.saveUseMed('${id}', ${index})">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Nama Petugas (PJ) <span class="text-red-500">*</span></label>
+                        <input id="u_pj" class="input-modern w-full" placeholder="Ketik nama Anda..." required autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Waktu / Catatan (Opsional)</label>
+                        <input id="u_note" class="input-modern w-full" placeholder="Cth: Pagi / Siang / Malam">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all transform active:scale-95 mt-6 flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> KONFIRMASI (KURANGI 1)
+                </button>
+            </form>
         `);
-        setTimeout(() => document.getElementById('u_pj').focus(), 100);
+
+        // UX: Otomatis arahkan kursor mengetik ke kolom PJ
+        setTimeout(() => {
+            const el = document.getElementById('u_pj');
+            if(el) el.focus();
+        }, 100);
     },
+
+    // 2. LOGIKA PENYIMPANAN DATA
+    saveUseMed(id, index) {
+        // Ambil nilai dari form
+        const pj = document.getElementById('u_pj').value;
+        const note = document.getElementById('u_note').value;
+        
+        // Validasi input kosong
+        if(!pj.trim()) return Swal.fire('Gagal', 'Nama Petugas wajib diisi!', 'warning');
+
+        const p = this.data.patients.find(x => x.id === id);
+        const s = p.medicine.stock[index];
+
+        // Validasi Stok (Double Check sebelum simpan)
+        const currentSisa = parseInt(s.init) - (parseInt(s.used) || 0);
+        if (currentSisa <= 0) {
+            return Swal.fire('Error', 'Gagal menyimpan. Stok obat sudah habis!', 'error');
+        }
+
+        // --- PROSES UTAMA ---
+        // 1. Tambah jumlah terpakai (used)
+        s.used = (parseInt(s.used) || 0) + 1;
+
+        // 2. Buat objek Log
+        const newLog = {
+            time: new Date().toLocaleString('id-ID'), // Format waktu lokal
+            name: s.name,
+            pj: pj,
+            note: note || '-'
+        };
+
+        // 3. Masukkan ke riwayat (unshift = paling atas)
+        if(!p.medicine.logs) p.medicine.logs = [];
+        p.medicine.logs.unshift(newLog);
+
+        // --- SIMPAN & REFRESH ---
+        this.closeModal();       // Tutup modal
+        this.saveDB();           // Simpan ke database
+        this.renderPatientDetail(); // Refresh tampilan tabel
+
+        // Notifikasi Sukses Kecil
+        Swal.fire({
+            icon: 'success',
+            title: 'Tercatat!',
+            text: `Stok ${s.name} berkurang 1.`,
+            timer: 1500,
+            showConfirmButton: false,
+            backdrop: `rgba(0,0,0,0.4)`
+        });
+    },
+  
     execUseMed(id, idx) {
         const pj = document.getElementById('u_pj').value;
         const note = document.getElementById('u_note').value;
