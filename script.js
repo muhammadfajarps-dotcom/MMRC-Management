@@ -1,5 +1,5 @@
 // ============================================================
-// CONFIGURATION (MMRC V15.3 - AUTO EST & SESSION FIX)
+// CONFIGURATION (MMRC V15.5 - FINAL SYNC OPTIMIZATION)
 // ============================================================
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -13,6 +13,7 @@ const firebaseConfig = {
   measurementId: "G-4218HRWRTC"
 };
 
+// Initialize Firebase safely
 if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
@@ -32,13 +33,12 @@ const app = {
     isRestoring: false,
 
     init() {
-        console.log("MMRC System V15.3 - Session & Medicine Logic");
+        console.log("MMRC System V15.5 - Medicine Sync Perfected");
         this.checkSession();
     },
 
-    // --- FITUR KEAMANAN: LOGIN ULANG SAAT KELUAR (SESSION STORAGE) ---
+    // --- SESSION & SECURITY ---
     checkSession() {
-        // Menggunakan sessionStorage agar hilang saat browser/tab ditutup
         const session = sessionStorage.getItem('MMRC_SESSION');
         if (session === 'LOGGED_IN') {
             document.getElementById('auth-layer').classList.add('hidden');
@@ -55,7 +55,7 @@ const app = {
         const u = document.getElementById('login-user').value;
         const p = document.getElementById('login-pass').value;
         if(u === 'OPERASIONAL.MMRC' && p === 'MADANI1999') {
-            sessionStorage.setItem('MMRC_SESSION', 'LOGGED_IN'); // Session Storage
+            sessionStorage.setItem('MMRC_SESSION', 'LOGGED_IN');
             document.getElementById('auth-layer').classList.add('hidden');
             document.getElementById('app-layer').classList.remove('hidden');
             this.loadDB();
@@ -336,7 +336,7 @@ const app = {
             `;
         }
 
-        // --- FITUR ESTIMASI HABIS & SINKRONISASI STOK ---
+        // --- OPTIMIZED & SYNCHRONIZED MEDICINE TAB ---
         if(tab === 'medicine') {
             const stockHtml = (p.medicine?.stock || []).map((s, i) => {
                 const sisa = s.init - s.used;
@@ -368,10 +368,11 @@ const app = {
             
             const logHtml = (p.medicine?.logs || []).map((l, i) => `
                 <tr class="border-b hover:bg-slate-50 text-xs">
-                    <td class="py-2 pl-2 text-slate-500">${l.time}</td>
-                    <td class="py-2 font-bold">${l.name}</td>
-                    <td class="py-2">${l.pj}</td>
-                    <td class="text-right pr-2 flex justify-end gap-2">
+                    <td class="py-3 pl-3 text-slate-500 whitespace-nowrap align-top">${l.time}</td>
+                    <td class="py-3 font-bold align-top text-brand-700">${l.name}</td>
+                    <td class="py-3 align-top">${l.pj}</td>
+                    <td class="py-3 align-top italic text-slate-600">${l.note || '-'}</td>
+                    <td class="text-right pr-3 py-3 flex justify-end gap-2 align-top">
                         <button onclick="app.modalEditLog('${p.id}', ${i})" class="text-blue-500 hover:bg-blue-50 p-1 rounded" title="Edit Log"><i class="fas fa-pen"></i></button>
                         <button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-500 hover:bg-red-50 p-1 rounded" title="Hapus & Kembalikan Stok"><i class="fas fa-trash"></i></button>
                     </td>
@@ -387,7 +388,13 @@ const app = {
                     <div class="bg-white border rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 text-[10px] text-slate-500 uppercase tracking-wider">
-                                <tr><th class="p-3">Waktu</th><th>Obat</th><th>PJ</th><th class="text-right p-3">Aksi</th></tr>
+                                <tr>
+                                    <th class="p-3 w-1/6">Waktu</th>
+                                    <th class="p-3 w-1/5">Obat</th>
+                                    <th class="p-3 w-1/6">PJ</th>
+                                    <th class="p-3">Catatan</th>
+                                    <th class="text-right p-3 w-1/6">Aksi</th>
+                                </tr>
                             </thead>
                             <tbody class="divide-y">${logHtml}</tbody>
                         </table>
@@ -436,200 +443,21 @@ const app = {
     },
 
     // ============================================================
-    // MODALS & SAVING LOGIC
-    // ============================================================
-
-    modalPatient(id = null) {
-        const p = id ? this.data.patients.find(x => x.id === id) : null;
-        document.getElementById('modal-title').innerText = id ? "EDIT DATA PASIEN" : "REGISTRASI PASIEN";
-        const v = (val) => val || '';
-        const chk = p?.checklist || {};
-        this.openModal(`
-            <form onsubmit="event.preventDefault(); app.savePatient('${id||''}')" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer relative bg-slate-50 hover:bg-white transition"><input type="file" id="p_photo" class="absolute inset-0 opacity-0 cursor-pointer"><i class="fas fa-camera text-2xl text-slate-400 mb-1"></i><p class="text-xs text-slate-500">Klik untuk upload foto</p></div>
-                <input id="p_name" class="input-modern" value="${v(p?.reg.name)}" placeholder="Nama Lengkap" required>
-                <div class="grid grid-cols-2 gap-3"><input id="p_ttl" class="input-modern" value="${v(p?.reg.ttl)}" placeholder="Tempat, Tgl Lahir"><input id="p_age" type="number" class="input-modern" value="${v(p?.reg.age)}" placeholder="Usia (Th)"></div>
-                <div class="grid grid-cols-2 gap-3"><select id="p_status" class="input-modern"><option value="">- Status Pernikahan -</option><option ${p?.reg.status==='Menikah'?'selected':''}>Menikah</option><option ${p?.reg.status==='Belum Menikah'?'selected':''}>Belum Menikah</option></select><input id="p_job" class="input-modern" value="${v(p?.reg.job)}" placeholder="Pekerjaan"></div>
-                <input id="p_guard" class="input-modern" value="${v(p?.reg.guardian)}" placeholder="Penanggung Jawab">
-                <textarea id="p_history" class="input-modern h-16" placeholder="Riwayat Penyakit (Terdahulu)">${v(p?.reg.history)}</textarea>
-                <textarea id="m_plan" class="input-modern h-20" placeholder="Diagnosa & Plan Saat Ini">${v(p?.diagnosis.plan)}</textarea>
-                <input id="m_dr" class="input-modern" value="${v(p?.diagnosis.dr_name)}" placeholder="Dokter DPJP">
-                <div class="border-t pt-2 mt-2"><p class="text-xs font-bold text-brand-600 mb-2 uppercase">Checklist Medis</p><div class="checklist-item"><input type="checkbox" id="chk_urine" class="chk-box" ${chk.urine?'checked':''}><div class="flex-1"><p class="text-xs font-bold">Urine Test</p></div><input id="note_urine" class="input-modern py-1 text-xs" style="width:50%" placeholder="Ket..." value="${v(chk.urine_note)}"></div><div class="checklist-item"><input type="checkbox" id="chk_fix" class="chk-box" ${chk.fix?'checked':''}><div class="flex-1"><p class="text-xs font-bold">Fiksasi</p></div><input id="note_fix" class="input-modern py-1 text-xs" style="width:50%" placeholder="Ket..." value="${v(chk.fix_note)}"></div><div class="checklist-item"><input type="checkbox" id="chk_inj" class="chk-box" ${chk.inj?'checked':''}><div class="flex-1"><p class="text-xs font-bold">Injeksi</p></div><input id="note_inj" class="input-modern py-1 text-xs" style="width:50%" placeholder="Ket..." value="${v(chk.inj_note)}"></div><textarea id="p_prescription" class="input-modern h-24 mt-3" placeholder="Tulis Resep Obat Dokter di sini...">${v(p?.diagnosis.prescription)}</textarea></div>
-                <button class="w-full bg-brand-700 text-white py-3 rounded-xl font-bold shadow-lg mt-4">SIMPAN DATA</button>
-            </form>
-        `);
-    },
-
-    async savePatient(id) {
-        const get = (id) => document.getElementById(id).value;
-        const pOld = id ? this.data.patients.find(x => x.id === id) : null;
-        let photo = pOld?.reg.photo || 'https://via.placeholder.com/150';
-        const file = document.getElementById('p_photo').files[0];
-        if(file) photo = await this.toBase64(file);
-
-        const newP = {
-            id: id || 'P-' + Date.now(),
-            reg: { name: get('p_name'), age: get('p_age'), ttl: get('p_ttl'), status: get('p_status'), history: get('p_history'), job: get('p_job'), guardian: get('p_guard'), addr: pOld?.reg.addr||'-', photo, timestamp: pOld?.reg.timestamp || new Date().toLocaleString() },
-            diagnosis: { dr_name: get('m_dr'), plan: get('m_plan'), prescription: get('p_prescription') },
-            checklist: { urine: document.getElementById('chk_urine').checked, urine_note: get('note_urine'), fix: document.getElementById('chk_fix').checked, fix_note: get('note_fix'), inj: document.getElementById('chk_inj').checked, inj_note: get('note_inj') },
-            medicine: pOld?.medicine || {stock:[], logs:[]},
-            ttv: pOld?.ttv || [],
-            visits: pOld?.visits || [],
-            crisis: pOld?.crisis || { bpss: [] },
-            program: pOld?.program || {},
-            counseling: pOld?.counseling || [],
-            daily_progress: pOld?.daily_progress || [],
-            screening: pOld?.screening || [], 
-            conclusi: pOld?.conclusi || [], 
-            assessment: pOld?.assessment || [], 
-            plan_therapy: pOld?.plan_therapy || [], 
-            termination: pOld?.termination || [] 
-        };
-        
-        if(id) this.data.patients[this.data.patients.findIndex(x=>x.id===id)] = newP;
-        else this.data.patients.push(newP);
-        
-        this.closeModal(); this.saveDB();
-        
-        if(!id) this.renderPatientList(this.currentCategory); else this.renderPatientDetail();
-    },
-
-    modalProgram(id, isSync = false) {
-        const p = this.data.patients.find(x => x.id === id);
-        const prog = p.program || {};
-        
-        let options = `<option value="">Pilih Paket...</option>`;
-        if(this.currentCategory === 'detox') {
-            options += `<option value="Detox 7 Hari|7|Fokus detoksifikasi fisik." ${prog.name==='Detox 7 Hari'?'selected':''}>Detox 7 Hari</option>`;
-        } else {
-            options += `
-                <option value="Recovery 14 Hari|14|Program awal pemulihan." ${prog.name==='Recovery 14 Hari'?'selected':''}>Recovery 14 Hari</option>
-                <option value="Primary 1 Bulan|30|Stabilisasi perilaku." ${prog.name==='Primary 1 Bulan'?'selected':''}>Primary 1 Bulan</option>
-                <option value="Primary 2 Bulan|60|Pengembangan diri." ${prog.name==='Primary 2 Bulan'?'selected':''}>Primary 2 Bulan</option>
-                <option value="Advanced 3 Bulan|90|Pemantapan pemulihan." ${prog.name==='Advanced 3 Bulan'?'selected':''}>Advanced 3 Bulan</option>
-                <option value="Re-Entry 6 Bulan|180|Persiapan kembali." ${prog.name==='Re-Entry 6 Bulan'?'selected':''}>Re-Entry 6 Bulan</option>
-                <option value="Aftercare 1 Tahun|365|Maintenance jangka panjang." ${prog.name==='Aftercare 1 Tahun'?'selected':''}>Aftercare 1 Tahun</option>
-            `;
-        }
-
-        if(isSync) {
-            options = `
-                <option value="Recovery 14 Hari|14|Program awal pemulihan.">Recovery 14 Hari</option>
-                <option value="Primary 1 Bulan|30|Stabilisasi perilaku.">Primary 1 Bulan</option>
-                <option value="Primary 2 Bulan|60|Pengembangan diri.">Primary 2 Bulan</option>
-                <option value="Advanced 3 Bulan|90|Pemantapan pemulihan.">Advanced 3 Bulan</option>
-                <option value="Re-Entry 6 Bulan|180|Persiapan kembali.">Re-Entry 6 Bulan</option>
-                <option value="Aftercare 1 Tahun|365|Maintenance jangka panjang.">Aftercare 1 Tahun</option>
-            `;
-        }
-        const title = isSync ? "SINKRONISASI KE REHABILITASI" : `PENGATURAN PROGRAM (${this.currentCategory.toUpperCase()})`;
-        this.openModal(`
-            <h3 class="font-bold mb-4 text-center">${title}</h3>
-            <label class="text-xs font-bold text-slate-500">Pilih Paket</label>
-            <select id="pr_select" class="input-modern mb-3" onchange="app.updateProgramDesc()">${options}</select>
-            <label class="text-xs font-bold text-slate-500">Keterangan</label>
-            <input id="pr_desc" class="input-modern mb-3 bg-slate-100" value="${prog.desc||''}" readonly>
-            <label class="text-xs font-bold text-slate-500">Tanggal Mulai</label>
-            <input id="pr_start" type="date" class="input-modern mb-6" value="${isSync ? new Date().toISOString().split('T')[0] : (prog.startDate||'')}">
-            <button onclick="app.saveProgram('${id}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN PERUBAHAN</button>
-        `);
-    },
-    updateProgramDesc() {
-        const val = document.getElementById('pr_select').value.split('|');
-        if(val.length > 1) document.getElementById('pr_desc').value = val[2];
-    },
-    saveProgram(id) {
-        const val = document.getElementById('pr_select').value.split('|');
-        const startDate = document.getElementById('pr_start').value;
-        if(val.length < 2 || !startDate) return Swal.fire('Error', 'Lengkapi data!', 'error');
-
-        const p = this.data.patients.find(x => x.id === id);
-        if(this.currentCategory === 'rehab' || (this.currentCategory==='detox' && !val[0].includes('Detox'))) {
-            if(p.program?.name && p.program.name.includes('Detox') && p.program.startDate) {
-                const detoxStart = new Date(p.program.startDate);
-                const detoxEnd = new Date(detoxStart);
-                detoxEnd.setDate(detoxStart.getDate() + 7);
-                if(new Date() < detoxEnd) {
-                    return Swal.fire({title: 'AKSES DITOLAK', text: `Masa Detox (7 Hari) belum selesai! Pasien baru bisa masuk program Rehabilitasi setelah tanggal ${detoxEnd.toLocaleDateString('id-ID')}.`, icon: 'warning'});
-                }
-            }
-        }
-        p.program = { name: val[0], days: parseInt(val[1]), desc: val[2], startDate: startDate };
-        this.closeModal(); this.saveDB(); 
-        Swal.fire({icon:'success', title:'Program Diperbarui', timer:1000, showConfirmButton:false}).then(() => {
-             const isNowDetox = val[0].includes('Detox');
-             app.renderPatientList(isNowDetox ? 'detox' : 'rehab');
-        });
-    },
-
-    modalSign(id, arrName, index = null) {
-        const p = this.data.patients.find(x=>x.id===id);
-        const arr = p[arrName] || [];
-        const v = index !== null ? arr[index] : null;
-        this.openModal(`
-            <h3 class="font-bold mb-4 uppercase">${index!==null?'Edit':'Input'} Data</h3>
-            <input id="v_pj" class="input-modern mb-2" placeholder="Nama PJ (Wajib)" value="${v?.pj||''}">
-            <textarea id="v_note" class="input-modern h-24 mb-2" placeholder="Catatan...">${v?.note||''}</textarea>
-            ${v?.photo ? '<p class="text-xs text-green-600 text-center">Foto tersimpan</p>' : ''}
-            <input type="file" id="v_photo" class="text-xs mb-2">
-            <div class="bg-slate-50 border p-2 rounded-xl mb-2"><canvas id="sig-pad" class="bg-white border w-full h-32 rounded"></canvas><button onclick="app.signaturePad.clear()" class="text-xs text-red-500 mt-1">Hapus TTD</button></div>
-            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN</button>
-        `);
-        setTimeout(()=>{const c=document.getElementById('sig-pad'); c.width=c.parentElement.clientWidth-16; c.height=128; this.signaturePad=new SignaturePad(c);},300);
-    },
-    async saveSign(id, arrName, index) {
-        const pj = document.getElementById('v_pj').value;
-        if(!pj) return Swal.fire('Error','Nama PJ Wajib','error');
-        const p = this.data.patients.find(x=>x.id===id);
-        const arr = p[arrName] || (p[arrName]=[]);
-        const f = document.getElementById('v_photo').files[0];
-        let photo = index!==null?arr[index].photo:''; 
-        if(f) photo = await this.toBase64(f);
-        let sign = !this.signaturePad.isEmpty() ? this.signaturePad.toDataURL() : (index!==null?arr[index].sign:'');
-        if(!sign) return Swal.fire('Error','TTD Wajib','error');
-        const data = { time: index!==null?arr[index].time:new Date().toLocaleString(), note:document.getElementById('v_note').value, pj, photo, sign };
-        if(index!==null) arr[index] = data; else arr.unshift(data);
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
-    },
-
-    modalSimpleNote(id, arrName) {
-        this.openModal(`
-            <h3 class="font-bold mb-4 uppercase">Input ${arrName}</h3>
-            <input id="sn_pj" class="input-modern mb-3" placeholder="Nama PJ">
-            <textarea id="sn_note" class="input-modern h-32 mb-4" placeholder="Catatan..."></textarea>
-            <button onclick="app.saveSimpleNote('${id}', '${arrName}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN</button>
-        `);
-    },
-    saveSimpleNote(id, arrName) {
-        const pj = document.getElementById('sn_pj').value;
-        const note = document.getElementById('sn_note').value;
-        if(!pj || !note) return Swal.fire('Error','Isi semua data','error');
-        const p = this.data.patients.find(x=>x.id===id);
-        if(!p[arrName]) p[arrName] = [];
-        p[arrName].unshift({time:new Date().toLocaleString(), pj, note});
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
-    },
-
-    // ============================================================
-    // FIXED MEDICINE LOGIC (AUTO USE & ESTIMATION)
+    // FIXED MEDICINE LOGIC (REMOVED INPUT 'USED', ADDED NOTE)
     // ============================================================
     
-    // 1. TAMBAH/EDIT STOK (Dengan Tanggal Masuk & Dosis)
+    // 1. TAMBAH/EDIT STOK (Updated V15.4: Input 'Terpakai' Dihapus)
     modalStock(id, index=null) {
         const p=this.data.patients.find(x=>x.id===id); const s=index!==null?p.medicine.stock[index]:null;
         const today = new Date().toISOString().split('T')[0];
+        
+        // Input "Terpakai" dihapus agar user hanya menggunakan Log Minum Obat
         this.openModal(`
             <h3 class="font-bold mb-3">Stok Obat</h3>
             <input id="s_name" class="input-modern mb-2" value="${s?.name||''}" placeholder="Nama Obat">
-            <div class="grid grid-cols-2 gap-2 mb-2">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500">Jumlah Awal</label>
-                    <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500">Terpakai (Auto)</label>
-                    <input id="s_used" type="number" class="input-modern bg-slate-100 text-slate-500 cursor-not-allowed" value="${s?.used||0}" readonly title="Gunakan tombol Check/Log untuk menambah">
-                </div>
+            <div class="mb-2">
+                <label class="text-[10px] font-bold text-slate-500">Jumlah Awal (Stok Fisik)</label>
+                <input id="s_init" type="number" class="input-modern" value="${s?.init||''}" placeholder="Qty">
             </div>
             <div class="grid grid-cols-2 gap-2 mb-2">
                 <div>
@@ -641,6 +469,7 @@ const app = {
                     <input id="s_daily" type="number" class="input-modern" value="${s?.daily_dose || ''}" placeholder="Cth: 3">
                 </div>
             </div>
+            <label class="text-[10px] font-bold text-slate-500">Expired Date</label>
             <input id="s_exp" type="date" class="input-modern mb-3" value="${s?.exp||''}">
             <button onclick="app.saveStock('${id}',${index})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">SIMPAN</button>
         `);
@@ -648,13 +477,12 @@ const app = {
     saveStock(id, index) {
         const p=this.data.patients.find(x=>x.id===id); if(!p.medicine) p.medicine={stock:[],logs:[]};
         
-        // Ambil data yang ada sebelumnya untuk 'used' agar tidak reset, karena fieldnya readonly
         const prevUsed = index !== null ? p.medicine.stock[index].used : 0;
         
         const data={
             name:document.getElementById('s_name').value, 
             init:Number(document.getElementById('s_init').value), 
-            used: prevUsed, 
+            used: prevUsed, // Used value preserved, only modifiable via logs
             exp:document.getElementById('s_exp').value,
             date_in: document.getElementById('s_date_in').value,
             daily_dose: Number(document.getElementById('s_daily').value)
@@ -664,21 +492,22 @@ const app = {
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 2. FITUR CATAT (RECORD) - PENGURANGAN STOK OTOMATIS
+    // 2. FITUR CATAT (RECORD) - ADDED NOTE FIELD
     modalUseMed(id, idx) {
         const p = this.data.patients.find(x => x.id === id);
         const medName = p.medicine.stock[idx].name;
         this.openModal(`
             <h3 class="font-bold text-center mb-2">Konfirmasi Minum Obat</h3>
             <p class="text-center text-sm mb-4 text-brand-600 font-bold">${medName}</p>
-            <input id="u_pj" class="input-modern mb-4" placeholder="Nama PJ (Perawat/Staff)" autofocus>
+            <input id="u_pj" class="input-modern mb-2" placeholder="Nama PJ (Perawat/Staff)" autofocus>
+            <textarea id="u_note" class="input-modern mb-4 h-20" placeholder="Catatan (Misal: Diminum setelah makan)"></textarea>
             <button onclick="app.execUseMed('${id}', ${idx})" class="w-full bg-emerald-600 text-white py-2 rounded-xl font-bold hover:bg-emerald-700 shadow-md">CATAT & KURANGI STOK</button>
         `);
-        // Fokus otomatis ke input PJ
         setTimeout(() => document.getElementById('u_pj').focus(), 100);
     },
     execUseMed(id, idx) {
         const pj = document.getElementById('u_pj').value;
+        const note = document.getElementById('u_note').value;
         if (!pj) return Swal.fire('Wajib Diisi', 'Masukkan Nama PJ', 'warning');
         
         const p = this.data.patients.find(x => x.id === id);
@@ -687,12 +516,12 @@ const app = {
         const stockItem = p.medicine.stock[idx];
         if(stockItem.init - stockItem.used <= 0) return Swal.fire('Stok Habis', 'Tidak bisa mencatat, stok 0.', 'error');
         
-        // Logic: Tambah Used, Catat Log
         stockItem.used++; 
         p.medicine.logs.unshift({
             time: new Date().toLocaleString(), 
             name: stockItem.name, 
-            pj: pj
+            pj: pj,
+            note: note 
         });
         
         this.closeModal(); 
@@ -701,7 +530,7 @@ const app = {
         Swal.fire({icon:'success', title:'Tercatat', timer:800, showConfirmButton:false});
     },
 
-    // 3. FITUR EDIT LOG
+    // 3. FITUR EDIT LOG (UPDATED: EDIT NOTE)
     modalEditLog(id, i) {
         const l = this.data.patients.find(x=>x.id===id).medicine.logs[i];
         this.openModal(`
@@ -711,18 +540,21 @@ const app = {
             <label class="text-xs font-bold text-slate-500">PJ</label>
             <input id="el_pj" class="input-modern mb-2" value="${l.pj}">
             <label class="text-xs font-bold text-slate-500">Waktu</label>
-            <input id="el_time" class="input-modern mb-4" value="${l.time}">
+            <input id="el_time" class="input-modern mb-2" value="${l.time}">
+            <label class="text-xs font-bold text-slate-500">Catatan</label>
+            <textarea id="el_note" class="input-modern mb-4 h-20">${l.note || ''}</textarea>
             <button onclick="app.saveEditLog('${id}',${i})" class="w-full bg-brand-600 text-white py-2 rounded font-bold">UPDATE DATA</button>
         `);
     },
     saveEditLog(id, i) {
         const p=this.data.patients.find(x=>x.id===id); 
-        p.medicine.logs[i].pj=document.getElementById('el_pj').value; 
-        p.medicine.logs[i].time=document.getElementById('el_time').value;
+        p.medicine.logs[i].pj = document.getElementById('el_pj').value; 
+        p.medicine.logs[i].time = document.getElementById('el_time').value;
+        p.medicine.logs[i].note = document.getElementById('el_note').value;
         this.closeModal(); this.saveDB(); this.renderPatientDetail();
     },
 
-    // 4. FITUR HAPUS & SYNC STOK (LOGIC INTI)
+    // 4. FITUR HAPUS LOG (Sync Stok)
     deleteMedLog(id, i) {
         Swal.fire({
             title: 'Hapus Log?',
@@ -831,8 +663,8 @@ const app = {
             children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
             children.push(new Paragraph({text:""}));
             children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
-            const medRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }), new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] })]})];
-            (p.medicine?.logs || []).forEach(l => { medRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(l.time)] }), new TableCell({ children: [new Paragraph(l.name)] }), new TableCell({ children: [new Paragraph(l.pj)] }),]})); });
+            const medRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }), new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Catatan", bold:true})] })]})];
+            (p.medicine?.logs || []).forEach(l => { medRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(l.time)] }), new TableCell({ children: [new Paragraph(l.name)] }), new TableCell({ children: [new Paragraph(l.pj)] }), new TableCell({ children: [new Paragraph(l.note||'-')] })]})); });
             children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
             children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
             const ttvRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }), new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })]})];
@@ -862,7 +694,7 @@ const app = {
             const wb = XLSX.utils.book_new();
             const bio = [{ Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, Program: p.program?.name, StartDate: p.program?.startDate, Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription }];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
-            const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj}));
+            const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj, Catatan:l.note||'-'}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
             const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
