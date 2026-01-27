@@ -332,133 +332,202 @@ renderPatientList(category) {
     switchTab(tabId) { this.activeTab = tabId; this.saveState('detail', this.activePatientId); this.renderPatientDetail(); },
 
     getTabContent(p, tab) {
+        // Helper untuk menangani data kosong
         const v = (val) => val || '-';
         
-        // --- TAB BIODATA ---
-        if(tab === 'biodata') {
-            return `<div class="grid grid-cols-2 gap-4 text-sm">
-                <div class="p-4 bg-slate-50 border rounded-xl"><span class="text-xs font-bold text-slate-400">TTL</span><div class="font-bold">${v(p.reg.ttl)}</div></div>
-                <div class="p-4 bg-slate-50 border rounded-xl"><span class="text-xs font-bold text-slate-400">PJ</span><div class="font-bold">${v(p.reg.guardian)}</div></div>
-                <div class="col-span-2 p-4 bg-slate-50 border rounded-xl"><span class="text-xs font-bold text-slate-400">Riwayat</span><div class="mt-1">${v(p.reg.history)}</div></div>
-                <button onclick="app.modalPatient('${p.id}')" class="col-span-2 bg-brand-600 text-white py-3 rounded-xl font-bold">EDIT BIODATA</button>
+        // 1. TAB BIODATA
+        if (tab === 'biodata') {
+            return `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-fade-in">
+                <div class="p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Tempat, Tgl Lahir</span>
+                    <div class="font-bold text-slate-700 text-lg">${v(p.reg.ttl)}</div>
+                </div>
+                <div class="p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Penanggung Jawab (PJ)</span>
+                    <div class="font-bold text-slate-700 text-lg">${v(p.reg.guardian)}</div>
+                </div>
+                <div class="col-span-1 md:col-span-2 p-4 bg-slate-50 border rounded-xl">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Riwayat Penggunaan</span>
+                    <div class="mt-1 text-slate-700 leading-relaxed font-medium">${v(p.reg.history)}</div>
+                </div>
+                <div class="col-span-1 md:col-span-2 mt-2">
+                    <button onclick="app.modalPatient('${p.id}')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow hover:bg-slate-900 transition">
+                        <i class="fas fa-edit mr-2"></i> EDIT BIODATA PASIEN
+                    </button>
+                </div>
             </div>`;
         }
         
-        // --- TAB PROGRAM ---
-        if(tab === 'program') {
+        // 2. TAB PROGRAM
+        if (tab === 'program') {
             const prog = p.program || {};
-            return `<div class="text-center p-8 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                <h2 class="text-2xl font-black text-slate-700 mb-2">${prog.name || 'BELUM DIATUR'}</h2>
-                <p class="text-slate-500 mb-6">${prog.desc || 'Silakan pilih paket program.'}</p>
-                <button onclick="app.modalProgram('${p.id}')" class="bg-brand-600 text-white px-6 py-2 rounded-full font-bold">ATUR PROGRAM</button>
+            return `
+            <div class="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 animate-fade-in h-[300px]">
+                <div class="bg-white p-4 rounded-full shadow-sm mb-4"><i class="fas fa-clipboard-list text-4xl text-brand-600"></i></div>
+                <h2 class="text-2xl font-black text-slate-700 mb-1">${prog.name || 'BELUM DIATUR'}</h2>
+                <p class="text-slate-500 mb-6 font-medium">${prog.desc || 'Pasien ini belum memiliki paket program.'}</p>
+                <button onclick="app.modalProgram('${p.id}')" class="bg-brand-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-brand-700 hover:shadow-xl transition transform hover:-translate-y-1">
+                    <i class="fas fa-cog mr-2"></i> ATUR PROGRAM
+                </button>
             </div>`;
         }
 
-        // --- TAB MEDICINE (DENGAN REMINDER & INVOICE) ---
-        if(tab === 'medicine') {
-            const stockHtml = (p.medicine?.stock || []).map((s, i) => {
-                const sisa = s.init - (s.used || 0);
-                
-                // LOGIKA REMINDER:
-                // Jika sisa < 7, beri background merah (bg-red-50) dan teks merah
-                const isLow = sisa < 7;
-                const rowClass = isLow ? "bg-red-50 border-l-4 border-l-red-500 transition" : "border-b hover:bg-slate-50 transition";
-                const textClass = isLow ? "text-red-600 font-bold" : "text-emerald-600 font-bold";
-                const warningIcon = isLow ? `<i class="fas fa-exclamation-triangle text-red-500 mr-1 animate-pulse" title="Stok Menipis (<7)"></i>` : '';
+        // 3. TAB MEDICINE (OBAT) - Dengan Reminder & Invoice
+        if (tab === 'medicine') {
+            // Pastikan array stock & logs ada
+            const stocks = p.medicine?.stock || [];
+            const logs = p.medicine?.logs || [];
 
-                return `<tr class="${rowClass} text-xs">
-                    <td class="p-3">
-                        <div class="font-bold text-slate-700">${s.date_in}</div>
-                        <div class="text-[10px] text-slate-400">Inv: ${s.invoice_date || '-'}</div>
-                    </td>
-                    <td class="p-3 font-bold text-slate-700">
-                        ${warningIcon} ${s.name}
-                        ${isLow ? '<div class="text-[9px] text-red-500 font-bold uppercase mt-1">Stok Menipis!</div>' : ''}
-                    </td>
-                    <td class="p-3 text-center ${textClass} text-sm">${sisa}</td>
-                    <td class="p-3 text-right flex gap-1 justify-end items-center h-full pt-4">
-                        <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg shadow hover:bg-emerald-700 text-[10px] font-bold tracking-wide">MINUM</button>
-                        <button onclick="app.modalStock('${p.id}', ${i})" class="bg-slate-200 text-slate-600 p-1.5 rounded-lg hover:bg-slate-300"><i class="fas fa-pen"></i></button>
-                        <button onclick="app.delSubItem('medicine.stock', ${i})" class="text-red-400 hover:text-red-600 p-1.5"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            }).join('') || '<tr><td colspan="4" class="text-center p-8 text-slate-400 italic">Belum ada stok obat yang diinput.</td></tr>';
+            // Generate HTML Tabel Stok
+            let stockHtml = '';
+            if (stocks.length === 0) {
+                stockHtml = `<tr><td colspan="4" class="text-center p-8 text-slate-400 italic bg-slate-50 rounded-lg">Belum ada stok obat yang diinput.</td></tr>`;
+            } else {
+                stockHtml = stocks.map((s, i) => {
+                    const sisa = parseInt(s.init) - (parseInt(s.used) || 0);
+                    const isLow = sisa < 7;
+                    
+                    // Style Kondisional
+                    const rowClass = isLow ? 'bg-red-50 border-l-4 border-l-red-500' : 'border-b hover:bg-slate-50';
+                    const textClass = isLow ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold';
+                    const warning = isLow ? '<i class="fas fa-exclamation-triangle text-red-500 mr-1 animate-pulse" title="Stok Menipis"></i>' : '';
+                    const alertText = isLow ? '<div class="text-[9px] text-red-500 font-bold uppercase mt-1">RESTOCK SEGERA!</div>' : '';
 
-            const logHtml = (p.medicine?.logs || []).map((l, i) => `
-                <tr class="border-b text-xs hover:bg-slate-50">
-                    <td class="p-3 text-slate-500">${l.time}</td>
+                    return `
+                    <tr class="${rowClass} transition duration-200">
+                        <td class="p-3 align-middle">
+                            <div class="font-bold text-xs text-slate-700">${s.date_in}</div>
+                            <div class="text-[10px] text-slate-400 bg-white px-1 rounded inline-block border border-slate-100 mt-1">Inv: ${s.invoice_date || '-'}</div>
+                        </td>
+                        <td class="p-3 align-middle">
+                            <div class="font-bold text-sm text-slate-800">${warning} ${s.name}</div>
+                            ${alertText}
+                        </td>
+                        <td class="p-3 text-center align-middle">
+                            <span class="${textClass} text-lg">${sisa}</span>
+                        </td>
+                        <td class="p-3 text-right align-middle">
+                            <div class="flex justify-end gap-1">
+                                <button onclick="app.modalUseMed('${p.id}', ${i})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg shadow hover:bg-emerald-700 text-[10px] font-bold tracking-wide transition"><i class="fas fa-pills mr-1"></i> MINUM</button>
+                                <button onclick="app.modalStock('${p.id}', ${i})" class="bg-slate-200 text-slate-600 p-1.5 rounded-lg hover:bg-slate-300 transition"><i class="fas fa-pen"></i></button>
+                                <button onclick="app.delSubItem('medicine.stock', ${i})" class="text-red-300 hover:text-red-600 p-1.5 transition"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // Generate HTML Tabel Log
+            let logHtml = '';
+            if (logs.length === 0) {
+                logHtml = `<tr><td colspan="5" class="text-center p-8 text-slate-400 italic">Belum ada riwayat minum obat.</td></tr>`;
+            } else {
+                logHtml = logs.map((l, i) => `
+                <tr class="border-b last:border-0 hover:bg-slate-50 transition text-xs">
+                    <td class="p-3 text-slate-500 font-mono">${l.time}</td>
                     <td class="p-3 font-bold text-slate-700">${l.name}</td>
-                    <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold text-[10px]">${l.pj}</span></td>
-                    <td class="p-3 italic text-slate-500">${l.note||'-'}</td>
-                    <td class="p-3 text-right"><button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button></td>
-                </tr>`).join('') || '<tr><td colspan="5" class="text-center p-8 text-slate-400 italic">Belum ada riwayat penggunaan.</td></tr>';
-            
-            return `<div class="space-y-8 animate-fade-in">
-                <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-                        <div>
-                            <h4 class="font-black text-brand-800 text-sm uppercase tracking-wide"><i class="fas fa-boxes mr-2"></i> STOK OBAT & INVOICE</h4>
-                            <p class="text-[10px] text-slate-400 font-bold mt-1">Baris merah = Stok < 7 (Perlu Restock)</p>
-                        </div>
-                        <button onclick="app.modalStock('${p.id}')" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-brand-700 shadow flex items-center gap-2">
-                            <i class="fas fa-plus-circle"></i> TAMBAH STOK
+                    <td class="p-3"><span class="bg-brand-50 text-brand-700 px-2 py-1 rounded font-bold text-[10px] uppercase tracking-wider">${l.pj}</span></td>
+                    <td class="p-3 italic text-slate-500">${l.note || '-'}</td>
+                    <td class="p-3 text-right"><button onclick="app.deleteMedLog('${p.id}', ${i})" class="text-slate-300 hover:text-red-500 transition"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('');
+            }
+
+            return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                        <h4 class="font-black text-slate-700 text-xs uppercase tracking-wider"><i class="fas fa-boxes mr-2"></i> Stok & Invoice</h4>
+                        <button onclick="app.modalStock('${p.id}')" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand-700 transition flex items-center gap-2">
+                            <i class="fas fa-plus"></i> STOK BARU
                         </button>
                     </div>
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
-                            <tr>
-                                <th class="p-3 w-1/4">Tgl Masuk / Inv</th>
-                                <th class="p-3 w-1/3">Nama Obat</th>
-                                <th class="p-3 text-center w-1/6">Sisa</th>
-                                <th class="p-3 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white">${stockHtml}</tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-3 w-24">Tanggal</th>
+                                    <th class="p-3">Nama Obat</th>
+                                    <th class="p-3 text-center w-16">Sisa</th>
+                                    <th class="p-3 text-right w-32">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">${stockHtml}</tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="bg-slate-50 p-4 border-b border-slate-200">
-                        <h4 class="font-black text-brand-800 text-sm uppercase tracking-wide"><i class="fas fa-history mr-2"></i> RIWAYAT PENGGUNAAN</h4>
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                        <h4 class="font-black text-slate-700 text-xs uppercase tracking-wider"><i class="fas fa-history mr-2"></i> Log Riwayat Minum</h4>
                     </div>
-                    <div class="max-h-64 overflow-y-auto">
+                    <div class="max-h-[300px] overflow-y-auto">
                         <table class="w-full text-left">
-                            <tbody class="divide-y divide-slate-100 bg-white">${logHtml}</tbody>
+                            <tbody class="divide-y divide-slate-100">${logHtml}</tbody>
                         </table>
                     </div>
                 </div>
             </div>`;
         }
-        
-        // --- TAB LAINNYA (GENERIC) ---
-        const simpleTabs = ['ttv','screening','conclusi','daily','assessment','plan','visit','terminasi','counseling'];
-        if(simpleTabs.includes(tab)) {
-            let arrName = tab === 'ttv' ? 'ttv' : (tab === 'daily' ? 'daily_progress' : (tab === 'visit' ? 'visits' : (tab === 'plan' ? 'plan_therapy' : tab))); 
-            if(tab === 'screening' || tab === 'conclusi') arrName = tab;
-            const arr = p[arrName] || [];
+
+        // 4. TAB LAINNYA (GENERIC & MAPPER)
+        // Kita gunakan mapping object agar lebih stabil daripada if/else bertingkat
+        const mapArr = {
+            'ttv': 'ttv',
+            'daily': 'daily_progress',
+            'visit': 'visits',
+            'plan': 'plan_therapy',
+            'terminasi': 'termination',
+            'assessment': 'assessment',
+            'counseling': 'counseling',
+            'screening': 'screening',
+            'conclusi': 'conclusi'
+        };
+
+        const arrName = mapArr[tab];
+
+        // Jika tab ditemukan di mapping
+        if (arrName) {
+            const dataArr = p[arrName] || [];
             
-            return `
-            <div class="flex justify-between items-center mb-6">
-                <h4 class="font-black text-xl uppercase text-slate-700 border-b-4 border-brand-200 inline-block pb-1">${tab.replace('_',' ')}</h4>
-                <button onclick="app.modalSimpleNote('${p.id}', '${arrName}')" class="bg-brand-600 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-brand-700 shadow flex items-center gap-2">
-                    <i class="fas fa-plus"></i> INPUT DATA
-                </button>
-            </div>
-            <div class="space-y-3">
-                ${arr.length === 0 ? '<div class="text-center p-10 text-slate-300 font-bold border-2 border-dashed border-slate-100 rounded-xl">BELUM ADA DATA</div>' : ''}
-                ${arr.map((x,i) => `
-                <div class="p-4 border border-slate-100 rounded-2xl bg-white shadow-sm hover:shadow-md transition flex justify-between items-start gap-4">
-                    <div class="text-sm text-slate-600">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="bg-brand-50 text-brand-700 px-2 py-1 rounded-md text-[10px] font-bold border border-brand-100"><i class="far fa-clock mr-1"></i> ${x.time}</span>
-                            <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold"><i class="far fa-user mr-1"></i> ${x.pj||'Petugas'}</span>
+            // Generate HTML List Item
+            const listHtml = dataArr.length === 0 
+                ? '<div class="text-center p-12 text-slate-300 font-bold border-2 border-dashed border-slate-200 rounded-xl">BELUM ADA DATA</div>' 
+                : dataArr.map((x, i) => `
+                    <div class="p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:shadow-md transition flex justify-between items-start gap-4 mb-3 animate-fade-in">
+                        <div class="text-sm text-slate-600 w-full">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="bg-brand-50 text-brand-700 px-2 py-1 rounded text-[10px] font-bold border border-brand-100 uppercase">
+                                    <i class="far fa-clock mr-1"></i> ${x.time}
+                                </span>
+                                <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                    <i class="far fa-user mr-1"></i> ${x.pj || 'Admin'}
+                                </span>
+                            </div>
+                            <p class="leading-relaxed whitespace-pre-wrap text-slate-700 font-medium border-l-2 border-brand-200 pl-3">${x.note || JSON.stringify(x)}</p>
                         </div>
-                        <p class="leading-relaxed whitespace-pre-line">${x.note||JSON.stringify(x)}</p>
+                        <button onclick="app.delSubItem('${arrName}', ${i})" class="text-slate-300 hover:text-red-500 p-2 transition" title="Hapus Data">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
                     </div>
-                    <button onclick="app.delSubItem('${arrName}',${i})" class="text-slate-300 hover:text-red-500 transition p-2"><i class="fas fa-trash-alt"></i></button>
-                </div>`).join('')}
+                `).join('');
+
+            return `
+            <div class="animate-fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-black text-xl uppercase text-slate-700 border-b-4 border-brand-200 inline-block pb-1 tracking-tight">
+                        DATA ${tab.replace(/_/g, ' ')}
+                    </h4>
+                    <button onclick="app.modalSimpleNote('${p.id}', '${arrName}')" class="bg-brand-600 text-white px-5 py-2.5 rounded-full text-xs font-bold hover:bg-brand-700 shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center gap-2">
+                        <i class="fas fa-plus-circle"></i> INPUT DATA
+                    </button>
+                </div>
+                <div>${listHtml}</div>
             </div>`;
         }
+
+        // Default jika tab tidak dikenali
+        return `<div class="p-10 text-center text-red-500 font-bold">Error: Tab '${tab}' tidak ditemukan.</div>`;
     },
 
         // --- 1. MEDICINE FINAL OVERHAUL (V17.0) ---
