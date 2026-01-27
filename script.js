@@ -255,7 +255,7 @@ renderPatientList(category) {
 
         container.innerHTML = '';
         container.appendChild(grid);
-    },
+    },  
   
     openPatient(id) {
         this.activePatientId = id;
