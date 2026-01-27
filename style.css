@@ -1,13 +1,13 @@
 /* =========================================
-   MMRC PREMIUM THEME - MAROON EDITION V2
+   MMRC PREMIUM THEME - MAROON DOMINANT V17
    ========================================= */
 
 :root {
     --primary-50: #fff1f2;
     --primary-100: #ffe4e6;
-    --primary-600: #e11d48;
-    --primary-700: #be123c;
-    --primary-800: #9f1239;
+    --primary-600: #e11d48; /* Merah Maroon Cerah */
+    --primary-700: #be123c; /* Merah Maroon Gelap */
+    --primary-800: #9f1239; /* Merah Maroon Deep */
     --bg-surface: #f8fafc;
 }
 
@@ -47,14 +47,13 @@ body {
     box-shadow: 0 0 0 3px var(--primary-50); outline: none;
 }
 
-/* CARDS */
+/* CARDS & ANIMATION */
 .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
 
 .fade-in { animation: fadeIn 0.4s ease-out forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Login BG Pattern */
 .login-bg {
     background-image: url('https://www.transparenttextures.com/patterns/medical-icons.png');
     opacity: 0.05;
@@ -64,17 +63,12 @@ body {
 #modal-container.hidden { display: none; }
 #modal-container { display: flex; }
 
-/* STOCK WARNING */
-.stock-low {
-    border: 2px solid #ef4444 !important; /* Red Border */
-    background-color: #fef2f2 !important; /* Red Bg */
-    animation: pulse-red 2s infinite;
+/* Table Styling */
+table thead tr th { color: var(--primary-800); background-color: var(--primary-50); }
+.tab-btn.active { background-color: var(--primary-600); color: white; border-color: var(--primary-600); }
+.tab-btn {
+    padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
+    color: #64748b; border: 1px solid #e2e8f0; background: white; white-space: nowrap;
+    transition: all 0.2s;
 }
-.stock-badge {
-    position: absolute; top: -10px; right: -10px;
-    background: #ef4444; color: white; padding: 2px 8px;
-    border-radius: 10px; font-size: 0.65rem; font-weight: bold;
-    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);
-    z-index: 10;
-}
-@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+.tab-btn:hover { border-color: var(--primary-600); color: var(--primary-600); }
