@@ -667,6 +667,7 @@ const app = {
         });
     },
 
+    
     modalSign(id, arrName, index = null) {
         const p = this.data.patients.find(x => x.id === id);
         const arr = p[arrName] || [];
@@ -682,10 +683,10 @@ const app = {
                 <input id="v_pj" class="input-modern w-full" placeholder="Nama PJ..." value="${v?.pj || ''}">
             </div>
 
-            <div class="mb-3">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Upload Foto Kegiatan (Opsional)</label>
-                <input id="v_photo" type="file" accept="image/*" class="input-modern w-full text-xs">
-                ${v?.photo ? '<p class="text-[10px] text-green-600 mt-1">✅ Foto sebelumnya tersimpan (upload baru jika ingin mengganti)</p>' : ''}
+            <div class="mb-3 p-2 bg-slate-100 rounded border border-slate-300">
+                <label class="block text-xs font-bold text-slate-700 mb-2">📸 Upload Foto Kegiatan</label>
+                <input id="v_photo" type="file" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                ${v?.photo ? '<p class="text-[10px] text-green-600 mt-1 font-bold">✅ Foto tersimpan (abaikan jika tidak ingin ganti)</p>' : ''}
             </div>
 
             <div class="mb-3">
@@ -695,45 +696,37 @@ const app = {
 
             <div class="mb-4">
                 <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan (Wajib)</label>
-                
-                <div id="signature-container" style="position: relative; width: 100%; height: 200px; border: 2px dashed #94a3b8; background-color: #f8fafc; border-radius: 12px; touch-action: none;">
+                <div id="signature-container" style="position: relative; width: 100%; height: 180px; border: 2px dashed #94a3b8; background-color: #f8fafc; border-radius: 12px; touch-action: none;">
                     <canvas id="signature-pad" style="display: block; width: 100%; height: 100%; touch-action: none;"></canvas>
                 </div>
-
                 <div class="flex justify-between mt-2 items-center">
-                    <span class="text-[10px] text-slate-400">Gunakan jari untuk tanda tangan</span>
+                    <span class="text-[10px] text-slate-400">Gunakan jari</span>
                     <button onclick="app.clearSignature()" class="text-xs text-red-500 font-bold hover:underline">Hapus / Ulangi</button>
                 </div>
-                ${v?.sign ? '<p class="text-[10px] text-green-600 mt-1">✅ Tanda tangan sebelumnya tersimpan</p>' : ''}
+                ${v?.sign ? '<p class="text-[10px] text-green-600 mt-1">✅ Tanda tangan tersimpan</p>' : ''}
             </div>
 
-            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow mt-2 active:scale-95 transition">
+            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow active:scale-95 transition">
                 SIMPAN LAPORAN
             </button>
         `;
 
         this.openModal(html);
 
-        // --- INISIALISASI CANVAS (SUPORT HP & RETINA DISPLAY) ---
+        // LOGIKA CANVAS (HP SUPPORT)
         setTimeout(() => {
             const canvas = document.getElementById('signature-pad');
             const container = document.getElementById('signature-container');
 
             if (canvas && container) {
-                // 1. Ambil rasio layar (Penting agar tidak pecah di HP)
                 const ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-                // 2. Set ukuran fisik canvas
                 canvas.width = container.offsetWidth * ratio;
                 canvas.height = container.offsetHeight * ratio;
-                
-                // 3. Skalakan konteks gambar
                 const ctx = canvas.getContext("2d");
                 ctx.scale(ratio, ratio);
 
-                // 4. Hidupkan Library
                 this.signaturePad = new SignaturePad(canvas, {
-                    backgroundColor: 'rgba(255, 255, 255, 0)', // Transparan
+                    backgroundColor: 'rgba(255, 255, 255, 0)',
                     penColor: 'rgb(0, 0, 0)',
                     velocityFilterWeight: 0.7
                 });
@@ -741,7 +734,6 @@ const app = {
         }, 250); 
     },
     
-    // Pastikan helper ini tetap ada
     clearSignature() {
         if (this.signaturePad) this.signaturePad.clear();
     },
