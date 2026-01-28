@@ -263,23 +263,39 @@ const app = {
         this.renderPatientDetail();
     },
 
-    renderPatientDetail() {
-        const p = this.data.patients.find(x => x.id === this.activePatientId);
+    renderPatientDetail(id = this.activePatientId) {
+        this.activePatientId = id;
+        const p = this.data.patients.find(x => x.id === id);
         if(!p) return this.renderPatientList(this.currentCategory);
-        
-        this.saveState('detail', p.id);
-        document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
-        
-        let customActions = '';
-        if(this.currentCategory === 'detox' && p.program?.startDate) {
-            const diff = Math.floor((new Date() - new Date(p.program.startDate)) / (1000 * 60 * 60 * 24)) + 1;
-            if(diff >= 7) {
-                customActions = `
-                    <button onclick="app.modalProgram('${p.id}', true)" class="bg-gradient-to-r from-emerald-500 to-emerald-700 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg hover:shadow-emerald-200 hover:-translate-y-1 transition flex items-center gap-2 animate-bounce">
-                        <i class="fas fa-sync-alt"></i> SINKRONISASI KE REHABILITASI
-                    </button>
-                    <div class="w-px h-8 bg-slate-300 mx-2"></div>
-                `;
+
+        this.saveState('detail');
+
+        // --- UPDATE BAGIAN INI (HEADER & TOMBOL DOWNLOAD) ---
+        const title = this.currentCategory === 'detox' ? "UNIT STABILISASI" : "UNIT REHABILITASI";
+        const color = this.currentCategory === 'detox' ? "text-rose-600" : "text-brand-600";
+
+        document.getElementById('page-title').innerHTML = `
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / 
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderPatientList('${this.currentCategory}')">${title}</span> / 
+            <span class="${color}">${p.reg.name}</span>
+        `;
+
+        // INI YANG MEMUNCULKAN TOMBOL WORD & EXCEL
+        document.getElementById('header-actions').innerHTML = `
+            <div class="flex items-center gap-2">
+                <button onclick="app.renderPatientList('${this.currentCategory}')" class="bg-slate-200 text-slate-600 w-8 h-8 rounded-full hover:bg-slate-300 flex items-center justify-center mr-2" title="Kembali">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                
+                <div class="h-6 w-px bg-slate-300 mx-1"></div> <button onclick="app.exportToWord('${id}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold hover:bg-blue-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-word"></i> <span class="hidden md:inline">WORD</span>
+                </button>
+                
+                <button onclick="app.exportToExcel('${id}')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold hover:bg-emerald-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-excel"></i> <span class="hidden md:inline">EXCEL</span>
+                </button>
+            </div>
+        `;
             }
         }
 
