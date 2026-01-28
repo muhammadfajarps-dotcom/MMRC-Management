@@ -282,7 +282,12 @@ const app = {
                 `;
             }
         }
-
+        document.getElementById('page-title').innerHTML = `
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / 
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderPatientList('${this.currentCategory}')">${title}</span> / 
+            <span class="${color}">${p.reg.name}</span>
+        `;
+      
         document.getElementById('header-actions').innerHTML = `
             ${customActions}
             <button onclick="app.exportToWord('${p.id}')" class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-700" title="Download Word"><i class="fas fa-file-word"></i></button>
