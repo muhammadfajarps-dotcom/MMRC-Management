@@ -682,39 +682,107 @@ const app = {
         `);
         setTimeout(()=>{const c=document.getElementById('sig-pad'); c.width=c.parentElement.clientWidth-16; c.height=128; this.signaturePad=new SignaturePad(c);},300);
     },
+    
     async saveSign(id, arrName, index) {
+        // 1. Ambil value dari form
         const pj = document.getElementById('v_pj').value;
-        if(!pj) return Swal.fire('Error','Nama PJ Wajib','error');
-        const p = this.data.patients.find(x=>x.id===id);
-        const arr = p[arrName] || (p[arrName]=[]);
-        const f = document.getElementById('v_photo').files[0];
-        let photo = index!==null?arr[index].photo:''; 
-        if(f) photo = await this.toBase64(f);
-        let sign = !this.signaturePad.isEmpty() ? this.signaturePad.toDataURL() : (index!==null?arr[index].sign:'');
-        if(!sign) return Swal.fire('Error','TTD Wajib','error');
-        const data = { time: index!==null?arr[index].time:new Date().toLocaleString(), note:document.getElementById('v_note').value, pj, photo, sign };
-        if(index!==null) arr[index] = data; else arr.unshift(data);
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
-    },
+        const note = document.getElementById('v_note').value;
+        const photoInput = document.getElementById('v_photo');
 
-    modalSimpleNote(id, arrName) {
+        // 2. Validasi
+        if (!pj) return Swal.fire('Gagal', 'Nama PJ wajib diisi!', 'warning');
+
+        // 3. Cari pasien
+        const p = this.data.patients.find(x => x.id === id);
+        if (!p[arrName]) p[arrName] = [];
+
+        // 4. Fungsi bantu ubah file ke Base64 (agar foto bisa disimpan)
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        // 5. Proses Foto
+        let photoData = null;
+        if (photoInput && photoInput.files[0]) {
+            photoData = await toBase64(photoInput.files[0]);
+        } else if (index !== null && p[arrName][index].photo) {
+            photoData = p[arrName][index].photo; // Pakai foto lama jika mode edit
+        }
+
+        // 6. Proses Tanda Tangan
+        let signData = null;
+        if (this.signaturePad && !this.signaturePad.isEmpty()) {
+            signData = this.signaturePad.toDataURL();
+        } else if (index !== null && p[arrName][index].sign) {
+            signData = p[arrName][index].sign; // Pakai ttd lama jika mode edit
+        }
+
+        // 7. Bungkus Data
+        const newData = {
+            time: new Date().toLocaleString('id-ID'),
+            pj: pj,
+            note: note,
+            photo: photoData,
+            sign: signData
+        };
+
+        // 8. Simpan ke Array (Edit atau Baru)
+        if (index !== null) p[arrName][index] = newData;
+        else p[arrName].unshift(newData);
+
+        // 9. Tutup & Refresh
+        this.closeModal();
+        this.saveDB();
+        this.renderPatientDetail();
+        Swal.fire('Tersimpan', 'Laporan & Tanda tangan berhasil disimpan.', 'success');
+    },
+    
+    modalSimpleNote(id, arrName, index = null) {
+        const p = this.data.patients.find(x => x.id === id);
+        const arr = p[arrName] || [];
+        const v = index !== null ? arr[index] : null;
+
         this.openModal(`
-            <h3 class="font-bold mb-4 uppercase">Input ${arrName}</h3>
-            <input id="sn_pj" class="input-modern mb-3" placeholder="Nama PJ">
-            <textarea id="sn_note" class="input-modern h-32 mb-4" placeholder="Catatan..."></textarea>
-            <button onclick="app.saveSimpleNote('${id}', '${arrName}')" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN</button>
+            <h3 class="font-bold mb-4 text-brand-800 uppercase">${index !== null ? 'Edit' : 'Input'} Data</h3>
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Nama Petugas (PJ)</label>
+                <input id="n_pj" class="input-modern w-full" placeholder="Nama PJ..." value="${v?.pj || ''}">
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Isi Catatan / Hasil</label>
+                <textarea id="n_note" class="input-modern w-full h-40" placeholder="Tulis hasil di sini...">${v?.note || ''}</textarea>
+            </div>
+            <button onclick="app.saveSimpleNote('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow hover:bg-brand-700 transition">SIMPAN DATA</button>
         `);
     },
-    saveSimpleNote(id, arrName) {
-        const pj = document.getElementById('sn_pj').value;
-        const note = document.getElementById('sn_note').value;
-        if(!pj || !note) return Swal.fire('Error','Isi semua data','error');
-        const p = this.data.patients.find(x=>x.id===id);
-        if(!p[arrName]) p[arrName] = [];
-        p[arrName].unshift({time:new Date().toLocaleString(), pj, note});
-        this.closeModal(); this.saveDB(); this.renderPatientDetail();
-    },
 
+    saveSimpleNote(id, arrName, index) {
+        const pj = document.getElementById('n_pj').value;
+        const note = document.getElementById('n_note').value;
+
+        if (!pj || !note) return Swal.fire('Gagal', 'PJ dan Catatan wajib diisi!', 'warning');
+
+        const p = this.data.patients.find(x => x.id === id);
+        if (!p[arrName]) p[arrName] = [];
+
+        const newData = {
+            time: new Date().toLocaleString('id-ID'),
+            pj: pj,
+            note: note
+        };
+
+        if (index !== null) p[arrName][index] = newData;
+        else p[arrName].unshift(newData);
+
+        this.closeModal();
+        this.saveDB();
+        this.renderPatientDetail(); // Penting agar tampilan langsung berubah
+        Swal.fire('Berhasil', 'Data berhasil disimpan.', 'success');
+    },
+  
     // ============================================================
     // FIXED MEDICINE LOGIC (UPDATED V17.0)
     // ============================================================
