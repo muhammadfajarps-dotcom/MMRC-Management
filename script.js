@@ -1134,11 +1134,13 @@ const app = {
     // ============================================================
     // EXPORT
     // ============================================================
+    // ============================================================
+    // FUNGSI DOWNLOAD WORD (VERSI DEBUG & FIX)
+    // ============================================================
     
-    // 1. Helper: Ubah Kode Base64 jadi Buffer (Agar bisa dibaca Word)
+    // Helper 1: Ubah Base64 ke ArrayBuffer
     base64ToArrayBuffer(base64) {
-        // Cek validitas base64
-        if (!base64 || !base64.includes(',')) return null;
+        if (!base64 || typeof base64 !== 'string' || !base64.includes(',')) return null;
         try {
             const binaryString = window.atob(base64.split(',')[1]); 
             const len = binaryString.length;
@@ -1148,13 +1150,16 @@ const app = {
             }
             return bytes.buffer;
         } catch (e) {
-            console.error("Gagal convert base64", e);
+            console.error("Gagal convert gambar:", e);
             return null;
         }
     },
 
-    // 2. Helper: Membuat Gambar di Word (Aman dari error)
+    // Helper 2: Buat ImageRun (Aman)
     createImageRun(base64String, width = 100, height = 100) {
+        // Cek dulu apakah docx ada
+        if (typeof docx === 'undefined') return null;
+
         const buffer = this.base64ToArrayBuffer(base64String);
         if (!buffer) {
             return new docx.TextRun({ text: "-", size: 20 });
@@ -1165,7 +1170,7 @@ const app = {
         });
     },
 
-    // 3. Helper: Membuat Header Kolom Tabel
+    // Helper 3: Header Tabel
     createTableHeader(texts, widths) {
         const { TableRow, TableCell, Paragraph, WidthType } = docx;
         return new TableRow({
@@ -1173,173 +1178,155 @@ const app = {
                 new TableCell({ 
                     children: [new Paragraph({ text: text, bold: true, size: 22 })], 
                     width: { size: widths[i], type: WidthType.PERCENTAGE },
-                    shading: { fill: "E0E0E0" } // Warna abu-abu header
+                    shading: { fill: "E0E0E0" } 
                 })
             ),
             tableHeader: true,
         });
     },
 
-    // --- FUNGSI UTAMA DOWNLOAD ---
+    // --- FUNGSI UTAMA ---
     async downloadDOCX(patientId) {
-        const p = this.data.patients.find(x => x.id === patientId);
-        if (!p) return Swal.fire('Error', 'Data pasien tidak ditemukan', 'error');
-
-        // Loader
-        Swal.fire({title: 'Sedang Membuat Dokumen...', text: 'Mengambil grafik dan data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
-
-        const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, TextRun, HeadingLevel, AlignmentType } = docx;
-
-        // --- A. JUDUL DOKUMEN ---
-        const title = new Paragraph({
-            text: `REKAM MEDIS: ${p.name.toUpperCase()}`,
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 100 }
-        });
-
-        const subTitle = new Paragraph({
-            children: [
-                new TextRun({ text: `MRN: ${p.mrn} | Usia: ${this.calculateAge(p.dob)} Th | Gender: ${p.gender}`, bold: true })
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 }
-        });
-
-        // --- B. PROSES GRAFIK BPSS (CRISIS MONITORING) ---
-        // Kita ambil gambar dari Canvas chart yang sedang tampil di layar
-        let chartParagraph = new Paragraph({ text: "[Grafik tidak tersedia - Pastikan Anda sudah membuka Tab Crisis]", color: "red" });
-        
-        // Pastikan canvas dengan ID 'chartCanvas' ada di HTML Anda
-        const canvasElement = document.getElementById('chartCanvas');
-        if (canvasElement) {
-            try {
-                // Ubah canvas menjadi gambar PNG
-                const chartDataUrl = canvasElement.toDataURL("image/png");
-                chartParagraph = new Paragraph({
-                    children: [this.createImageRun(chartDataUrl, 500, 250)], // Lebar 500, Tinggi 250
-                    alignment: AlignmentType.CENTER,
-                    spacing: { after: 300 }
-                });
-            } catch (e) {
-                console.error("Gagal ambil grafik", e);
-            }
+        // 1. CEK LIBRARY DULU
+        if (typeof docx === 'undefined') {
+            alert("ERROR: Library 'docx' belum terpasang di index.html. Cek koneksi internet atau script tag.");
+            return;
+        }
+        if (typeof saveAs === 'undefined') {
+            alert("ERROR: Library 'FileSaver.js' belum terpasang.");
+            return;
         }
 
-        // --- C. TABEL ANGKA BPSS ---
-        let bpssTable = new Paragraph({ text: "Belum ada data BPSS" });
-        const bpssData = p.crisis?.bpss || [];
-        
-        if (bpssData.length > 0) {
-            // Header: Hari, Bio, Psy, Soc, Spi, Total
-            const headerRow = this.createTableHeader(
-                ["HARI", "BIO", "PSY", "SOC", "SPI", "TOTAL"], 
-                [20, 16, 16, 16, 16, 16]
-            );
+        try {
+            const p = this.data.patients.find(x => x.id === patientId);
+            if (!p) {
+                alert("Data pasien tidak ditemukan!");
+                return;
+            }
 
-            // Baris Data
-            const dataRows = bpssData.map((d, i) => {
-                return new TableRow({
+            // Loader
+            Swal.fire({
+                title: 'Sedang Membuat Word...', 
+                text: 'Mohon tunggu, sedang memproses gambar...', 
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading()
+            });
+
+            // Destructuring Library
+            const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, TextRun, HeadingLevel, AlignmentType, ImageRun } = docx;
+
+            // --- A. Header Dokumen ---
+            const title = new Paragraph({
+                text: `REKAM MEDIS: ${p.name.toUpperCase()}`,
+                heading: HeadingLevel.HEADING_1,
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 }
+            });
+
+            const subTitle = new Paragraph({
+                children: [
+                    new TextRun({ text: `MRN: ${p.mrn} | Tgl Lahir: ${p.dob} | Gender: ${p.gender}`, bold: true })
+                ],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 }
+            });
+
+            // --- B. Ambil Grafik (Safe Mode) ---
+            let chartElement = null;
+            try {
+                const canvas = document.getElementById('chartCanvas');
+                if (canvas) {
+                    const chartDataUrl = canvas.toDataURL("image/png");
+                    const chartBuffer = this.base64ToArrayBuffer(chartDataUrl);
+                    if (chartBuffer) {
+                        chartElement = new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    data: chartBuffer,
+                                    transformation: { width: 500, height: 250 }
+                                })
+                            ],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 300 }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("Gagal ambil grafik:", err);
+                chartElement = new Paragraph({ text: "[Grafik tidak dapat dimuat]", color: "red" });
+            }
+
+            // Jika grafik null (canvas gak ketemu), buat placeholder
+            if (!chartElement) chartElement = new Paragraph({ text: "[Grafik tidak tersedia saat download]", alignment: AlignmentType.CENTER });
+
+
+            // --- C. Tabel BPSS ---
+            let bpssTable = new Paragraph({ text: "Belum ada data BPSS" });
+            const bpssData = p.crisis?.bpss || [];
+            if (bpssData.length > 0) {
+                const headerRow = this.createTableHeader(["HARI", "BIO", "PSY", "SOC", "SPI", "TOTAL"], [20, 16, 16, 16, 16, 16]);
+                const dataRows = bpssData.map((d, i) => new TableRow({
                     children: [
-                        new TableCell({ children: [new Paragraph(`Hari ke-${i + 1}`)] }),
+                        new TableCell({ children: [new Paragraph(`Hari ${i + 1}`)] }),
                         new TableCell({ children: [new Paragraph(String(d.bio||0))] }),
                         new TableCell({ children: [new Paragraph(String(d.psy||0))] }),
                         new TableCell({ children: [new Paragraph(String(d.soc||0))] }),
                         new TableCell({ children: [new Paragraph(String(d.spi||0))] }),
                         new TableCell({ children: [new Paragraph({ text: String(d.total||0), bold: true })] }),
                     ],
-                });
-            });
+                }));
+                bpssTable = new Table({ rows: [headerRow, ...dataRows], width: { size: 100, type: WidthType.PERCENTAGE } });
+            }
 
-            bpssTable = new Table({
-                rows: [headerRow, ...dataRows],
-                width: { size: 100, type: WidthType.PERCENTAGE },
-            });
-        }
-
-
-        // --- D. FUNGSI UNTUK TABEL LAPORAN (Assessment, Daily, dll) ---
-        const createLogTable = (titleText, dataArray) => {
-            if (!dataArray || dataArray.length === 0) return [];
-
-            // Header Tabel
-            const headerRow = this.createTableHeader(
-                ["WAKTU", "PJ", "CATATAN", "FOTO", "TTD"],
-                [15, 15, 40, 15, 15]
-            );
-
-            // Isi Baris
-            const rows = dataArray.map(item => {
-                return new TableRow({
+            // --- D. Helper Tabel Log (Foto + TTD) ---
+            const createLogTable = (titleText, dataArray) => {
+                if (!dataArray || dataArray.length === 0) return [];
+                const headerRow = this.createTableHeader(["WAKTU", "PJ", "CATATAN", "FOTO", "TTD"], [15, 15, 40, 15, 15]);
+                
+                const rows = dataArray.map(item => new TableRow({
                     children: [
                         new TableCell({ children: [new Paragraph(item.time || "-")] }),
                         new TableCell({ children: [new Paragraph(item.pj || "-")] }),
                         new TableCell({ children: [new Paragraph(item.note || "-")] }),
-                        
-                        // Kolom Foto
-                        new TableCell({ 
-                            children: [new Paragraph({ children: [this.createImageRun(item.photo, 80, 80)] })],
-                            verticalAlign: "center"
-                        }),
-
-                        // Kolom Tanda Tangan
-                        new TableCell({ 
-                            children: [new Paragraph({ children: [this.createImageRun(item.sign, 60, 40)] })],
-                            verticalAlign: "center"
-                        }),
+                        new TableCell({ children: [new Paragraph({ children: [this.createImageRun(item.photo, 80, 80)] })], verticalAlign: "center" }),
+                        new TableCell({ children: [new Paragraph({ children: [this.createImageRun(item.sign, 60, 40)] })], verticalAlign: "center" }),
                     ],
-                });
-            });
+                }));
 
-            return [
-                new Paragraph({ text: `\n${titleText}`, heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 100 } }),
-                new Table({
-                    rows: [headerRow, ...rows],
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                })
+                return [
+                    new Paragraph({ text: `\n${titleText}`, heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 100 } }),
+                    new Table({ rows: [headerRow, ...rows], width: { size: 100, type: WidthType.PERCENTAGE } })
+                ];
+            };
+
+            // --- E. Susun Section ---
+            const children = [
+                title, subTitle,
+                new Paragraph({ text: "MONITORING KRISIS (BPSS)", heading: HeadingLevel.HEADING_2 }),
+                chartElement,
+                bpssTable,
+                ...createLogTable("ASSESSMENT AWAL", p.assessment),
+                ...createLogTable("DAILY REPORTS", p.daily_report),
+                ...createLogTable("RENCANA TERAPI", p.plan_therapy),
+                ...createLogTable("VISIT DOKTER", p.visits),
+                ...createLogTable("KONSELING", p.counseling),
+                ...createLogTable("SCREENING", p.screening),
+                ...createLogTable("KESIMPULAN", p.conclusion)
             ];
-        };
 
-        // --- E. SUSUN HALAMAN DOKUMEN ---
-        const sectionChildren = [
-            title,
-            subTitle,
-            
-            // 1. Masukkan Grafik & Tabel BPSS
-            new Paragraph({ text: "MONITORING KRISIS (BPSS)", heading: HeadingLevel.HEADING_2 }),
-            chartParagraph, // Gambar Grafik
-            new Paragraph({ text: "" }), // Spasi
-            bpssTable,      // Tabel Angka
-            
-            // 2. Masukkan Tabel Laporan Lainnya
-            ...createLogTable("ASSESSMENT AWAL", p.assessment),
-            ...createLogTable("DAILY REPORTS", p.daily_report),
-            ...createLogTable("RENCANA TERAPI", p.plan_therapy),
-            ...createLogTable("VISIT DOKTER", p.visits),
-            ...createLogTable("KONSELING", p.counseling),
-            ...createLogTable("SCREENING", p.screening),
-            ...createLogTable("KESIMPULAN", p.conclusion)
-        ];
-
-        // --- F. GENERATE & DOWNLOAD ---
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: sectionChildren,
-            }],
-        });
-
-        try {
+            // --- F. Generate Blob ---
+            const doc = new Document({ sections: [{ children: children }] });
             const blob = await Packer.toBlob(doc);
-            saveAs(blob, `RekamMedis_${p.name.replace(/\s+/g, '_')}_Lengkap.docx`);
-            Swal.fire('Berhasil', 'Dokumen Word Lengkap (Grafik+Foto+TTD) diunduh!', 'success');
+            
+            saveAs(blob, `RM_${p.name.replace(/\s+/g, '_')}.docx`);
+            Swal.fire('Berhasil', 'File Word Terunduh!', 'success');
+
         } catch (error) {
             console.error(error);
-            Swal.fire('Gagal', 'Terjadi kesalahan saat export Word.', 'error');
+            Swal.fire('Gagal', 'Error: ' + error.message, 'error');
         }
     },
-                  
-  
+                          
   exportToExcel(id) {
         try {
             const p = this.data.patients.find(x=>x.id===id);
