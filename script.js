@@ -1011,84 +1011,159 @@ const app = {
     // ============================================================
     // EXPORT
     // ============================================================
-    async exportToWord(id) {
-        try {
-            const p = this.data.patients.find(x=>x.id===id);
-            if (!p) throw new Error("Data pasien tidak ditemukan");
-            if (typeof docx === 'undefined') throw new Error("Library Word belum termuat. Coba refresh halaman.");
-            const { Document, Packer, Paragraph, Table, TableRow, TableCell, HeadingLevel, ImageRun, WidthType } = docx;
-            const b64Blob = (b64) => { try { if (!b64 || !b64.includes('base64,')) return null; return Uint8Array.from(atob(b64.split(',')[1]), c => c.charCodeAt(0)) } catch(e) { return null } };
-            const createDetailSection = (title, dataArr) => {
-                const rows = [new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing:{before:400, after:200} })];
-                if(!dataArr || dataArr.length === 0) { rows.push(new Paragraph({text: "(Data Kosong)", italic: true})); return rows; }
-                dataArr.forEach(item => {
-                    const itemChildren = [ new Paragraph({ text: `Waktu: ${item.time} | PJ: ${item.pj}`, bold: true }), new Paragraph({ text: item.note, spacing:{after:100} }) ];
-                    if(item.photo) { const imgData = b64Blob(item.photo); if(imgData) itemChildren.push(new Paragraph({children:[new ImageRun({data:imgData, transformation:{width:150, height:100}})]})); }
-                    if(item.sign) { const signData = b64Blob(item.sign); if(signData) { itemChildren.push(new Paragraph({text: "Tanda Tangan:", size: 16})); itemChildren.push(new Paragraph({children:[new ImageRun({data:signData, transformation:{width:100, height:50}})]})); } }
-                    itemChildren.push(new Paragraph({ text: "__________________________________________________________________________________", color: "CCCCCC" }));
-                    rows.push(...itemChildren);
-                });
-                return rows;
-            };
-            const children = [];
-            children.push(new Paragraph({ text: "REKAM MEDIS PASIEN MMRC", heading: HeadingLevel.HEADING_1, alignment: "center" }));
-            children.push(new Paragraph({ text: `Dicetak pada: ${new Date().toLocaleString()}`, alignment: "center", spacing:{after:300} }));
-            children.push(new Paragraph({ text: "I. IDENTITAS & PROGRAM", heading: HeadingLevel.HEADING_2 }));
-            children.push(new Paragraph(`Nama Lengkap: ${p.reg.name}`));
-            children.push(new Paragraph(`TTL: ${p.reg.ttl || '-'} | Usia: ${p.reg.age} Th`));
-            children.push(new Paragraph(`Status: ${p.reg.status || '-'} | Pekerjaan: ${p.reg.job || '-'}`));
-            children.push(new Paragraph(`Penanggung Jawab: ${p.reg.guardian || '-'}`));
-            children.push(new Paragraph(`Program Saat Ini: ${p.program?.name || 'Belum Ada'} (${p.program?.days || 0} Hari)`));
-            children.push(new Paragraph(`Mulai Program: ${p.program?.startDate || '-'}`));
-            children.push(new Paragraph({text:""}));
-            children.push(new Paragraph({ text: "II. RIWAYAT PENGGUNAAN OBAT", heading: HeadingLevel.HEADING_2 }));
-            const medRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nama Obat", bold:true})] }), new TableCell({ children: [new Paragraph({text: "PJ", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Catatan", bold:true})] })]})];
-            (p.medicine?.logs || []).forEach(l => { medRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(l.time)] }), new TableCell({ children: [new Paragraph(l.name)] }), new TableCell({ children: [new Paragraph(l.pj)] }), new TableCell({ children: [new Paragraph(l.note||'-')] })]})); });
-            children.push(new Table({ rows: medRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-            children.push(new Paragraph({ text: "III. TANDA VITAL (TTV & GDS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-            const ttvRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Waktu", bold:true})] }), new TableCell({ children: [new Paragraph({text: "TD", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Nadi/RR", bold:true})] }), new TableCell({ children: [new Paragraph({text: "GDS", bold:true})] })]})];
-            (p.ttv || []).forEach(t => { ttvRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(t.time)] }), new TableCell({ children: [new Paragraph(t.td)] }), new TableCell({ children: [new Paragraph(`${t.nadi}/${t.rr}`)] }), new TableCell({ children: [new Paragraph(t.gds)] }),]})); });
-            children.push(new Table({ rows: ttvRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-            children.push(new Paragraph({ text: "IV. SKOR BPSS (CRISIS)", heading: HeadingLevel.HEADING_2, spacing:{before:300} }));
-            const bpssRows = [new TableRow({ children: [new TableCell({ children: [new Paragraph({text: "Hari", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Bio", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Psy", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Soc", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Spi", bold:true})] }), new TableCell({ children: [new Paragraph({text: "Total", bold:true})] })]})];
-            (p.crisis?.bpss || []).forEach((b, i) => { bpssRows.push(new TableRow({ children: [new TableCell({ children: [new Paragraph(`Hari-${i+1}`)] }), new TableCell({ children: [new Paragraph(String(b.bio))] }), new TableCell({ children: [new Paragraph(String(b.psy))] }), new TableCell({ children: [new Paragraph(String(b.soc))] }), new TableCell({ children: [new Paragraph(String(b.spi))] }), new TableCell({ children: [new Paragraph(String(b.total))] }),]})); });
-            children.push(new Table({ rows: bpssRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-            children.push(...createDetailSection("V. ASSESSMENT", p.assessment));
-            children.push(...createDetailSection("VI. RENCANA TERAPI", p.plan_therapy));
-            children.push(...createDetailSection("VII. VISIT DOKTER", p.visits));
-            children.push(...createDetailSection("VIII. KONSELING", p.counseling));
-            children.push(...createDetailSection("IX. PROGRES HARIAN", p.daily_progress));
-            children.push(...createDetailSection("X. TERMINASI", p.termination));
-            const doc = new Document({ sections: [{ children }] });
-            const blob = await Packer.toBlob(doc);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a"); a.href = url; a.download = `Laporan_Lengkap_${p.reg.name}.docx`; a.click();
-        } catch (err) { Swal.fire("Error Export", "Gagal membuat dokumen Word.", "error"); }
+    // --- FUNGSI DOWNLOAD WORD (LAPORAN RESMI) ---
+    exportToWord(id) {
+        const p = this.data.patients.find(x => x.id === id);
+        if(!p) return;
+
+        // Kita bikin Template HTML untuk Word
+        // CSS inline sangat penting agar tampilan di Word rapi
+        const htmlContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: top; }
+                th { background-color: #f0f0f0; font-weight: bold; }
+                .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px; }
+                .title { font-size: 16pt; font-weight: bold; margin: 0; }
+                .subtitle { font-size: 12pt; margin: 0; }
+                .section-title { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <p class="title">UNIT REHABILITASI & STABILISASI</p>
+                <p class="subtitle">LAPORAN PERKEMBANGAN PASIEN</p>
+            </div>
+
+            <h3 class="section-title">I. DATA PASIEN</h3>
+            <table style="border: none;">
+                <tr style="border: none;"><td style="border: none; width: 150px;">Nama Lengkap</td><td style="border: none;">: ${p.reg.name}</td></tr>
+                <tr style="border: none;"><td style="border: none;">Usia</td><td style="border: none;">: ${p.reg.age} Tahun</td></tr>
+                <tr style="border: none;"><td style="border: none;">Program</td><td style="border: none;">: ${p.program?.name || '-'}</td></tr>
+                <tr style="border: none;"><td style="border: none;">Tanggal Masuk</td><td style="border: none;">: ${p.program?.startDate || '-'}</td></tr>
+                <tr style="border: none;"><td style="border: none;">Diagnosa/Keluhan</td><td style="border: none;">: ${p.diagnosis.plan || '-'}</td></tr>
+            </table>
+
+            <h3 class="section-title">II. RINGKASAN OBAT SAAT INI</h3>
+            <table>
+                <thead>
+                    <tr><th>Nama Obat</th><th>Stok Awal</th><th>Terpakai</th><th>Sisa</th></tr>
+                </thead>
+                <tbody>
+                    ${(p.medicine?.stock || []).map(s => `
+                        <tr>
+                            <td>${s.name}</td>
+                            <td>${s.init}</td>
+                            <td>${s.used || 0}</td>
+                            <td>${parseInt(s.init) - (parseInt(s.used)||0)}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="4">Tidak ada data obat.</td></tr>'}
+                </tbody>
+            </table>
+
+            <h3 class="section-title">III. 5 JURNAL PERKEMBANGAN TERAKHIR</h3>
+            <table>
+                <thead>
+                    <tr><th style="width: 120px;">Waktu</th><th>Petugas</th><th>Catatan</th></tr>
+                </thead>
+                <tbody>
+                    ${(p.daily_progress || []).slice(0, 5).map(d => `
+                        <tr>
+                            <td>${d.time}</td>
+                            <td>${d.pj}</td>
+                            <td>${d.note}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="3">Belum ada catatan harian.</td></tr>'}
+                </tbody>
+            </table>
+
+            <br><br>
+            <p style="text-align: right;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+        </body>
+        </html>`;
+
+        // Proses Download Blob
+        const blob = new Blob(['\ufeff', htmlContent], {
+            type: 'application/msword'
+        });
+        saveAs(blob, `Laporan_${p.reg.name}.doc`);
     },
 
+    // --- FUNGSI DOWNLOAD EXCEL (DATA LENGKAP) ---
     exportToExcel(id) {
-        try {
-            const p = this.data.patients.find(x=>x.id===id);
-            if (!p) throw new Error("Pasien tidak ditemukan");
-            const wb = XLSX.utils.book_new();
-            const bio = [{ Nama: p.reg.name, TTL: p.reg.ttl, Usia: p.reg.age, PJ: p.reg.guardian, Program: p.program?.name, StartDate: p.program?.startDate, Diagnosa: p.diagnosis.plan, Resep: p.diagnosis.prescription }];
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bio), "Biodata_Program");
-            const meds = (p.medicine?.logs||[]).map(l=>({Waktu:l.time, Obat:l.name, PJ:l.pj, Catatan:l.note||'-'}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meds), "Medicine");
-            const ttv = (p.ttv||[]).map(t=>({Waktu:t.time, TD:t.td, Nadi:t.nadi, RR:t.rr, TB:t.tb, BB:t.bb, GDS:t.gds}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ttv), "TTV_GDS");
-            const crisis = (p.crisis?.bpss||[]).map((b,i)=>({Hari:i+1, Bio:b.bio, Psy:b.psy, Soc:b.soc, Spi:b.spi, Total:b.total}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crisis), "Crisis_BPSS");
-            const mapLog = (arr) => (arr||[]).map(x=>({Waktu:x.time, PJ:x.pj, Catatan:x.note, AdaFoto:x.photo?'Ya':'Tidak', AdaTTD:x.sign?'Ya':'Tidak'}));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.assessment)), "Assessment");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.plan_therapy)), "Rencana_Terapi");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.visits)), "Visit_Dokter");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.counseling)), "Konseling");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.daily_progress)), "Progres_Harian");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mapLog(p.termination)), "Terminasi");
-            XLSX.writeFile(wb, `Laporan_Lengkap_${p.reg.name}.xlsx`);
-        } catch (err) { Swal.fire("Error Export", "Gagal membuat Excel.", "error"); }
-    }
-};
+        const p = this.data.patients.find(x => x.id === id);
+        if(!p) return;
+
+        const wb = XLSX.utils.book_new();
+
+        // 1. SHEET BIODATA
+        const bioData = [
+            ["DATA PASIEN", ""],
+            ["Nama", p.reg.name],
+            ["Umur", p.reg.age],
+            ["Diagnosa", p.diagnosis.plan],
+            ["Program", p.program?.name || '-'],
+            ["Tanggal Masuk", p.program?.startDate || '-'],
+            ["Wali / PJ", p.reg.guardian]
+        ];
+        const wsBio = XLSX.utils.aoa_to_sheet(bioData);
+        XLSX.utils.book_append_sheet(wb, wsBio, "Biodata");
+
+        // 2. SHEET OBAT (Stok & Riwayat)
+        // Gabung stok dan log jadi satu tampilan atau pisah
+        const stockData = (p.medicine?.stock || []).map(s => ({
+            Nama_Obat: s.name,
+            Masuk: s.init,
+            Terpakai: s.used || 0,
+            Sisa: s.init - (s.used || 0),
+            Tgl_Invoice: s.invoice_date || '-'
+        }));
+        if(stockData.length) {
+            const wsStock = XLSX.utils.json_to_sheet(stockData);
+            XLSX.utils.book_append_sheet(wb, wsStock, "Stok_Obat");
+        }
+
+        const logData = (p.medicine?.logs || []).map(l => ({
+            Waktu: l.time,
+            Obat: l.name,
+            Petugas: l.pj,
+            Catatan: l.note
+        }));
+        if(logData.length) {
+            const wsLog = XLSX.utils.json_to_sheet(logData);
+            XLSX.utils.book_append_sheet(wb, wsLog, "Riwayat_Minum");
+        }
+
+        // 3. SHEET TTV (Tanda Vital)
+        const ttvData = (p.ttv || []).map(t => ({
+            Waktu: t.time,
+            TD: t.td,
+            Nadi: t.nadi,
+            Suhu: t.suhu,
+            SpO2: t.spo2
+        }));
+        if(ttvData.length) {
+            const wsTTV = XLSX.utils.json_to_sheet(ttvData);
+            XLSX.utils.book_append_sheet(wb, wsTTV, "TTV");
+        }
+
+        // 4. SHEET JURNAL (Daily Progress)
+        const dailyData = (p.daily_progress || []).map(d => ({
+            Waktu: d.time,
+            PJ: d.pj,
+            Isi_Laporan: d.note
+        }));
+        if(dailyData.length) {
+            const wsDaily = XLSX.utils.json_to_sheet(dailyData);
+            XLSX.utils.book_append_sheet(wb, wsDaily, "Jurnal_Harian");
+        }
+
+        // DOWNLOAD FILE
+        XLSX.writeFile(wb, `REKAM_MEDIS_${p.reg.name.replace(/ /g,'_')}.xlsx`);
+    },
 
 document.addEventListener('DOMContentLoaded', () => { window.app = app; app.init(); });
