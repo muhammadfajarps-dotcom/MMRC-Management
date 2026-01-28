@@ -1134,240 +1134,208 @@ const app = {
     // ============================================================
     // EXPORT
     // ============================================================
-    async exportToWord(id) {
-        const p = this.data.patients.find(x => x.id === id);
-        if(!p) { Swal.fire('Error', 'Data pasien tidak ditemukan!', 'error'); return; }
-
-        // --- 1. HELPER: FORMAT TANGGAL & WAKTU INDONESIA ---
-        const fmtTime = (isoStr) => {
-            if(!isoStr) return '-';
-            try { return new Date(isoStr).toLocaleString('id-ID', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }); } 
-            catch(e) { return isoStr; }
-        };
-
-        // --- 2. HELPER: RENDER GAMBAR (SAFE MODE) ---
-        const renderImg = (src, w=100) => {
-            // Jika src kosong atau bukan gambar base64/url valid, return kosong
-            if (!src || src.length < 20) return '';
-            // Style display:block memastikan gambar tidak merusak baris teks
-            return `<br><img src="${src}" width="${w}" style="width:${w}px; height:auto; display:block; margin-top:5px; border:1px solid #eee;">`;
-        };
-
-        // --- 3. HELPER: FORMAT TABEL STANDAR (Waktu | Petugas | Isi) ---
-        // Ini kunci agar semua tabel (Assessmen, Plan, Daily) terlihat SAMA PERSIS rapinya
-        const renderStandardTable = (dataArr, emptyText) => {
-            if (!dataArr || dataArr.length === 0) {
-                return `<tr><td colspan="3" align="center" style="padding:10px; font-style:italic; background-color:#f9f9f9;">${emptyText}</td></tr>`;
+    
+    // 1. Helper: Ubah Kode Base64 jadi Buffer (Agar bisa dibaca Word)
+    base64ToArrayBuffer(base64) {
+        // Cek validitas base64
+        if (!base64 || !base64.includes(',')) return null;
+        try {
+            const binaryString = window.atob(base64.split(',')[1]); 
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
             }
-            return dataArr.map(x => `
-                <tr>
-                    <td valign="top" width="15%" style="padding:5px; font-size:10pt;">${fmtTime(x.time)}</td>
-                    
-                    <td valign="top" width="20%" align="center" style="padding:5px;">
-                        <div style="font-weight:bold; font-size:10pt; margin-bottom:5px;">${x.pj || '-'}</div>
-                        ${renderImg(x.sign, 60) /* TTD Ukuran 60px */}
-                    </td>
-                    
-                    <td valign="top" width="65%" style="padding:5px;">
-                        <div style="text-align:justify; font-size:11pt; line-height:1.4;">${x.note || '-'}</div>
-                        ${renderImg(x.photo, 200) /* Foto Kegiatan Ukuran 200px */}
-                    </td>
-                </tr>
-            `).join('');
+            return bytes.buffer;
+        } catch (e) {
+            console.error("Gagal convert base64", e);
+            return null;
+        }
+    },
+
+    // 2. Helper: Membuat Gambar di Word (Aman dari error)
+    createImageRun(base64String, width = 100, height = 100) {
+        const buffer = this.base64ToArrayBuffer(base64String);
+        if (!buffer) {
+            return new docx.TextRun({ text: "-", size: 20 });
+        }
+        return new docx.ImageRun({
+            data: buffer,
+            transformation: { width: width, height: height }
+        });
+    },
+
+    // 3. Helper: Membuat Header Kolom Tabel
+    createTableHeader(texts, widths) {
+        const { TableRow, TableCell, Paragraph, WidthType } = docx;
+        return new TableRow({
+            children: texts.map((text, i) => 
+                new TableCell({ 
+                    children: [new Paragraph({ text: text, bold: true, size: 22 })], 
+                    width: { size: widths[i], type: WidthType.PERCENTAGE },
+                    shading: { fill: "E0E0E0" } // Warna abu-abu header
+                })
+            ),
+            tableHeader: true,
+        });
+    },
+
+    // --- FUNGSI UTAMA DOWNLOAD ---
+    async downloadDOCX(patientId) {
+        const p = this.data.patients.find(x => x.id === patientId);
+        if (!p) return Swal.fire('Error', 'Data pasien tidak ditemukan', 'error');
+
+        // Loader
+        Swal.fire({title: 'Sedang Membuat Dokumen...', text: 'Mengambil grafik dan data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+        const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, TextRun, HeadingLevel, AlignmentType } = docx;
+
+        // --- A. JUDUL DOKUMEN ---
+        const title = new Paragraph({
+            text: `REKAM MEDIS: ${p.name.toUpperCase()}`,
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 100 }
+        });
+
+        const subTitle = new Paragraph({
+            children: [
+                new TextRun({ text: `MRN: ${p.mrn} | Usia: ${this.calculateAge(p.dob)} Th | Gender: ${p.gender}`, bold: true })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+        });
+
+        // --- B. PROSES GRAFIK BPSS (CRISIS MONITORING) ---
+        // Kita ambil gambar dari Canvas chart yang sedang tampil di layar
+        let chartParagraph = new Paragraph({ text: "[Grafik tidak tersedia - Pastikan Anda sudah membuka Tab Crisis]", color: "red" });
+        
+        // Pastikan canvas dengan ID 'chartCanvas' ada di HTML Anda
+        const canvasElement = document.getElementById('chartCanvas');
+        if (canvasElement) {
+            try {
+                // Ubah canvas menjadi gambar PNG
+                const chartDataUrl = canvasElement.toDataURL("image/png");
+                chartParagraph = new Paragraph({
+                    children: [this.createImageRun(chartDataUrl, 500, 250)], // Lebar 500, Tinggi 250
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 }
+                });
+            } catch (e) {
+                console.error("Gagal ambil grafik", e);
+            }
+        }
+
+        // --- C. TABEL ANGKA BPSS ---
+        let bpssTable = new Paragraph({ text: "Belum ada data BPSS" });
+        const bpssData = p.crisis?.bpss || [];
+        
+        if (bpssData.length > 0) {
+            // Header: Hari, Bio, Psy, Soc, Spi, Total
+            const headerRow = this.createTableHeader(
+                ["HARI", "BIO", "PSY", "SOC", "SPI", "TOTAL"], 
+                [20, 16, 16, 16, 16, 16]
+            );
+
+            // Baris Data
+            const dataRows = bpssData.map((d, i) => {
+                return new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph(`Hari ke-${i + 1}`)] }),
+                        new TableCell({ children: [new Paragraph(String(d.bio||0))] }),
+                        new TableCell({ children: [new Paragraph(String(d.psy||0))] }),
+                        new TableCell({ children: [new Paragraph(String(d.soc||0))] }),
+                        new TableCell({ children: [new Paragraph(String(d.spi||0))] }),
+                        new TableCell({ children: [new Paragraph({ text: String(d.total||0), bold: true })] }),
+                    ],
+                });
+            });
+
+            bpssTable = new Table({
+                rows: [headerRow, ...dataRows],
+                width: { size: 100, type: WidthType.PERCENTAGE },
+            });
+        }
+
+
+        // --- D. FUNGSI UNTUK TABEL LAPORAN (Assessment, Daily, dll) ---
+        const createLogTable = (titleText, dataArray) => {
+            if (!dataArray || dataArray.length === 0) return [];
+
+            // Header Tabel
+            const headerRow = this.createTableHeader(
+                ["WAKTU", "PJ", "CATATAN", "FOTO", "TTD"],
+                [15, 15, 40, 15, 15]
+            );
+
+            // Isi Baris
+            const rows = dataArray.map(item => {
+                return new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph(item.time || "-")] }),
+                        new TableCell({ children: [new Paragraph(item.pj || "-")] }),
+                        new TableCell({ children: [new Paragraph(item.note || "-")] }),
+                        
+                        // Kolom Foto
+                        new TableCell({ 
+                            children: [new Paragraph({ children: [this.createImageRun(item.photo, 80, 80)] })],
+                            verticalAlign: "center"
+                        }),
+
+                        // Kolom Tanda Tangan
+                        new TableCell({ 
+                            children: [new Paragraph({ children: [this.createImageRun(item.sign, 60, 40)] })],
+                            verticalAlign: "center"
+                        }),
+                    ],
+                });
+            });
+
+            return [
+                new Paragraph({ text: `\n${titleText}`, heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 100 } }),
+                new Table({
+                    rows: [headerRow, ...rows],
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                })
+            ];
         };
 
-        // --- 4. STRUKTUR HTML UTAMA (DESIGNED FOR MS WORD) ---
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-            <meta charset="utf-8">
-            <title>Laporan Medis - ${p.reg.name}</title>
-            <style>
-                /* RESET & BASE STYLE */
-                body { font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.2; color: #000; }
-                
-                /* HEADER STYLE */
-                .kop-main { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0; }
-                .kop-sub { font-size: 12pt; text-align: center; margin: 5px 0 20px 0; }
-                
-                /* SECTION HEADER (ABU-ABU) */
-                .sec-title { 
-                    background-color: #E0E0E0; 
-                    border: 1px solid #000; 
-                    font-weight: bold; 
-                    padding: 5px 10px; 
-                    margin-top: 20px; 
-                    margin-bottom: 5px; 
-                    font-size: 11pt;
-                    text-transform: uppercase;
-                }
-
-                /* TABEL GENERAL */
-                table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }
-                th { background-color: #F2F2F2; text-align: center; font-weight: bold; }
-
-                /* TABEL BIODATA (NO BORDER) */
-                .tbl-bio td { border: none; padding: 3px 5px; }
-            </style>
-        </head>
-        <body>
-            <p class="kop-main">${this.currentCategory === 'detox' ? 'UNIT STABILISASI (DETOX)' : 'UNIT REHABILITASI'}</p>
-            <p class="kop-sub">REKAM MEDIS ELEKTRONIK PASIEN</p>
-            <hr size="2" color="black" noshade>
-
-            <div class="sec-title">I. IDENTITAS PASIEN</div>
-            <table class="tbl-bio" style="width:100%; border:none;">
-                <tr>
-                    <td width="70%" valign="top">
-                        <table class="tbl-bio" width="100%">
-                            <tr><td width="140">Nama Lengkap</td><td>: <b>${p.reg.name}</b></td></tr>
-                            <tr><td>Nomor Registrasi</td><td>: ${p.id.slice(0,8).toUpperCase()}</td></tr>
-                            <tr><td>Usia / JK</td><td>: ${p.reg.age} Tahun / ${p.reg.gender}</td></tr>
-                            <tr><td>Tanggal Masuk</td><td>: ${fmtTime(p.program?.startDate)}</td></tr>
-                            <tr><td>Program</td><td>: ${p.program?.name || '-'}</td></tr>
-                            <tr><td>Penanggung Jawab</td><td>: ${p.reg.guardian || '-'}</td></tr>
-                        </table>
-                    </td>
-                    <td width="30%" align="center" valign="top">
-                        <div style="border:1px solid #ccc; padding:5px; display:inline-block;">
-                            ${renderImg(p.reg.photo, 110) || '<br><i>No Photo</i>'}
-                            <br><span style="font-size:9pt;">FOTO TERBARU</span>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-
-            <div class="sec-title">II. PENILAIAN KRISIS (BPSS)</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead>
-                    <tr>
-                        <th width="15%">Hari Ke-</th>
-                        <th>Biological</th>
-                        <th>Psychological</th>
-                        <th>Social</th>
-                        <th>Spiritual</th>
-                        <th>Total Skor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${(p.crisis?.bpss || []).map((b, i) => `
-                        <tr>
-                            <td align="center">Hari ${i + 1}</td>
-                            <td align="center">${b.bio}</td>
-                            <td align="center">${b.psy}</td>
-                            <td align="center">${b.soc}</td>
-                            <td align="center">${b.spi}</td>
-                            <td align="center"><b>${b.total}</b></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="6" align="center">Belum ada data BPSS.</td></tr>'}
-                </tbody>
-            </table>
-
-            <div class="sec-title">III. OBSERVASI TTV (Tanda Vital)</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>Waktu</th><th>TD</th><th>Nadi</th><th>Suhu</th><th>RR</th><th>SpO2</th></tr></thead>
-                <tbody>
-                    ${(p.ttv || []).map(t => `
-                        <tr>
-                            <td>${fmtTime(t.time)}</td>
-                            <td align="center">${t.td || '-'}</td>
-                            <td align="center">${t.nadi || '-'}</td>
-                            <td align="center">${t.suhu || '-'}</td>
-                            <td align="center">${t.rr || '-'}</td>
-                            <td align="center">${t.spo2 || '-'}</td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="6" align="center">Belum ada data TTV.</td></tr>'}
-                </tbody>
-            </table>
-
-            <div class="sec-title">IV. PEMBERIAN OBAT</div>
+        // --- E. SUSUN HALAMAN DOKUMEN ---
+        const sectionChildren = [
+            title,
+            subTitle,
             
-            <p><b>A. Stok Obat</b></p>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>Nama Obat</th><th>Awal</th><th>Terpakai</th><th>Sisa</th></tr></thead>
-                <tbody>
-                    ${(p.medicine?.stock || []).map(s => `
-                        <tr>
-                            <td>${s.name}</td>
-                            <td align="center">${s.init}</td>
-                            <td align="center">${s.used || 0}</td>
-                            <td align="center"><b>${parseInt(s.init) - (parseInt(s.used)||0)}</b></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="4" align="center">Stok obat kosong.</td></tr>'}
-                </tbody>
-            </table>
+            // 1. Masukkan Grafik & Tabel BPSS
+            new Paragraph({ text: "MONITORING KRISIS (BPSS)", heading: HeadingLevel.HEADING_2 }),
+            chartParagraph, // Gambar Grafik
+            new Paragraph({ text: "" }), // Spasi
+            bpssTable,      // Tabel Angka
+            
+            // 2. Masukkan Tabel Laporan Lainnya
+            ...createLogTable("ASSESSMENT AWAL", p.assessment),
+            ...createLogTable("DAILY REPORTS", p.daily_report),
+            ...createLogTable("RENCANA TERAPI", p.plan_therapy),
+            ...createLogTable("VISIT DOKTER", p.visits),
+            ...createLogTable("KONSELING", p.counseling),
+            ...createLogTable("SCREENING", p.screening),
+            ...createLogTable("KESIMPULAN", p.conclusion)
+        ];
 
-            <p><b>B. Log Minum Obat</b></p>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th width="20%">Waktu</th><th width="20%">Petugas</th><th width="60%">Catatan</th></tr></thead>
-                <tbody>
-                    ${(p.medicine?.logs || []).map(l => `
-                        <tr>
-                            <td>${fmtTime(l.time)}</td>
-                            <td align="center">${l.pj}</td>
-                            <td>${l.note}</td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="3" align="center">Belum ada log minum obat.</td></tr>'}
-                </tbody>
-            </table>
+        // --- F. GENERATE & DOWNLOAD ---
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: sectionChildren,
+            }],
+        });
 
-            <div class="sec-title">V. ASSESSMENT (PENGKAJIAN)</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>WAKTU</th><th>PETUGAS</th><th>HASIL ASSESSMENT</th></tr></thead>
-                <tbody>${renderStandardTable(p.assessment, 'Belum ada data Assessment.')}</tbody>
-            </table>
-
-            <div class="sec-title">VI. RENCANA TERAPI (PLAN)</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>WAKTU</th><th>PETUGAS</th><th>RENCANA TERAPI</th></tr></thead>
-                <tbody>${renderStandardTable(p.plan_therapy, 'Belum ada data Plan Therapy.')}</tbody>
-            </table>
-
-            <div class="sec-title">VII. VISIT DOKTER / AHLI</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>WAKTU</th><th>DOKTER / AHLI</th><th>CATATAN VISIT & RESEP</th></tr></thead>
-                <tbody>${renderStandardTable(p.visits, 'Belum ada data Visit Dokter.')}</tbody>
-            </table>
-
-            <div class="sec-title">VIII. KONSELING INDIVIDUAL</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>WAKTU</th><th>KONSELOR</th><th>ISI SESI KONSELING</th></tr></thead>
-                <tbody>${renderStandardTable(p.counseling, 'Belum ada data Konseling.')}</tbody>
-            </table>
-
-            <div class="sec-title">IX. JURNAL HARIAN (DAILY PROGRESS)</div>
-            <table width="100%" border="1" cellspacing="0" cellpadding="5">
-                <thead><tr><th>WAKTU</th><th>PETUGAS</th><th>CATATAN PERKEMBANGAN</th></tr></thead>
-                <tbody>${renderStandardTable(p.daily_progress, 'Belum ada Jurnal Harian.')}</tbody>
-            </table>
-
-            <br><br><br>
-            <table style="border:none; width:100%;">
-                <tr style="border:none;">
-                    <td style="border:none;" width="60%"></td>
-                    <td style="border:none; text-align:center;" width="40%">
-                        <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                        <br><br><br><br>
-                        <p style="text-decoration:underline; font-weight:bold;">( ........................................... )</p>
-                        <p>Kepala / Penanggung Jawab Unit</p>
-                    </td>
-                </tr>
-            </table>
-
-        </body>
-        </html>`;
-
-        // --- 5. EKSEKUSI DOWNLOAD ---
-        if (typeof htmlDocx !== 'undefined') {
-            const converted = htmlDocx.asBlob(htmlContent, {
-                orientation: 'portrait',
-                margins: { top: 720, right: 720, bottom: 720, left: 720 } // Margin 1.27 cm (Standar Rapi)
-            });
-            saveAs(converted, `RekamMedis_${p.reg.name.replace(/\s+/g, '_')}_FULL.docx`);
-        } else {
-            Swal.fire('Error', 'Library html-docx belum dimuat. Cek file index.html', 'error');
+        try {
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `RekamMedis_${p.name.replace(/\s+/g, '_')}_Lengkap.docx`);
+            Swal.fire('Berhasil', 'Dokumen Word Lengkap (Grafik+Foto+TTD) diunduh!', 'success');
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal', 'Terjadi kesalahan saat export Word.', 'error');
         }
     },
                   
