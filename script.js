@@ -1014,83 +1014,103 @@ const app = {
     async exportToWord(id) {
         const p = this.data.patients.find(x => x.id === id);
         if(!p) return;
-      
+
+        // 1. SIAPKAN KONTEN HTML
+        // Kita gunakan CSS inline agar terbaca di Word
         const htmlContent = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <!DOCTYPE html>
+        <html>
         <head>
             <meta charset="utf-8">
             <style>
-                body { font-family: 'Times New Roman', serif; font-size: 12pt; }
-                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-                th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: top; }
-                th { background-color: #f0f0f0; font-weight: bold; }
-                .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px; }
-                .title { font-size: 16pt; font-weight: bold; margin: 0; }
-                .subtitle { font-size: 12pt; margin: 0; }
-                .section-title { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
+                body { font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.15; }
+                h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 0; }
+                h2 { text-align: center; font-size: 12pt; margin-top: 5px; font-weight: normal; }
+                h3 { font-size: 12pt; font-weight: bold; margin-top: 20px; text-decoration: underline; text-transform: uppercase; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
+                th, td { border: 1px solid black; padding: 6px; text-align: left; vertical-align: top; font-size: 11pt; }
+                th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
+                .no-border td { border: none; padding: 4px; }
+                .footer { text-align: right; font-size: 9pt; color: #555; margin-top: 30px; }
             </style>
         </head>
         <body>
-            <div class="header">
-                <p class="title">UNIT REHABILITASI & STABILISASI</p>
-                <p class="subtitle">LAPORAN PERKEMBANGAN PASIEN</p>
-            </div>
+            <h1>UNIT REHABILITASI & STABILISASI</h1>
+            <h2>Laporan Perkembangan Pasien</h2>
+            <hr style="border: 1px solid black; margin-bottom: 20px;">
 
-            <h3 class="section-title">I. DATA PASIEN</h3>
-            <table style="border: none;">
-                <tr style="border: none;"><td style="border: none; width: 150px;">Nama Lengkap</td><td style="border: none;">: ${p.reg.name}</td></tr>
-                <tr style="border: none;"><td style="border: none;">Usia</td><td style="border: none;">: ${p.reg.age} Tahun</td></tr>
-                <tr style="border: none;"><td style="border: none;">Program</td><td style="border: none;">: ${p.program?.name || '-'}</td></tr>
-                <tr style="border: none;"><td style="border: none;">Tanggal Masuk</td><td style="border: none;">: ${p.program?.startDate || '-'}</td></tr>
-                <tr style="border: none;"><td style="border: none;">Diagnosa/Keluhan</td><td style="border: none;">: ${p.diagnosis.plan || '-'}</td></tr>
+            <h3>I. Data Pasien</h3>
+            <table class="no-border">
+                <tr><td width="150">Nama Lengkap</td><td>: <b>${p.reg.name}</b></td></tr>
+                <tr><td>Usia</td><td>: ${p.reg.age} Tahun</td></tr>
+                <tr><td>Program</td><td>: ${p.program?.name || '-'}</td></tr>
+                <tr><td>Tanggal Masuk</td><td>: ${p.program?.startDate || '-'}</td></tr>
+                <tr><td>Diagnosa</td><td>: ${p.diagnosis.plan || '-'}</td></tr>
+                <tr><td>Penanggung Jawab</td><td>: ${p.reg.guardian}</td></tr>
             </table>
 
-            <h3 class="section-title">II. RINGKASAN OBAT SAAT INI</h3>
+            <h3>II. Ringkasan Obat</h3>
             <table>
                 <thead>
-                    <tr><th>Nama Obat</th><th>Stok Awal</th><th>Terpakai</th><th>Sisa</th></tr>
+                    <tr>
+                        <th width="30%">Nama Obat</th>
+                        <th width="20%">Stok Awal</th>
+                        <th width="20%">Terpakai</th>
+                        <th width="30%">Sisa</th>
+                    </tr>
                 </thead>
                 <tbody>
                     ${(p.medicine?.stock || []).map(s => `
                         <tr>
                             <td>${s.name}</td>
-                            <td>${s.init}</td>
-                            <td>${s.used || 0}</td>
-                            <td>${parseInt(s.init) - (parseInt(s.used)||0)}</td>
+                            <td style="text-align:center">${s.init}</td>
+                            <td style="text-align:center">${s.used || 0}</td>
+                            <td style="text-align:center; font-weight:bold;">${parseInt(s.init) - (parseInt(s.used)||0)}</td>
                         </tr>
-                    `).join('') || '<tr><td colspan="4">Tidak ada data obat.</td></tr>'}
+                    `).join('') || '<tr><td colspan="4" style="text-align:center">Tidak ada data obat.</td></tr>'}
                 </tbody>
             </table>
 
-            <h3 class="section-title">III. 5 JURNAL PERKEMBANGAN TERAKHIR</h3>
+            <h3>III. Jurnal Perkembangan (Terbaru)</h3>
             <table>
                 <thead>
-                    <tr><th style="width: 120px;">Waktu</th><th>Petugas</th><th>Catatan</th></tr>
+                    <tr>
+                        <th width="20%">Waktu</th>
+                        <th width="20%">Petugas</th>
+                        <th width="60%">Catatan / Kejadian</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    ${(p.daily_progress || []).slice(0, 5).map(d => `
+                    ${(p.daily_progress || []).slice(0, 10).map(d => `
                         <tr>
                             <td>${d.time}</td>
-                            <td>${d.pj}</td>
+                            <td style="text-align:center">${d.pj}</td>
                             <td>${d.note}</td>
                         </tr>
-                    `).join('') || '<tr><td colspan="3">Belum ada catatan harian.</td></tr>'}
+                    `).join('') || '<tr><td colspan="3" style="text-align:center">Belum ada catatan harian.</td></tr>'}
                 </tbody>
             </table>
 
-            <br><br>
-            <p style="text-align: right;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+            <div class="footer">
+                <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+            </div>
         </body>
         </html>`;
 
-        // Proses Download Blob
-        const blob = new Blob(['\ufeff', htmlContent], {
-            type: 'application/msword'
-        });
-        saveAs(blob, `Laporan_${p.reg.name}.doc`);
+        // 2. KONVERSI KE DOCX ASLI (Bukan Fake HTML)
+        // Pastikan library html-docx.js sudah dimuat di index.html
+        if (typeof htmlDocx !== 'undefined') {
+            const converted = htmlDocx.asBlob(htmlContent, {
+                orientation: 'portrait',
+                margins: {top: 720, right: 720, bottom: 720, left: 720} // Margin (twips)
+            });
+            saveAs(converted, `Laporan_${p.reg.name.replace(/\s+/g, '_')}.docx`);
+        } else {
+            Swal.fire('Error', 'Library html-docx belum dimuat. Cek index.html', 'error');
+        }
     },
-
-    exportToExcel(id) {
+  
+  exportToExcel(id) {
         try {
             const p = this.data.patients.find(x=>x.id===id);
             if (!p) throw new Error("Pasien tidak ditemukan");
