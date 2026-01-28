@@ -1014,9 +1014,7 @@ const app = {
     async exportToWord(id) {
         const p = this.data.patients.find(x => x.id === id);
         if(!p) return;
-
-        // Kita bikin Template HTML untuk Word
-        // CSS inline sangat penting agar tampilan di Word rapi
+      
         const htmlContent = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head>
