@@ -263,11 +263,12 @@ const app = {
         this.renderPatientDetail();
     },
 
-    renderPatientDetail() {
-        const p = this.data.patients.find(x => x.id === this.activePatientId);
+    renderPatientDetail(id = this.activePatientId) {
+        this.activePatientId = id;
+        const p = this.data.patients.find(x => x.id === id);
         if(!p) return this.renderPatientList(this.currentCategory);
-        
-        this.saveState('detail', p.id);
+
+        this.saveState('detail');
         document.getElementById('page-title').innerText = "DETAIL BERKAS PASIEN";
         
         let customActions = '';
@@ -283,6 +284,9 @@ const app = {
             }
         }
 
+        const title = this.currentCategory === 'detox' ? "UNIT STABILISASI (DETOX)" : "UNIT REHABILITASI";
+        const color = this.currentCategory === 'detox' ? "text-rose-600" : "text-brand-600";
+      
         document.getElementById('page-title').innerHTML = `
             <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / 
             <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderPatientList('${this.currentCategory}')">${title}</span> / 
