@@ -1013,125 +1013,115 @@ const app = {
     // ============================================================
     async exportToWord(id) {
         const p = this.data.patients.find(x => x.id === id);
-        if(!p) return;
+        if(!p) { Swal.fire('Error', 'Data pasien tidak ditemukan', 'error'); return; }
 
-        // --- HELPER 1: Cek & Render Gambar (Agar tidak error jika kosong) ---
-        // width: ukuran lebar gambar di Word (dalam pixel)
+        // --- HELPER 1: PEMBUAT GAMBAR (Safe Render) ---
+        // Fungsi ini memastikan gambar punya ukuran tetap agar tabel tidak berantakan
         const renderImg = (src, width=100) => {
-            if (!src || src.length < 10) return ''; // Cek jika data kosong/rusak
-            // Kita gunakan tag img dengan width atribut agar terbaca di Word
-            return `<br><img src="${src}" width="${width}" height="auto" style="display:block; margin-top:5px;">`;
+            if (!src || src.length < 10) return ''; 
+            // Style display block & margin auto agar gambar di tengah
+            return `<br><img src="${src}" width="${width}" style="width:${width}px; height:auto; display:block; margin-top:5px; margin-bottom:5px;">`;
         };
 
-        // --- HELPER 2: Render Tabel Log dengan Foto & TTD ---
-        const renderLogTable = (dataArr, emptyText) => {
+        // --- HELPER 2: FORMAT TANGGAL INDONESIA ---
+        const fmtDate = (dateStr) => {
+            if(!dateStr) return '-';
+            try { return new Date(dateStr).toLocaleString('id-ID'); } catch(e) { return dateStr; }
+        };
+
+        // --- HELPER 3: GENERATOR TABEL LOG (UTAMA) ---
+        // Mencetak: Waktu | Petugas(+TTD) | Catatan(+Foto)
+        const renderLogTable = (dataArr, emptyMsg) => {
             if (!dataArr || dataArr.length === 0) {
-                return `<tr><td colspan="3" style="text-align:center; font-style:italic; padding:10px;">${emptyText}</td></tr>`;
+                return `<tr><td colspan="3" align="center" style="padding:15px; font-style:italic; background-color:#fff;">${emptyMsg}</td></tr>`;
             }
             return dataArr.map(x => `
                 <tr>
-                    <td style="width: 15%;">${x.time || '-'}</td>
+                    <td valign="top" style="width:15%; padding:5px; font-size:10pt;">${x.time || '-'}</td>
                     
-                    <td style="width: 20%; text-align:center; vertical-align:middle;">
-                        <div style="font-weight:bold;">${x.pj || '-'}</div>
-                        ${renderImg(x.sign, 60) /* TTD Ukuran Kecil (60px) */}
+                    <td valign="top" align="center" style="width:20%; padding:5px;">
+                        <div style="font-weight:bold; font-size:10pt;">${x.pj || 'Petugas'}</div>
+                        ${renderImg(x.sign, 60) /* TTD Lebar 60px */}
                     </td>
                     
-                    <td style="width: 65%;">
-                        <div style="margin-bottom:5px;">${x.note || '-'}</div>
-                        ${renderImg(x.photo, 200) /* Foto Kegiatan Ukuran Sedang (200px) */}
+                    <td valign="top" style="width:65%; padding:5px;">
+                        <div style="font-size:11pt; text-align:justify;">${x.note || '-'}</div>
+                        ${renderImg(x.photo, 200) /* Foto Kegiatan Lebar 200px */}
                     </td>
                 </tr>
             `).join('');
         };
 
-        // --- HELPER 3: Render TTV ---
-        const renderTTV = (dataArr) => {
-            if (!dataArr || dataArr.length === 0) return `<tr><td colspan="5" style="text-align:center;">Belum ada data TTV.</td></tr>`;
-            return dataArr.map(x => `
-                <tr>
-                    <td>${x.time}</td>
-                    <td>${x.td || '-'}</td>
-                    <td>${x.nadi || '-'}</td>
-                    <td>${x.suhu || '-'}</td>
-                    <td>${x.spo2 || '-'}</td>
-                </tr>
-            `).join('');
-        };
-
-        // --- STRUKTUR HTML UTAMA ---
+        // --- PREPARE HTML CONTENT ---
         const htmlContent = `
         <!DOCTYPE html>
-        <html>
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head>
             <meta charset="utf-8">
+            <title>Laporan ${p.reg.name}</title>
             <style>
-                body { font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.2; }
-                h1 { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 0; text-transform: uppercase; }
-                h2 { text-align: center; font-size: 12pt; margin-top: 5px; font-weight: normal; margin-bottom: 20px; }
+                /* STYLE KHUSUS WORD */
+                body { font-family: 'Times New Roman', serif; font-size: 11pt; }
                 
-                .section-header { 
-                    background-color: #f0f0f0; 
-                    padding: 5px; 
+                /* HEADER */
+                .kop-title { font-size: 14pt; font-weight: bold; text-align: center; margin: 0; text-transform: uppercase; }
+                .kop-sub { font-size: 12pt; text-align: center; margin: 0; margin-bottom: 20px; }
+                
+                /* SECTION HEADER (ABU-ABU) */
+                .section-head { 
+                    background-color: #E0E0E0; 
                     font-weight: bold; 
+                    padding: 5px; 
                     border: 1px solid #000; 
                     margin-top: 15px; 
-                    margin-bottom: 10px;
+                    margin-bottom: 0px; 
                     text-transform: uppercase;
                     font-size: 10pt;
                 }
 
+                /* TABEL STANDARD */
                 table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                th, td { border: 1px solid black; padding: 5px; vertical-align: top; font-size: 10pt; }
-                th { background-color: #f9f9f9; font-weight: bold; text-align: center; }
-                
-                /* Layout Biodata dengan Foto */
-                .bio-container { width: 100%; margin-bottom: 20px; }
-                .bio-text { vertical-align: top; }
-                .bio-photo { width: 120px; text-align: right; vertical-align: top; }
-                
-                .footer { margin-top: 40px; text-align: right; font-size: 9pt; color: #555; }
+                th { background-color: #F2F2F2; font-weight: bold; text-align: center; padding: 5px; border: 1px solid #000; }
+                td { border: 1px solid #000; padding: 5px; }
+
+                /* TABEL BIODATA (TANPA GARIS) */
+                .bio-table td { border: none; padding: 3px; vertical-align: top; }
             </style>
         </head>
         <body>
-            <h1>${this.currentCategory === 'detox' ? 'UNIT STABILISASI (DETOX)' : 'UNIT REHABILITASI'}</h1>
-            <h2>REKAM MEDIS ELEKTRONIK</h2>
-            <hr style="border: 2px solid black;">
+            <p class="kop-title">${this.currentCategory === 'detox' ? 'UNIT STABILISASI (DETOX)' : 'UNIT REHABILITASI'}</p>
+            <p class="kop-sub">REKAM MEDIS ELEKTRONIK PASIEN</p>
+            <hr size="2" color="black">
 
-            <div class="section-header">I. IDENTITAS PASIEN</div>
-            
-            <table style="border: none;">
-                <tr style="border: none;">
-                    <td style="border: none; vertical-align: top;">
-                        <table style="border: none; width: 100%;">
-                            <tr><td style="border:none; width:140px;">Nama Lengkap</td><td style="border:none;">: <b>${p.reg.name}</b></td></tr>
-                            <tr><td style="border:none;">Jenis Kelamin</td><td style="border:none;">: ${p.reg.gender || '-'}</td></tr>
-                            <tr><td style="border:none;">TTL</td><td style="border:none;">: ${p.reg.ttl || '-'}</td></tr>
-                            <tr><td style="border:none;">Usia</td><td style="border:none;">: ${p.reg.age} Tahun</td></tr>
-                            <tr><td style="border:none;">Penanggung Jawab</td><td style="border:none;">: ${p.reg.guardian || '-'}</td></tr>
-                            <tr><td style="border:none;">Program</td><td style="border:none;">: ${p.program?.name || '-'}</td></tr>
+            <div class="section-head">I. IDENTITAS PASIEN</div>
+            <table class="bio-table" style="width:100%; border:none;">
+                <tr>
+                    <td width="70%">
+                        <table class="bio-table">
+                            <tr><td width="130">Nama Lengkap</td><td>: <b>${p.reg.name}</b></td></tr>
+                            <tr><td>No. MR / ID</td><td>: ${p.id.slice(-6).toUpperCase()}</td></tr>
+                            <tr><td>TTL</td><td>: ${p.reg.ttl || '-'}</td></tr>
+                            <tr><td>Usia</td><td>: ${p.reg.age} Tahun</td></tr>
+                            <tr><td>Jenis Kelamin</td><td>: ${p.reg.gender || '-'}</td></tr>
+                            <tr><td>Penanggung Jawab</td><td>: ${p.reg.guardian || '-'}</td></tr>
+                            <tr><td>Tanggal Masuk</td><td>: ${p.program?.startDate || '-'}</td></tr>
+                            <tr><td>Program</td><td>: ${p.program?.name || '-'}</td></tr>
                         </table>
                     </td>
-                    <td style="border: none; width: 130px; text-align: center; vertical-align: top;">
-                        <div style="border: 1px solid #ccc; padding: 5px; display:inline-block;">
-                           ${renderImg(p.reg.photo, 100) || '<p style="font-size:8pt; color:#ccc;">No Photo</p>'}
-                           <p style="font-size:8pt; margin:0;">Foto Pasien</p>
+                    <td width="30%" align="center" valign="top">
+                        <div style="border:1px solid #999; padding:5px; display:inline-block;">
+                            ${renderImg(p.reg.photo, 120)}
+                            <br><span style="font-size:8pt; color:#555;">FOTO PASIEN</span>
                         </div>
                     </td>
                 </tr>
             </table>
 
-            <div class="section-header">II. DATA PENGOBATAN (MEDICINE)</div>
-            <p style="font-weight:bold; font-size:10pt;">A. Stok Obat</p>
+            <div class="section-head">II. DATA OBAT (MEDICINE)</div>
+            
+            <p style="margin-bottom:5px; font-weight:bold;">A. Stok Obat Saat Ini</p>
             <table>
-                <thead>
-                    <tr>
-                        <th width="30%">Nama Obat</th>
-                        <th width="20%">Awal</th>
-                        <th width="20%">Terpakai</th>
-                        <th width="30%">Sisa</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Nama Obat</th><th>Awal</th><th>Terpakai</th><th>Sisa</th></tr></thead>
                 <tbody>
                     ${(p.medicine?.stock || []).map(s => `
                         <tr>
@@ -1144,74 +1134,111 @@ const app = {
                 </tbody>
             </table>
 
-            <p style="font-weight:bold; font-size:10pt; margin-top:10px;">B. Riwayat Minum Obat</p>
+            <p style="margin-bottom:5px; margin-top:10px; font-weight:bold;">B. Riwayat Pemberian Obat</p>
             <table>
                 <thead><tr><th>Waktu</th><th>Petugas</th><th>Keterangan</th></tr></thead>
                 <tbody>
                     ${(p.medicine?.logs || []).map(l => `
                         <tr>
-                            <td>${l.time}</td>
-                            <td align="center">${l.pj}</td>
-                            <td>${l.note}</td>
+                            <td width="20%">${l.time}</td>
+                            <td width="20%" align="center">${l.pj}</td>
+                            <td width="60%">${l.note}</td>
                         </tr>
-                    `).join('') || '<tr><td colspan="3" align="center">Belum ada riwayat.</td></tr>'}
+                    `).join('') || '<tr><td colspan="3" align="center">Belum ada riwayat minum obat.</td></tr>'}
                 </tbody>
             </table>
 
-            <div class="section-header">III. TANDA TTV & VITAL SIGNS</div>
+            <div class="section-head">III. TANDA VITAL (TTV) & FISIK</div>
             <table>
-                <thead><tr><th>Waktu</th><th>TD</th><th>Nadi</th><th>Suhu</th><th>SpO2</th></tr></thead>
-                <tbody>${renderTTV(p.ttv)}</tbody>
+                <thead><tr><th>Waktu</th><th>TD</th><th>Nadi</th><th>Suhu</th><th>SpO2</th><th>BB</th></tr></thead>
+                <tbody>
+                    ${(p.ttv || []).map(t => `
+                        <tr>
+                            <td>${t.time}</td>
+                            <td align="center">${t.td || '-'}</td>
+                            <td align="center">${t.nadi || '-'}</td>
+                            <td align="center">${t.suhu || '-'}</td>
+                            <td align="center">${t.spo2 || '-'}</td>
+                            <td align="center">${t.bb || '-'} Kg</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="6" align="center">Data TTV kosong.</td></tr>'}
+                </tbody>
             </table>
 
-            <div class="section-header">IV. ASSESSMENT (PENGKAJIAN)</div>
+            <div class="section-head">IV. PENILAIAN KRISIS (BPSS)</div>
             <table>
-                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Isi Assessment & Foto</th></tr></thead>
+                <thead><tr><th>Hari Ke</th><th>Bio</th><th>Psy</th><th>Soc</th><th>Spi</th><th>Total Skor</th></tr></thead>
+                <tbody>
+                    ${(p.crisis?.bpss || []).map((b, idx) => `
+                        <tr>
+                            <td align="center">Hari ${idx + 1}</td>
+                            <td align="center">${b.bio}</td>
+                            <td align="center">${b.psy}</td>
+                            <td align="center">${b.soc}</td>
+                            <td align="center">${b.spi}</td>
+                            <td align="center"><b>${b.total}</b></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="6" align="center">Belum ada data Crisis Intervention.</td></tr>'}
+                </tbody>
+            </table>
+
+            <div class="section-head">V. ASSESSMENT (PENGKAJIAN)</div>
+            <table>
+                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Hasil Assessment & Dokumentasi</th></tr></thead>
                 <tbody>${renderLogTable(p.assessment, 'Belum ada data assessment.')}</tbody>
             </table>
 
-            <div class="section-header">V. PLAN THERAPY</div>
+            <div class="section-head">VI. RENCANA TERAPI (PLAN)</div>
             <table>
-                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Rencana & Foto</th></tr></thead>
+                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Plan & Dokumentasi</th></tr></thead>
                 <tbody>${renderLogTable(p.plan_therapy, 'Belum ada data plan therapy.')}</tbody>
             </table>
 
-            <div class="section-header">VI. VISIT DOKTER</div>
+            <div class="section-head">VII. VISIT DOKTER / AHLI</div>
             <table>
-                <thead><tr><th>Waktu</th><th>Dokter / TTD</th><th>Catatan Visit</th></tr></thead>
-                <tbody>${renderLogTable(p.visits, 'Belum ada data visit.')}</tbody>
+                <thead><tr><th>Waktu</th><th>Dokter / TTD</th><th>Catatan Visit & Resep</th></tr></thead>
+                <tbody>${renderLogTable(p.visits, 'Belum ada data visit dokter.')}</tbody>
             </table>
 
-            <div class="section-header">VII. COUNSELING</div>
+            <div class="section-head">VIII. SESI KONSELING</div>
             <table>
-                <thead><tr><th>Waktu</th><th>Konselor / TTD</th><th>Isi Konseling</th></tr></thead>
+                <thead><tr><th>Waktu</th><th>Konselor / TTD</th><th>Catatan Konseling</th></tr></thead>
                 <tbody>${renderLogTable(p.counseling, 'Belum ada data konseling.')}</tbody>
             </table>
 
-            <div class="section-header">VIII. JURNAL HARIAN (DAILY)</div>
+            <div class="section-head">IX. JURNAL HARIAN (DAILY PROGRESS)</div>
             <table>
-                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Catatan & Dokumentasi</th></tr></thead>
+                <thead><tr><th>Waktu</th><th>Petugas / TTD</th><th>Laporan Perkembangan</th></tr></thead>
                 <tbody>${renderLogTable(p.daily_progress, 'Belum ada jurnal harian.')}</tbody>
             </table>
 
-            <div class="footer">
-                <p>Dokumen ini digenerate secara elektronik oleh Sistem MMRC.</p>
-                <p>${new Date().toLocaleString('id-ID')}</p>
-            </div>
+            <br><br>
+            <table style="border:none;">
+                <tr style="border:none;">
+                    <td style="border:none;" width="60%"></td>
+                    <td style="border:none; text-align:center;" width="40%">
+                        <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+                        <br><br><br><br>
+                        <p>( ................................................. )</p>
+                        <p>Kepala Unit / Penanggung Jawab</p>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>`;
 
-        // 4. PROSES KONVERSI KE DOCX
+        // --- PROSES EXPORT KE BLOB DOCX ---
         if (typeof htmlDocx !== 'undefined') {
             const converted = htmlDocx.asBlob(htmlContent, {
                 orientation: 'portrait',
-                margins: { top: 720, right: 720, bottom: 720, left: 720 }
+                margins: { top: 720, right: 720, bottom: 720, left: 720 } // Margin 1.27 cm
             });
-            saveAs(converted, `RekamMedis_${p.reg.name.replace(/\s+/g, '_')}.docx`);
+            saveAs(converted, `RekamMedis_${p.reg.name.replace(/\s+/g, '_')}_FULL.docx`);
         } else {
-            alert('Library html-docx belum dimuat!');
+            Swal.fire('Gagal', 'Library html-docx tidak terdeteksi. Refresh halaman.', 'error');
         }
-    },
+    },                            
+                  
   
   exportToExcel(id) {
         try {
