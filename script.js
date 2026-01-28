@@ -667,7 +667,6 @@ const app = {
         });
     },
 
-    
     modalSign(id, arrName, index = null) {
         const p = this.data.patients.find(x => x.id === id);
         const arr = p[arrName] || [];
@@ -684,14 +683,20 @@ const app = {
             </div>
 
             <div class="mb-3">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Catatan</label>
-                <textarea id="v_note" class="input-modern w-full h-20" placeholder="Isi laporan...">${v?.note || ''}</textarea>
+                <label class="block text-xs font-bold text-slate-500 mb-1">Upload Foto Kegiatan (Opsional)</label>
+                <input id="v_photo" type="file" accept="image/*" class="input-modern w-full text-xs">
+                ${v?.photo ? '<p class="text-[10px] text-green-600 mt-1">✅ Foto sebelumnya tersimpan (upload baru jika ingin mengganti)</p>' : ''}
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Catatan / Laporan</label>
+                <textarea id="v_note" class="input-modern w-full h-20" placeholder="Tulis laporan perkembangan...">${v?.note || ''}</textarea>
             </div>
 
             <div class="mb-4">
                 <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan (Wajib)</label>
                 
-                <div id="signature-container" style="position: relative; width: 100%; height: 200px; border: 2px dashed #94a3b8; background-color: #f1f5f9; border-radius: 12px; touch-action: none;">
+                <div id="signature-container" style="position: relative; width: 100%; height: 200px; border: 2px dashed #94a3b8; background-color: #f8fafc; border-radius: 12px; touch-action: none;">
                     <canvas id="signature-pad" style="display: block; width: 100%; height: 100%; touch-action: none;"></canvas>
                 </div>
 
@@ -699,44 +704,44 @@ const app = {
                     <span class="text-[10px] text-slate-400">Gunakan jari untuk tanda tangan</span>
                     <button onclick="app.clearSignature()" class="text-xs text-red-500 font-bold hover:underline">Hapus / Ulangi</button>
                 </div>
+                ${v?.sign ? '<p class="text-[10px] text-green-600 mt-1">✅ Tanda tangan sebelumnya tersimpan</p>' : ''}
             </div>
 
             <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow mt-2 active:scale-95 transition">
-                SIMPAN
+                SIMPAN LAPORAN
             </button>
         `;
 
         this.openModal(html);
 
-        // --- BAGIAN LOGIKA CANVAS UNTUK HP ---
+        // --- INISIALISASI CANVAS (SUPORT HP & RETINA DISPLAY) ---
         setTimeout(() => {
             const canvas = document.getElementById('signature-pad');
             const container = document.getElementById('signature-container');
 
             if (canvas && container) {
-                // 1. Ambil rasio layar HP (biasanya 2x atau 3x lebih tajam dari laptop)
+                // 1. Ambil rasio layar (Penting agar tidak pecah di HP)
                 const ratio = Math.max(window.devicePixelRatio || 1, 1);
 
-                // 2. Set ukuran canvas sesuai rasio tersebut agar garis tajam
+                // 2. Set ukuran fisik canvas
                 canvas.width = container.offsetWidth * ratio;
                 canvas.height = container.offsetHeight * ratio;
                 
-                // 3. Scale context agar koordinat gambar pas
+                // 3. Skalakan konteks gambar
                 const ctx = canvas.getContext("2d");
                 ctx.scale(ratio, ratio);
 
-                // 4. Inisialisasi Library SignaturePad
+                // 4. Hidupkan Library
                 this.signaturePad = new SignaturePad(canvas, {
                     backgroundColor: 'rgba(255, 255, 255, 0)', // Transparan
                     penColor: 'rgb(0, 0, 0)',
-                    velocityFilterWeight: 0.7 // Agar garis lebih halus di layar sentuh
+                    velocityFilterWeight: 0.7
                 });
-
-                console.log("Canvas siap (Mobile Mode). Ratio:", ratio);
             }
         }, 250); 
     },
-
+    
+    // Pastikan helper ini tetap ada
     clearSignature() {
         if (this.signaturePad) this.signaturePad.clear();
     },
