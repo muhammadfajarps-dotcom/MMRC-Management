@@ -283,12 +283,31 @@ const app = {
             }
         }
 
+        document.getElementById('page-title').innerHTML = `
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderDashboard()">DASHBOARD</span> / 
+            <span class="text-slate-400 cursor-pointer hover:underline" onclick="app.renderPatientList('${this.currentCategory}')">${title}</span> / 
+            <span class="${color}">${p.reg.name}</span>
+        `;
+
+      
         document.getElementById('header-actions').innerHTML = `
-            ${customActions}
-            <button onclick="app.exportToWord('${p.id}')" class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-blue-700" title="Download Word"><i class="fas fa-file-word"></i></button>
-            <button onclick="app.exportToExcel('${p.id}')" class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow hover:bg-emerald-700" title="Download Excel"><i class="fas fa-file-excel"></i></button>
-            <div class="w-px h-8 bg-slate-300 mx-2"></div>
-            <button onclick="app.renderPatientList('${this.currentCategory}')" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-300 flex items-center gap-2"><i class="fas fa-arrow-left"></i> KEMBALI</button>
+            <div class="flex items-center gap-2">
+                <button onclick="app.renderPatientList('${this.currentCategory}')" class="bg-slate-200 text-slate-600 w-8 h-8 rounded-full hover:bg-slate-300 flex items-center justify-center mr-2" title="Kembali">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                
+                <div class="h-6 w-px bg-slate-300 mx-1"></div> <button onclick="app.exportToWord('${id}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold hover:bg-blue-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-word"></i> <span class="hidden md:inline">WORD</span>
+                </button>
+                
+                <div class="h-6 w-px bg-slate-300 mx-1"></div> <button onclick="app.exportToWord('${id}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold hover:bg-blue-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-word"></i> <span class="hidden md:inline">WORD</span>
+                </button>
+                
+                <button onclick="app.exportToExcel('${id}')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold hover:bg-emerald-700 shadow flex items-center gap-2 transition">
+                    <i class="fas fa-file-excel"></i> <span class="hidden md:inline">EXCEL</span>
+                </button>
+            </div>
         `;
 
         const container = document.getElementById('main-content');
