@@ -667,20 +667,73 @@ const app = {
         });
     },
 
+    
     modalSign(id, arrName, index = null) {
-        const p = this.data.patients.find(x=>x.id===id);
-        const arr = p[arrName] || [];
-        const v = index !== null ? arr[index] : null;
-        this.openModal(`
-            <h3 class="font-bold mb-4 uppercase">${index!==null?'Edit':'Input'} Data</h3>
-            <input id="v_pj" class="input-modern mb-2" placeholder="Nama PJ (Wajib)" value="${v?.pj||''}">
-            <textarea id="v_note" class="input-modern h-24 mb-2" placeholder="Catatan...">${v?.note||''}</textarea>
-            ${v?.photo ? '<p class="text-xs text-green-600 text-center">Foto tersimpan</p>' : ''}
-            <input type="file" id="v_photo" class="text-xs mb-2">
-            <div class="bg-slate-50 border p-2 rounded-xl mb-2"><canvas id="sig-pad" class="bg-white border w-full h-32 rounded"></canvas><button onclick="app.signaturePad.clear()" class="text-xs text-red-500 mt-1">Hapus TTD</button></div>
-            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-2 rounded-lg font-bold">SIMPAN</button>
-        `);
-        setTimeout(()=>{const c=document.getElementById('sig-pad'); c.width=c.parentElement.clientWidth-16; c.height=128; this.signaturePad=new SignaturePad(c);},300);
+        // 1. Ambil data pasien saat ini
+        const p = this.data.patients.find(x => x.id === id);
+        const arr = p[arrName] || []; // Ambil array data (misal: p.assessment atau p.daily_report)
+        const v = index !== null ? arr[index] : null; // Jika mode edit, ambil data lama
+
+        // 2. Susun tampilan HTML Popup
+        // Perhatikan ID elemen (v_pj, v_note, dll) HARUS SAMA dengan yang ada di fungsi saveSign
+        const html = `
+            <h3 class="font-bold mb-4 text-brand-800 uppercase border-b pb-2">
+                ${index !== null ? 'Edit' : 'Input'} Laporan
+            </h3>
+            
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Nama Petugas (PJ)</label>
+                <input id="v_pj" class="input-modern w-full" placeholder="Nama PJ..." value="${v?.pj || ''}">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Upload Foto Kegiatan (Opsional)</label>
+                <input id="v_photo" type="file" accept="image/*" class="input-modern w-full text-xs">
+                ${v?.photo ? '<p class="text-[10px] text-green-600 mt-1">✅ Foto sebelumnya tersimpan (upload baru jika ingin mengganti)</p>' : ''}
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Catatan / Laporan</label>
+                <textarea id="v_note" class="input-modern w-full h-24" placeholder="Tulis laporan perkembangan, assessment, atau konseling di sini...">${v?.note || ''}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan Petugas</label>
+                <div class="border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 relative overflow-hidden h-40 touch-none">
+                    <canvas id="signature-pad" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+                </div>
+                <div class="flex justify-between mt-1 items-center">
+                    <span class="text-[10px] text-slate-400">*Gunakan jari/mouse untuk tanda tangan</span>
+                    <button onclick="app.signaturePad.clear()" class="text-xs text-red-500 font-bold hover:underline">Hapus Tanda Tangan</button>
+                </div>
+                ${v?.sign ? '<p class="text-[10px] text-green-600 mt-1">✅ Tanda tangan sebelumnya tersimpan</p>' : ''}
+            </div>
+
+            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow hover:bg-brand-700 transition transform active:scale-95">
+                SIMPAN LAPORAN
+            </button>
+        `;
+
+        // 3. Tampilkan Modal ke layar
+        this.openModal(html);
+
+        // 4. INISIALISASI CANVAS (SANGAT PENTING!)
+        // Tanpa bagian ini, kotak tanda tangan tidak akan bisa dicoret.
+        setTimeout(() => {
+            const canvas = document.getElementById('signature-pad');
+            if (canvas) {
+                // Atur resolusi canvas agar tajam (support layar retina/HP)
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+
+                // Aktifkan library SignaturePad pada canvas tersebut
+                this.signaturePad = new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)' // Background transparan
+                });
+            }
+        }, 150); // Beri jeda 150ms agar modal muncul sempurna dulu baru canvas disiapkan
     },
     
     async saveSign(id, arrName, index) {
