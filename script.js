@@ -684,70 +684,61 @@ const app = {
             </div>
 
             <div class="mb-3">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Upload Foto (Opsional)</label>
-                <input id="v_photo" type="file" accept="image/*" class="input-modern w-full text-xs">
-                ${v?.photo ? '<p class="text-[10px] text-green-600 mt-1">✅ Foto ada (upload baru untuk ganti)</p>' : ''}
-            </div>
-
-            <div class="mb-3">
                 <label class="block text-xs font-bold text-slate-500 mb-1">Catatan</label>
-                <textarea id="v_note" class="input-modern w-full h-24" placeholder="Tulis laporan...">${v?.note || ''}</textarea>
+                <textarea id="v_note" class="input-modern w-full h-20" placeholder="Isi laporan...">${v?.note || ''}</textarea>
             </div>
 
             <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan</label>
-                <div id="signature-container" class="border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 relative h-40 w-full touch-none">
-                    <canvas id="signature-pad" class="absolute inset-0 w-full h-full cursor-crosshair block"></canvas>
+                <label class="block text-xs font-bold text-slate-500 mb-1">Tanda Tangan (Wajib)</label>
+                
+                <div id="signature-container" style="position: relative; width: 100%; height: 200px; border: 2px dashed #94a3b8; background-color: #f1f5f9; border-radius: 12px; touch-action: none;">
+                    <canvas id="signature-pad" style="display: block; width: 100%; height: 100%; touch-action: none;"></canvas>
                 </div>
-                <div class="flex justify-between mt-1 items-center">
-                    <span class="text-[10px] text-slate-400">*Gunakan jari/mouse</span>
-                    <button onclick="app.clearSignature()" class="text-xs text-red-500 font-bold hover:underline">Hapus Tanda Tangan</button>
+
+                <div class="flex justify-between mt-2 items-center">
+                    <span class="text-[10px] text-slate-400">Gunakan jari untuk tanda tangan</span>
+                    <button onclick="app.clearSignature()" class="text-xs text-red-500 font-bold hover:underline">Hapus / Ulangi</button>
                 </div>
-                ${v?.sign ? '<p class="text-[10px] text-green-600 mt-1">✅ Tanda tangan tersimpan</p>' : ''}
             </div>
 
-            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow hover:bg-brand-700 transition">
-                SIMPAN LAPORAN
+            <button onclick="app.saveSign('${id}', '${arrName}', ${index})" class="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow mt-2 active:scale-95 transition">
+                SIMPAN
             </button>
         `;
 
         this.openModal(html);
 
-        // --- BAGIAN PERBAIKAN UTAMA ---
-        // Kita beri jeda sedikit agar Modal selesai animasi munculnya, baru Canvas di-setting
+        // --- BAGIAN LOGIKA CANVAS UNTUK HP ---
         setTimeout(() => {
             const canvas = document.getElementById('signature-pad');
             const container = document.getElementById('signature-container');
-            
-            if (canvas && container) {
-                // 1. Paksa ukuran canvas mengikuti container pembungkusnya
-                canvas.width = container.offsetWidth;
-                canvas.height = container.offsetHeight;
 
-                // 2. Inisialisasi Library
-                // Matikan background color (transparan) agar hasil simpanan bersih
-                this.signaturePad = new SignaturePad(canvas, {
-                    backgroundColor: 'rgba(255, 255, 255, 0)',
-                    penColor: 'rgb(0, 0, 0)'
-                });
+            if (canvas && container) {
+                // 1. Ambil rasio layar HP (biasanya 2x atau 3x lebih tajam dari laptop)
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+                // 2. Set ukuran canvas sesuai rasio tersebut agar garis tajam
+                canvas.width = container.offsetWidth * ratio;
+                canvas.height = container.offsetHeight * ratio;
                 
-                // 3. Handle resize window (agar responsif jika layar diputar/diubah)
-                window.onresize = () => {
-                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                    canvas.width = container.offsetWidth * ratio;
-                    canvas.height = container.offsetHeight * ratio;
-                    canvas.getContext("2d").scale(ratio, ratio);
-                    this.signaturePad.clear(); // Sayangnya data hilang saat resize, tapi tampilan tidak rusak
-                };
+                // 3. Scale context agar koordinat gambar pas
+                const ctx = canvas.getContext("2d");
+                ctx.scale(ratio, ratio);
+
+                // 4. Inisialisasi Library SignaturePad
+                this.signaturePad = new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)', // Transparan
+                    penColor: 'rgb(0, 0, 0)',
+                    velocityFilterWeight: 0.7 // Agar garis lebih halus di layar sentuh
+                });
+
+                console.log("Canvas siap (Mobile Mode). Ratio:", ratio);
             }
-        }, 300); // Waktu jeda dinaikkan ke 300ms untuk memastikan modal sudah render
+        }, 250); 
     },
 
-    // Tambahkan fungsi kecil ini untuk tombol "Hapus Tanda Tangan"
     clearSignature() {
-        if (this.signaturePad) {
-            this.signaturePad.clear();
-        }
+        if (this.signaturePad) this.signaturePad.clear();
     },
     
     async saveSign(id, arrName, index) {
