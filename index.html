@@ -60,9 +60,6 @@
         <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-popup">
             <div class="p-5 border-b flex justify-between items-center bg-brand-50 rounded-t-3xl">
                 <h3 id="modal-title" class="font-black text-brand-800 tracking-tight">FORM</h3>
-                <button onclick="app.downloadDOCX(app.activePatientId)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition active:scale-95">
-                <span>📄</span> Download Word
-                </button>
                 <button onclick="app.closeModal()" class="w-8 h-8 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 transition shadow-sm">✕</button>
             </div>
             <div id="modal-body" class="p-6 overflow-y-auto"></div>
@@ -76,8 +73,8 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
