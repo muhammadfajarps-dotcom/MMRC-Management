@@ -77,3 +77,23 @@ table tbody tr td { font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; }
 
 /* Signature & Chart Canvas */
 canvas { background: #fff; border-radius: 8px; }
+
+/* ============================================================ */
+/* STYLE ASISTEN AI & ANIMASI (TAMBAHAN SESUAI ARAHAN 1)        */
+/* ============================================================ */
+@keyframes popup {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-popup {
+    animation: popup 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#ai-chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+#ai-chat-messages::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
