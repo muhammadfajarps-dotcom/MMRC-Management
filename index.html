@@ -54,6 +54,54 @@
         </div>
     </div>
 
+    <div id="ai-assistant-widget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans">
+        <div id="ai-chat-window" class="hidden w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden mb-4 animate-popup">
+            <div class="bg-brand-700 text-white p-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm tracking-wide">MMRC AI Assistant</h4>
+                        <span class="text-[10px] text-rose-200 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span> Otomatisasi RM Aktif
+                        </span>
+                    </div>
+                </div>
+                <button onclick="toggleAIChat()" class="text-white/70 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50 text-xs">
+                <div class="flex gap-2 max-w-[85%]">
+                    <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-[10px]"></i>
+                    </div>
+                    <div class="bg-white p-2.5 rounded-xl rounded-tl-none shadow-sm border border-slate-100 text-slate-700">
+                        Halo! Saya Asisten AI MMRC. Saya bisa membantu Anda mengotomatiskan penyiapan dan ekspor data Rekam Medis (RM) lengkap klien secara rapi. 
+                        <div class="mt-2 flex flex-col gap-1">
+                            <button onclick="triggerAIAutomation()" class="text-left bg-brand-50 hover:bg-brand-100 text-brand-700 p-1.5 rounded font-semibold transition border border-brand-100">
+                                <i class="fa-solid fa-file-word mr-1"></i> Siapkan & Unduh RM Klien Aktif
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white border-t flex gap-2 items-center">
+                <input type="text" id="ai-chat-input" placeholder="Ketik perintah otomatisasi..." class="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-600 focus:bg-white transition" onkeypress="if(event.key === 'Enter') sendAIMessage()">
+                <button onclick="sendAIMessage()" class="bg-brand-700 hover:bg-brand-800 text-white w-8 h-8 rounded-xl flex items-center justify-center transition shadow-md">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <button onclick="toggleAIChat()" class="bg-brand-700 hover:bg-brand-800 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition duration-300 group">
+            <i class="fa-solid fa-robot text-xl group-hover:rotate-12 transition duration-300"></i>
+        </button>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
