@@ -1038,3 +1038,291 @@ const app = {
 };
 
 document.addEventListener('DOMContentLoaded', () => { window.app = app; app.init(); });
+
+// ============================================================
+// LOGIK ASISTEN AI & EKSPOR WORD (TAMBAHAN SESUAI ARAHAN)
+// ============================================================
+
+function toggleAIChat() {
+    const chatWindow = document.getElementById('ai-chat-window');
+    chatWindow.classList.toggle('hidden');
+    if(!chatWindow.classList.contains('hidden')) {
+        document.getElementById('ai-chat-input').focus();
+    }
+}
+
+function appendAIMessage(sender, text, isButtons = false) {
+    const container = document.getElementById('ai-chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = sender === 'user' ? 'flex gap-2 max-w-[85%] ml-auto justify-end' : 'flex gap-2 max-w-[85%]';
+    
+    if (sender === 'user') {
+        msgDiv.innerHTML = `
+            <div class="bg-brand-700 text-white p-2.5 rounded-xl rounded-tr-none shadow-sm text-slate-700">
+                ${text}
+            </div>
+        `;
+    } else {
+        msgDiv.innerHTML = `
+            <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-robot text-[10px]"></i>
+            </div>
+            <div class="bg-white p-2.5 rounded-xl rounded-tl-none shadow-sm border border-slate-100 text-slate-700">
+                ${text}
+            </div>
+        `;
+    }
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendAIMessage() {
+    const input = document.getElementById('ai-chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendAIMessage('user', text);
+    input.value = '';
+
+    setTimeout(() => {
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes('siapkan') || lowerText.includes('rm') || lowerText.includes('rekam medis') || lowerText.includes('unduh')) {
+            appendAIMessage('ai', 'Baik, instruksi diterima. Saya sedang membaca database MMRC, mengotomatisasi penyusunan berkas berkas klinis lengkap klien, memproses grafik, tanda tangan, serta foto secara real-time...');
+            setTimeout(() => {
+                triggerAIAutomation();
+            }, 1000);
+        } else {
+            appendAIMessage('ai', 'Perintah kurang spesifik. Hubungi saya untuk otomatisasi berkas dengan mengetik: <b>"Siapkan berkas rekam medis klien"</b>.');
+        }
+    }, 800);
+}
+
+function triggerAIAutomation() {
+    // Memastikan ada pasien yang sedang dipilih secara aktif di aplikasi
+    if (!app.activePatientId) {
+        Swal.fire('Gagal', 'Silakan pilih pasien terlebih dahulu di dashboard utama MMRC Anda.', 'warning');
+        appendAIMessage('ai', '<span class="text-rose-600 font-bold">Gagal otomatisasi:</span> Tidak ada pasien aktif yang dipilih di dashboard.');
+        return;
+    }
+
+    const patient = app.data.patients.find(p => p.id === app.activePatientId);
+    if (!patient) {
+        Swal.fire('Gagal', 'Data pasien tidak ditemukan.', 'error');
+        return;
+    }
+
+    appendAIMessage('ai', `Memulai pembuatan dokumen Word premium untuk pasien: <b>${patient.biodata?.nama || patient.reg?.name || 'Tanpa Nama'}</b>.`);
+    exportToWordPremium(patient);
+}
+
+function exportToWordPremium(p) {
+    // 1. Ambil Chart dari canvas Chart.js yang sedang aktif di UI menjadi Base64 Gambar
+    let chartBase64 = "";
+    if (app.chartInstance && document.getElementById('crisisChart')) {
+        try {
+            chartBase64 = document.getElementById('crisisChart').toDataURL("image/png");
+        } catch (e) { console.log(e); }
+    }
+
+    // 2. Format Konten HTML Khusus yang kompatibel dengan Rendering Microsoft Word
+    let docHtml = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+        <title>Rekam Medis MMRC</title>
+        <style>
+            body { font-family: 'Arial', sans-serif; color: #1e293b; line-height: 1.5; }
+            .header-table { width: 100%; border-bottom: 3px double #be123c; padding-bottom: 10px; margin-bottom: 20px; }
+            .title { font-size: 20pt; font-weight: bold; color: #be123c; text-align: center; margin: 0; text-transform: uppercase; }
+            .subtitle { font-size: 10pt; text-align: center; color: #64748b; margin: 5px 0 0 0; }
+            h2 { font-size: 14pt; color: #9f1239; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; text-transform: uppercase; }
+            table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            table.data-table th, table.data-table td { border: 1px solid #cbd5e1; padding: 8px; font-size: 10pt; text-align: left; }
+            table.data-table th { background-color: #ffe4e6; color: #881337; font-weight: bold; }
+            .patient-img { width: 120px; height: 150px; border: 1px solid #cbd5e1; object-fit: cover; }
+            .chart-img { width: 100%; max-width: 600px; margin-top: 15px; border: 1px solid #e2e8f0; padding: 5px; }
+            .sig-img { width: 150px; height: 80px; object-fit: contain; border-bottom: 1px solid #94a3b8; }
+            .footer-sign { width: 100%; margin-top: 40px; }
+            .footer-sign td { font-size: 10pt; text-align: center; vertical-align: bottom; width: 50%; }
+        </style>
+    </head>
+    <body>
+
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="title">MMRC INTEGRATED SYSTEM</div>
+                    <div class="subtitle">Rekam Medis Otomatisasi AI & Manajemen Transparan Klinis</div>
+                </td>
+            </tr>
+        </table>
+
+        <h2>A. DATA BIODATA PASIEN</h2>
+        <table class="data-table">
+            <tr>
+                <td style="width: 25%; font-weight: bold;">Nama Lengkap</td>
+                <td style="width: 50%;">${p.reg?.name || '-'}</td>
+                <td rowspan="4" style="width: 25%; text-align: center; vertical-align: middle;">
+                    ${p.reg?.photo ? `<img class="patient-img" src="${p.reg.photo}" />` : '<div style="font-size: 8pt; color:#94a3b8;">[ Tidak ada foto ]</div>'}
+                </td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold;">Usia / Tempat Tgl Lahir</td>
+                <td>${p.reg?.age || '-'} Thn / ${p.reg?.ttl || '-'}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold;">Status / Pekerjaan</td>
+                <td>${p.reg?.status || '-'} / ${p.reg?.job || '-'}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold;">Penanggung Jawab</td>
+                <td>${p.reg?.guardian || '-'}</td>
+            </tr>
+        </table>
+
+        <h2>B. MONITORING TTV & GDS</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Waktu</th>
+                    <th>TD (mmHg)</th>
+                    <th>Nadi (x/m)</th>
+                    <th>RR (x/m)</th>
+                    <th>TB/BB</th>
+                    <th>GDS (mg/dL)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(p.ttv || []).map(t => `
+                    <tr>
+                        <td>${t.time || '-'}</td>
+                        <td>${t.td || '-'}</td>
+                        <td>${t.nadi || '-'}</td>
+                        <td>${t.rr || '-'}</td>
+                        <td>${t.tb || '-'}/${t.bb || '-'}</td>
+                        <td>${t.gds || '-'}</td>
+                    </tr>
+                `).join('')}
+                ${(p.ttv || []).length === 0 ? '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada log TTV</td></tr>' : ''}
+            </tbody>
+        </table>
+
+        ${chartBase64 ? `
+            <div style="page-break-inside: avoid; text-align: center;">
+                <p style="font-size: 9pt; font-weight: bold; color: #64748b; margin-top:10px;">Grafik Trend Monitoring BPSS Klien</p>
+                <img class="chart-img" src="${chartBase64}" />
+            </div>
+        ` : ''}
+
+        <div style="page-break-before: always;"></div>
+
+        <h2>C. DIAGNOSIS KRISIS (BPSS)</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Hari</th>
+                    <th>Biologis (Bio)</th>
+                    <th>Psikologis (Psy)</th>
+                    <th>Sosial (Soc)</th>
+                    <th>Spiritual (Spi)</th>
+                    <th style="width: 15%;">Total Skor</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(p.crisis?.bpss || []).map((b, i) => `
+                    <tr>
+                        <td style="text-align: center;">${i + 1}</td>
+                        <td>${b.bio || '-'}</td>
+                        <td>${b.psy || '-'}</td>
+                        <td>${b.soc || '-'}</td>
+                        <td>${b.spi || '-'}</td>
+                        <td style="font-weight: bold; text-align: center;">${b.total || '-'}</td>
+                    </tr>
+                `).join('')}
+                ${(p.crisis?.bpss || []).length === 0 ? '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Belum ada log Evaluasi Krisis</td></tr>' : ''}
+            </tbody>
+        </table>
+
+        <h2>D. CATATAN ASSESSMENT AWAL</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Waktu</th>
+                    <th style="width: 20%;">Penanggung Jawab</th>
+                    <th>Catatan Klinis / Evaluasi Mandiri</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(p.assessment || []).map(x => `
+                    <tr>
+                        <td>${x.time || '-'}</td>
+                        <td><b>${x.pj || '-'}</b></td>
+                        <td>${x.note || '-'}</td>
+                    </tr>
+                `).join('')}
+                ${(p.assessment || []).length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Belum ada berkas assessment resmi</td></tr>' : ''}
+            </tbody>
+        </table>
+
+        <h2>E. LAPORAN PROGRES HARIAN</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Waktu</th>
+                    <th style="width: 20%;">Penanggung Jawab</th>
+                    <th>Catatan Progres</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(p.daily_progress || []).map(x => `
+                    <tr>
+                        <td>${x.time || '-'}</td>
+                        <td><b>${x.pj || '-'}</b></td>
+                        <td>${x.note || '-'}</td>
+                    </tr>
+                `).join('')}
+                ${(p.daily_progress || []).length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Belum ada berkas laporan harian</td></tr>' : ''}
+            </tbody>
+        </table>
+
+        <table class="footer-sign">
+            <tr>
+                <td>
+                    <p>Petugas Penanggung Jawab,</p>
+                    <br><br>
+                    <div style="height: 80px; border-bottom: 1px dashed #cbd5e1; width: 150px; margin: 0 auto;"></div>
+                    <p style="font-weight: bold; margin-top: 5px;">( _______________________ )</p>
+                </td>
+                <td>
+                    <p>Tanda Tangan Digital Klien Valid,</p>
+                    <br>
+                    <div style="text-align: center;">
+                        ${p.visits && p.visits[0]?.sign ? `<img class="sig-img" src="${p.visits[0].sign}" />` : p.assessment && p.assessment[0]?.sign ? `<img class="sig-img" src="${p.assessment[0].sign}" />` : '<div style="height: 80px; border-bottom: 1px dashed #cbd5e1; width: 150px; margin: 0 auto;"></div>'}
+                    </div>
+                    <p style="font-weight: bold; margin-top: 5px;">( ${p.reg?.name || 'Nama Klien'} )</p>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+    </html>`;
+
+    // 3. Konversi Dokumen HTML Menjadi File Microsoft Word Blob (.doc)
+    const converted = htmlToDocBlob(docHtml);
+    const url = URL.createObjectURL(converted);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RM_Lengkap_${p.reg?.name || 'Pasien'}_MMRC.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    appendAIMessage('ai', `<span class="text-emerald-600 font-bold">✓ Sukses Ekspor:</span> Dokumen Word Rekam Medis untuk <b>${p.reg?.name}</b> berhasil di-download dengan layout yang rapi beserta foto, grafik, dan tanda tangan digital.`);
+}
+
+function htmlToDocBlob(htmlContent) {
+    const blob = new Blob(['\ufeff' + htmlContent], {
+        type: 'application/msword'
+    });
+    return blob;
+}
