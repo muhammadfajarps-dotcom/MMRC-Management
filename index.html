@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMRC Management System</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="frontend/css/variables.css">
+    <link rel="stylesheet" href="frontend/css/base.css">
+    <link rel="stylesheet" href="frontend/css/layout.css">
+    <link rel="stylesheet" href="frontend/css/sidebar.css">
+    </head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="frontend/assets/logo/mmrc-logo.png" alt="MMRC Logo" class="sidebar-logo" onerror="this.src='https://via.placeholder.com/150x60?text=MMRC+LOGO'">
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a href="#" class="nav-item active">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Pasien</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-file-medical"></i>
+                    <span>Assessment</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-stethoscope"></i>
+                    <span>Treatment</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>TTV</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-pills"></i>
+                    <span>Farmasi</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Program</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-user-doctor"></i>
+                    <span>Visit</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-hands-holding-child"></i>
+                    <span>Counseling</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Laporan</span>
+                </a>
+                <a href="#" class="nav-item" style="margin-top: auto;">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Pengaturan</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="dashboard-header" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">Selamat Datang, Fajar</h1>
+                <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">Ringkasan sistem MMRC hari ini.</p>
+            </header>
+
+            <div id="dashboard-view">
+                </div>
+        </main>
+    </div>
+
+    </body>
+</html>
