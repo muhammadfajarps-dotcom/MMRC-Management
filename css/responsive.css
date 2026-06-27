@@ -1,0 +1,87 @@
+/* css/responsive.css */
+
+/* Overlay gelap saat sidebar terbuka di HP */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Tombol Menu Mobile */
+.mobile-menu-btn {
+    display: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    margin-right: 1rem;
+}
+
+.mobile-menu-btn:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+/* --- ATURAN UNTUK LAYAR MOBILE (Maksimal 768px) --- */
+@media (max-width: 768px) {
+    /* 1. Sidebar disembunyikan ke kiri */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        transform: translateX(-100%); /* Geser ke luar layar */
+        transition: transform var(--transition-normal);
+        box-shadow: var(--shadow-lg);
+    }
+
+    /* Kelas active ditambahkan via JS saat tombol menu ditekan */
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    /* 2. Header Dashboard di-adjust */
+    .mobile-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1.25rem;
+    }
+
+    .dashboard-header > div {
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    .dashboard-header .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 3. Padding utama dikurangi agar tidak terlalu sesak */
+    .main-content {
+        padding: 1.25rem;
+    }
+
+    /* 4. Area Konten ditumpuk ke bawah (1 kolom) */
+    .dashboard-content-area {
+        grid-template-columns: 1fr;
+    }
+}
