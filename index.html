@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="stylesheet" href="frontend/css/dashboard.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMRC Management System</title>
@@ -69,15 +70,85 @@
             </nav>
         </aside>
 
+                <!-- MAIN CONTENT (DASHBOARD) -->
         <main class="main-content">
-            <header class="dashboard-header" style="margin-bottom: 2rem;">
-                <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">Selamat Datang, Fajar</h1>
-                <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">Ringkasan sistem MMRC hari ini.</p>
+            <!-- Header Welcome -->
+            <header class="dashboard-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">Selamat Datang, Fajar</h1>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">Ringkasan sistem MMRC hari ini.</p>
+                </div>
+                <button class="btn-primary">
+                    <i class="fa-solid fa-plus"></i> Pasien Baru
+                </button>
             </header>
 
             <div id="dashboard-view">
+                <!-- 1. STATISTIC CARDS -->
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-primary">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Pasien Aktif</h3>
+                            <p>42</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-success">
+                            <i class="fa-solid fa-bed-pulse"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Bed Occupancy</h3>
+                            <p>85%</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-warning">
+                            <i class="fa-solid fa-clipboard-user"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Visit Hari Ini</h3>
+                            <p>8</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-danger">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Perhatian Khusus</h3>
+                            <p>3</p>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- 2. CHART & ACTIVITY AREA (Dengan Empty State) -->
+                <div class="dashboard-content-area">
+                    <!-- Area Grafik Tren (Kiri) -->
+                    <div class="card-container">
+                        <h2 class="card-title">Tren Pemulihan Pasien</h2>
+                        <div class="empty-state">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <h4>Belum Ada Data Grafik</h4>
+                            <p>Data tren pemulihan akan muncul setelah ada minimal 5 assessment pasien yang diselesaikan.</p>
+                        </div>
+                    </div>
+
+                    <!-- Area Aktivitas Terbaru (Kanan) -->
+                    <div class="card-container">
+                        <h2 class="card-title">Aktivitas Terbaru</h2>
+                        <div class="empty-state">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <h4>Tidak Ada Aktivitas</h4>
+                            <p>Belum ada log aktivitas hari ini.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
+
     </div>
 
     </body>
