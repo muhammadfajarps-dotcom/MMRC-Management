@@ -1,0 +1,129 @@
+/* css/dashboard.css */
+
+/* --- STATISTIC CARDS --- */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    transition: all var(--transition-normal);
+    border: 1px solid rgba(0,0,0,0.02);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Varian Warna Icon */
+.icon-primary { background: rgba(124, 33, 53, 0.1); color: var(--primary); }
+.icon-success { background: rgba(22, 163, 74, 0.1); color: var(--success); }
+.icon-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.icon-danger  { background: rgba(220, 38, 38, 0.1); color: var(--danger); }
+
+.stat-details h3 {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.stat-details p {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+/* --- EMPTY STATE --- */
+.dashboard-content-area {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 untuk Grafik, 1/3 untuk Aktivitas */
+    gap: 1.5rem;
+}
+
+.card-container {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0,0,0,0.02);
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: var(--radius-md);
+    background: #f8fafc;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+    color: var(--text-main);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    max-width: 300px;
+    margin-bottom: 1.5rem;
+}
+
+/* Button Standar */
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all var(--transition-normal);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: var(--secondary);
+    box-shadow: var(--shadow-glow);
+}
